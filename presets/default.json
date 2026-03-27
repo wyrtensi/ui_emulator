@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "name": "Default Layout",
+  "created": "2026-03-28T00:00:00.000Z",
+  "resolution": "1920x1080",
+  "scale": 1.0,
+  "windows": [
+    {
+      "id": "example-window",
+      "open": true,
+      "x": 200,
+      "y": 150,
+      "width": 380,
+      "height": 320,
+      "zIndex": 100
+    }
+  ],
+  "comments": []
+}

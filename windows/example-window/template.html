@@ -1,0 +1,75 @@
+<div class="example-container" data-export="example-full">
+
+  <!-- HEADER (drag handle) -->
+  <div class="example-header" data-export="example-header">
+    <span class="example-title">EXAMPLE WINDOW</span>
+    <button class="example-close" title="Close">✕</button>
+  </div>
+
+  <!-- TABS -->
+  <div class="example-tabs">
+    <button class="example-tab active" data-tab="info" data-export="example-tab">INFO</button>
+    <button class="example-tab" data-tab="stats">STATS</button>
+    <button class="example-tab" data-tab="settings">SETTINGS</button>
+  </div>
+
+  <!-- CONTENT PANELS -->
+  <div class="example-body" data-export="example-content">
+
+    <div class="example-panel active" data-panel="info">
+      <div class="example-row">
+        <span class="example-label">Name</span>
+        <span class="example-value">Jerry_The_Hunter</span>
+      </div>
+      <div class="example-row">
+        <span class="example-label">Race</span>
+        <span class="example-value accent">CORA</span>
+      </div>
+      <div class="example-row">
+        <span class="example-label">Level</span>
+        <span class="example-value">50</span>
+      </div>
+      <div class="example-bar-group">
+        <div class="example-bar hp">
+          <div class="example-bar-fill" style="width: 97.8%"></div>
+          <span class="example-bar-text">HP 14,875 / 15,200</span>
+        </div>
+        <div class="example-bar fp">
+          <div class="example-bar-fill" style="width: 100%"></div>
+          <span class="example-bar-text">FP 1,200 / 1,200</span>
+        </div>
+        <div class="example-bar sp">
+          <div class="example-bar-fill" style="width: 55%"></div>
+          <span class="example-bar-text">SP 1,600 / 2,900</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="example-panel" data-panel="stats">
+      <div class="example-stat-grid">
+        <div class="example-stat">
+          <span class="stat-label">ATTACK</span>
+          <span class="stat-value">1971</span>
+        </div>
+        <div class="example-stat">
+          <span class="stat-label">DEFENSE</span>
+          <span class="stat-value">1529</span>
+        </div>
+        <div class="example-stat">
+          <span class="stat-label">RANGE</span>
+          <span class="stat-value">55</span>
+        </div>
+        <div class="example-stat">
+          <span class="stat-label">MAX HP</span>
+          <span class="stat-value">16443</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="example-panel" data-panel="settings">
+      <p class="example-hint">This panel demonstrates that tabs work.</p>
+      <p class="example-hint">Each window can have its own interactive logic defined in <code>config.init()</code>.</p>
+    </div>
+
+  </div>
+</div>

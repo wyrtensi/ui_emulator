@@ -1,0 +1,60 @@
+.mm-container {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  background: rgba(8,12,16,0.85);
+  border: 1px solid rgba(0,229,255,0.15);
+  border-top: 1px solid rgba(0,229,255,0.5);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+  backdrop-filter: blur(8px);
+  font-family: 'Jura', 'Segoe UI', sans-serif;
+  overflow: hidden;
+}
+
+.mm-header {
+  padding: 10px 12px;
+  font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700;
+  color: #fff; letter-spacing: 1.5px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex; justify-content: space-between;
+}
+.mm-close { color: rgba(255,255,255,0.3); cursor: pointer; }
+.mm-close:hover { color: #00e5ff; }
+
+.mm-content { display: flex; flex: 1; overflow: hidden; }
+
+.mm-body {
+  flex: 1; position: relative; background: #020304;
+}
+.mm-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.mm-crosshair { position: absolute; inset: 0; pointer-events: none; }
+.mm-crosshair::before { content:''; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: rgba(0,229,255,0.15); }
+.mm-crosshair::after { content:''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: rgba(0,229,255,0.15); }
+.mm-player {
+  position: absolute; top: 50%; left: 50%;
+  width: 6px; height: 6px; background: #00e5ff;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 8px #00e5ff;
+}
+
+.mm-tools {
+  width: 32px; display: flex; flex-direction: column;
+  background: rgba(0,0,0,0.3);
+  border-left: 1px solid rgba(255,255,255,0.05);
+}
+.mm-btn {
+  height: 32px; background: transparent; border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.4); font-size: 16px; cursor: pointer; transition: 0.2s;
+}
+.mm-btn:hover { color: #00e5ff; background: rgba(0,229,255,0.1); }
+
+.mm-footer {
+  padding: 6px 12px; font-size: 11px; color: #8a9ba8;
+  font-weight: 600; border-top: 1px solid rgba(255,255,255,0.05); letter-spacing: 1px;
+}

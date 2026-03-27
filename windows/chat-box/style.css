@@ -1,0 +1,58 @@
+.cb-container {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  background: rgba(8,12,16,0.85);
+  border: 1px solid rgba(0,229,255,0.15);
+  border-top: 1px solid rgba(0,229,255,0.5);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+  backdrop-filter: blur(8px);
+  font-family: 'Segoe UI', sans-serif;
+  overflow: hidden;
+}
+
+/* Tabs header (drag handle) */
+.cb-tabs {
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  background: rgba(0,0,0,0.3); padding-right: 10px;
+}
+.cb-tabs-inner { display: flex; }
+.cb-tab {
+  font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700;
+  color: rgba(255,255,255,0.4); letter-spacing: 1px;
+  padding: 10px 14px; cursor: pointer; transition: 0.2s; position: relative;
+}
+.cb-tab:hover { color: #fff; }
+.cb-tab.active { color: #00e5ff; background: rgba(0,229,255,0.05); }
+.cb-tab.active::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 1px; background: #00e5ff; box-shadow: 0 -2px 5px #00e5ff;
+}
+.cb-close { color: rgba(255,255,255,0.3); font-size: 14px; cursor: pointer; }
+.cb-close:hover { color: #ff4060; }
+
+/* Log area */
+.cb-log {
+  flex: 1; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 6px; padding: 12px;
+}
+.cb-log::-webkit-scrollbar { width: 2px; }
+.cb-log::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
+
+.cb-msg { font-size: 13px; color: rgba(255,255,255,0.7); display: flex; gap: 8px; line-height: 1.4; }
+.cb-time { color: rgba(255,255,255,0.3); font-family: 'Jura', sans-serif; font-size: 11px; margin-top: 2px; flex-shrink: 0; }
+.cb-txt { flex: 1; }
+.cb-txt b { color: #fff; font-weight: 600; }
+.cb-sys .cb-txt { color: #00e5ff; }
+.cb-guild .cb-txt { color: #00e5ff; }
+.cb-party .cb-txt { color: #ff2a55; }
+.cb-race .cb-txt { color: #b02aff; }
+
+/* Input box */
+.cb-input-box {
+  display: flex; align-items: center;
+  background: rgba(0,0,0,0.4); padding: 8px 12px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.cb-type { font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700; color: #00e5ff; margin-right: 12px; }
+.cb-input { flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 13px; }

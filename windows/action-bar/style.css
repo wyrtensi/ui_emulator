@@ -1,0 +1,56 @@
+.ab-container {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  font-family: 'Jura', 'Segoe UI', sans-serif;
+  overflow: hidden;
+}
+
+.ab-drag-zone {
+  display: flex; justify-content: center; padding: 2px 0; opacity: 0; transition: opacity 0.2s;
+}
+.ab-container:hover .ab-drag-zone { opacity: 1; }
+.ab-drag-icon { color: rgba(255,255,255,0.3); font-size: 14px; cursor: move; }
+.ab-drag-icon:hover { color: #00e5ff; text-shadow: 0 0 5px #00e5ff; }
+
+.ab-main { display: flex; align-items: flex-end; gap: 8px; flex: 1; }
+
+.ab-side { display: flex; flex-direction: column; gap: 6px; justify-content: flex-end; padding-bottom: 2px; }
+.ab-circ {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(10,12,15,0.9); border: 1px solid rgba(0,229,255,0.3);
+  color: #00e5ff; cursor: pointer;
+  display: flex; justify-content: center; align-items: center; flex-shrink: 0; transition: 0.2s;
+}
+.ab-circ svg { width: 14px; height: 14px; }
+.ab-circ:hover { background: rgba(0,229,255,0.1); box-shadow: 0 0 10px rgba(0,229,255,0.4); color: #fff; }
+.ab-circ.ab-sm { width: 22px; height: 22px; }
+.ab-circ.ab-sm svg { width: 10px; height: 10px; }
+
+.ab-grid-wrap {
+  flex: 1; display: flex; align-items: flex-end;
+  background: rgba(8,12,16,0.85); backdrop-filter: blur(8px);
+  border: 1px solid rgba(0,229,255,0.15); padding: 4px;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%);
+  min-height: 56px;
+}
+
+.ab-grid {
+  display: grid; width: 100%; height: 100%;
+  grid-template-columns: repeat(auto-fill, 48px);
+  grid-auto-rows: 48px; gap: 4px;
+  align-content: end; justify-content: start; overflow: hidden;
+}
+
+.ab-slot {
+  width: 48px; height: 48px; background: rgba(255,255,255,0.1);
+  padding: 1px; position: relative; cursor: pointer; transition: 0.2s;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+}
+.ab-slot-inner {
+  width: 100%; height: 100%;
+  background: linear-gradient(180deg, #182025, #0f1418);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%);
+}
+.ab-slot:hover .ab-slot-inner { background: linear-gradient(180deg, #202b33, #151c22); }
+.ab-dot { position: absolute; bottom: 2px; left: 2px; width: 8px; height: 8px; border-radius: 50%; background: #8a9ba8; z-index: 3; }
+.ab-label { position: absolute; bottom: 2px; right: 10px; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); z-index: 2; }

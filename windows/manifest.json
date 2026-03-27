@@ -1,0 +1,74 @@
+{
+  "windows": [
+    {
+      "id": "player-status",
+      "name": "Player Status",
+      "folder": "windows/player-status",
+      "defaultPosition": { "x": 20, "y": 20, "width": 380, "height": 200 },
+      "defaultOpen": true
+    },
+    {
+      "id": "target-info",
+      "name": "Target Info",
+      "folder": "windows/target-info",
+      "defaultPosition": { "x": 770, "y": 25, "width": 380, "height": 110 },
+      "defaultOpen": true
+    },
+    {
+      "id": "minimap",
+      "name": "Minimap",
+      "folder": "windows/minimap",
+      "defaultPosition": { "x": 1660, "y": 20, "width": 240, "height": 240 },
+      "defaultOpen": true
+    },
+    {
+      "id": "chat-box",
+      "name": "Chat",
+      "folder": "windows/chat-box",
+      "defaultPosition": { "x": 20, "y": 755, "width": 440, "height": 240 },
+      "defaultOpen": true
+    },
+    {
+      "id": "action-bar",
+      "name": "Action Bar",
+      "folder": "windows/action-bar",
+      "defaultPosition": { "x": 698, "y": 940, "width": 524, "height": 80 },
+      "defaultOpen": true
+    },
+    {
+      "id": "xp-bar",
+      "name": "XP Bar",
+      "folder": "windows/xp-bar",
+      "defaultPosition": { "x": 650, "y": 1000, "width": 620, "height": 50 },
+      "defaultOpen": true
+    },
+    {
+      "id": "inventory",
+      "name": "Inventory",
+      "folder": "windows/inventory",
+      "defaultPosition": { "x": 580, "y": 130, "width": 340, "height": 380 },
+      "defaultOpen": false
+    },
+    {
+      "id": "character",
+      "name": "Character",
+      "folder": "windows/character",
+      "defaultPosition": { "x": 390, "y": 130, "width": 340, "height": 480 },
+      "defaultOpen": false
+    },
+    {
+      "id": "abilities",
+      "name": "Abilities",
+      "folder": "windows/abilities",
+      "defaultPosition": { "x": 1060, "y": 160, "width": 320, "height": 420 },
+      "defaultOpen": false
+    },
+    {
+      "id": "example-window",
+      "name": "Example Window",
+      "folder": "windows/example-window",
+      "defaultPosition": { "x": 200, "y": 150, "width": 380, "height": 320 },
+      "defaultOpen": false
+    }
+  ]
+}
