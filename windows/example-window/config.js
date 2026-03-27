@@ -16,8 +16,9 @@ export default {
   exports: [
     { selector: '[data-export="example-full"]', name: 'full', label: 'Full Window' },
     { selector: '[data-export="example-header"]', name: 'header', label: 'Header Bar' },
-    { selector: '[data-export="example-content"]', name: 'content', label: 'Content Area' },
+    { selector: '[data-export="example-tabs"]', name: 'tabs', label: 'Tab Row' },
     { selector: '[data-export="example-tab"]', name: 'tab', label: 'Single Tab' },
+    { selector: '[data-export="example-content"]', name: 'content', label: 'Content Area' },
   ],
   init(container) {
     // Tab switching

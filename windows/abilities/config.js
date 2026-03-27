@@ -12,7 +12,11 @@ export default {
   },
   exports: [
     { selector: '[data-export="abl-full"]', name: 'full', label: 'Full Abilities' },
-    { selector: '[data-export="abl-header"]', name: 'header', label: 'Header & Dots' },
+    { selector: '[data-export="abl-header"]', name: 'header', label: 'Header Bar' },
+    { selector: '[data-export="abl-title"]', name: 'title', label: 'Title Text' },
+    { selector: '[data-export="abl-dots"]', name: 'dots', label: 'Color Dots' },
+    { selector: '[data-export="abl-close"]', name: 'close', label: 'Close Button' },
+    { selector: '[data-export="abl-cats"]', name: 'cats', label: 'Category Tabs' },
     { selector: '[data-export="abl-list"]', name: 'list', label: 'Skill List' },
   ],
   init(container) {

@@ -12,6 +12,8 @@ export default {
   exports: [
     { selector: '[data-export="xp-full"]', name: 'full', label: 'Full XP Bar' },
     { selector: '[data-export="xp-bar"]', name: 'bar', label: 'Progress Arc' },
+    { selector: '[data-export="xp-bg"]', name: 'bg', label: 'Background Path' },
+    { selector: '[data-export="xp-fg"]', name: 'fg', label: 'Fill Path' },
     { selector: '[data-export="xp-text"]', name: 'text', label: 'Level & Percent' },
   ],
   init() {},

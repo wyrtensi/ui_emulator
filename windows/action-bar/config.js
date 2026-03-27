@@ -12,9 +12,14 @@ export default {
   },
   exports: [
     { selector: '[data-export="ab-full"]', name: 'full', label: 'Full Action Bar' },
-    { selector: '[data-export="ab-grid"]', name: 'grid', label: 'Slot Grid' },
     { selector: '[data-export="ab-left"]', name: 'left', label: 'Left Buttons' },
+    { selector: '[data-export="ab-move"]', name: 'move', label: 'Move Handle' },
+    { selector: '[data-export="ab-settings"]', name: 'settings', label: 'Settings Button' },
+    { selector: '[data-export="ab-lock"]', name: 'lock', label: 'Lock Button' },
+    { selector: '[data-export="ab-grid"]', name: 'grid', label: 'Grid Wrap' },
+    { selector: '[data-export="ab-slots"]', name: 'slots', label: 'Slot Grid' },
     { selector: '[data-export="ab-right"]', name: 'right', label: 'Corner Button' },
+    { selector: '[data-export="ab-grip"]', name: 'grip', label: 'Resize Grip' },
   ],
   init(container) {
     const grid = container.querySelector('.ab-grid');

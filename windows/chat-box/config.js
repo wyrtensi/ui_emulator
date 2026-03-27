@@ -12,8 +12,13 @@ export default {
   },
   exports: [
     { selector: '[data-export="cb-full"]', name: 'full', label: 'Full Chat' },
+    { selector: '[data-export="cb-tabs"]', name: 'tabs', label: 'Tab Bar' },
+    { selector: '[data-export="cb-tabs-inner"]', name: 'tabs-inner', label: 'Channel Tabs' },
+    { selector: '[data-export="cb-close"]', name: 'close', label: 'Close Button' },
     { selector: '[data-export="cb-log"]', name: 'log', label: 'Chat Log' },
     { selector: '[data-export="cb-input"]', name: 'input', label: 'Input Box' },
+    { selector: '[data-export="cb-type"]', name: 'type', label: 'Channel Label' },
+    { selector: '[data-export="cb-field"]', name: 'field', label: 'Text Field' },
   ],
   init(container) {
     // Tab switching

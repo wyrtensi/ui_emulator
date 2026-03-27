@@ -13,9 +13,15 @@ export default {
   exports: [
     { selector: '[data-export="inv-full"]', name: 'full', label: 'Full Inventory' },
     { selector: '[data-export="inv-header"]', name: 'header', label: 'Title Bar' },
+    { selector: '[data-export="inv-title"]', name: 'title', label: 'Title Text' },
+    { selector: '[data-export="inv-close"]', name: 'close', label: 'Close Button' },
     { selector: '[data-export="inv-toolbar"]', name: 'toolbar', label: 'Tabs & Search' },
+    { selector: '[data-export="inv-tabs"]', name: 'tabs', label: 'Filter Tabs' },
+    { selector: '[data-export="inv-search"]', name: 'search', label: 'Search Field' },
     { selector: '[data-export="inv-grid"]', name: 'grid', label: 'Item Grid' },
-    { selector: '[data-export="inv-footer"]', name: 'footer', label: 'Slots & Gold' },
+    { selector: '[data-export="inv-footer"]', name: 'footer', label: 'Footer Bar' },
+    { selector: '[data-export="inv-count"]', name: 'count', label: 'Slot Count' },
+    { selector: '[data-export="inv-gold"]', name: 'gold', label: 'Gold Amount' },
   ],
   init(container) {
     const grid = container.querySelector('.inv-grid');

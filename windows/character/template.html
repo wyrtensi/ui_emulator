@@ -1,17 +1,17 @@
 <div class="char-container" data-export="char-full">
-  <div class="char-header">
-    <span class="char-title">CHARACTER</span>
-    <div class="char-tab-row">
+  <div class="char-header" data-export="char-header">
+    <span class="char-title" data-export="char-title">CHARACTER</span>
+    <div class="char-tab-row" data-export="char-tabs">
       <button class="char-tab active">EQUIP</button>
       <button class="char-tab">COSTUMES</button>
     </div>
-    <button class="char-close" title="Close">✕</button>
+    <button class="char-close" data-export="char-close" title="Close">✕</button>
   </div>
 
   <div class="char-body">
     <!-- Equipment area with silhouette -->
     <div class="char-equip-area" data-export="char-equip">
-      <div class="char-silhouette">
+      <div class="char-silhouette" data-export="char-silhouette">
         <svg viewBox="0 0 120 200" fill="none" stroke="rgba(0,229,255,0.08)" stroke-width="0.8">
           <ellipse cx="60" cy="28" rx="16" ry="18"/>
           <line x1="60" y1="46" x2="60" y2="120"/>
@@ -41,38 +41,38 @@
 
     <!-- Stats grid -->
     <div class="char-stats" data-export="char-stats">
-      <div class="stat-box">
+      <div class="stat-box" data-export="char-stat-atk">
         <span class="stat-label">ATTACK</span><span class="stat-val">2,450</span>
       </div>
-      <div class="stat-box">
+      <div class="stat-box" data-export="char-stat-def">
         <span class="stat-label">DEFENSE</span><span class="stat-val">1,820</span>
       </div>
-      <div class="stat-box">
+      <div class="stat-box" data-export="char-stat-range">
         <span class="stat-label">RANGE</span><span class="stat-val">180</span>
       </div>
-      <div class="stat-box">
+      <div class="stat-box" data-export="char-stat-hp">
         <span class="stat-label">MAX HP</span><span class="stat-val">15,200</span>
       </div>
     </div>
 
     <!-- Mastery bars -->
     <div class="char-mastery" data-export="char-mastery">
-      <div class="mastery-row">
+      <div class="mastery-row" data-export="char-mastery-melee">
         <span class="mastery-label">MELEE</span>
         <div class="mastery-track"><div class="mastery-fill" style="width:92%"></div></div>
         <span class="mastery-rank">GM</span>
       </div>
-      <div class="mastery-row">
+      <div class="mastery-row" data-export="char-mastery-range">
         <span class="mastery-label">RANGE</span>
         <div class="mastery-track"><div class="mastery-fill" style="width:78%"></div></div>
         <span class="mastery-rank">GM</span>
       </div>
-      <div class="mastery-row">
+      <div class="mastery-row" data-export="char-mastery-def">
         <span class="mastery-label">DEFENSE</span>
         <div class="mastery-track"><div class="mastery-fill" style="width:85%"></div></div>
         <span class="mastery-rank">GM</span>
       </div>
-      <div class="mastery-row">
+      <div class="mastery-row" data-export="char-mastery-shield">
         <span class="mastery-label">SHIELD</span>
         <div class="mastery-track"><div class="mastery-fill" style="width:60%"></div></div>
         <span class="mastery-rank">PT</span>
