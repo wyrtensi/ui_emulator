@@ -500,15 +500,18 @@ function updateAuthUI(user) {
   const userEl = document.getElementById('rfo-gh-user');
   const avatarEl = document.getElementById('rfo-gh-avatar');
   const nameEl = document.getElementById('rfo-gh-username');
+  const hintEl = document.getElementById('rfo-comment-hint');
 
   if (user) {
     if (loginBtn) loginBtn.hidden = true;
     if (userEl) userEl.hidden = false;
     if (avatarEl) avatarEl.src = user.avatar_url;
     if (nameEl) nameEl.textContent = user.login;
+    if (hintEl) hintEl.textContent = '💬 Double-click on any window to add a comment pin';
   } else {
     if (loginBtn) loginBtn.hidden = false;
     if (userEl) userEl.hidden = true;
+    if (hintEl) hintEl.textContent = '💬 Sign in with GitHub to leave comment pins';
   }
 }
 

@@ -955,8 +955,54 @@ input[type="range"]::-webkit-slider-thumb {
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
 /* ═══════════════════════════════════════════════════════
-   GitHub Auth UI
+   GitHub Auth UI — Floating Badge (top-right)
    ═══════════════════════════════════════════════════════ */
+
+#rfo-auth-badge {
+  position: fixed;
+  top: 12px;
+  right: 60px;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+}
+
+.gh-login-btn-float {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(20, 25, 35, 0.85);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px;
+  color: #ccc;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: all 0.2s;
+}
+
+.gh-login-btn-float:hover {
+  background: rgba(30, 40, 60, 0.95);
+  border-color: var(--panel-accent);
+  color: #fff;
+}
+
+.gh-login-btn-float svg { flex-shrink: 0; }
+
+.gh-user-float {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 4px;
+  background: rgba(20, 25, 35, 0.85);
+  border: 1px solid rgba(0, 200, 255, 0.25);
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--panel-text);
+  backdrop-filter: blur(10px);
+}
 
 .panel-header-actions {
   display: flex;
@@ -964,25 +1010,9 @@ input[type="range"]::-webkit-slider-thumb {
   gap: 8px;
 }
 
-.gh-login-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.gh-login-btn svg { flex-shrink: 0; }
-
-.gh-user {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--panel-text);
-}
-
 .gh-avatar {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 1px solid var(--panel-accent-dim);
 }

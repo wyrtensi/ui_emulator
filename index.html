@@ -35,11 +35,7 @@
   <!-- ═══ COMMENT FLOATING TOOLBAR ═══ -->
   <div id="rfo-comment-toolbar" hidden>
     <div class="ct-inner">
-      <span class="ct-hint">💬 Double-click on any window to add a comment pin</span>
-      <div class="ct-author-wrap">
-        <label>Name:</label>
-        <input type="text" id="rfo-author-name" placeholder="Anonymous" class="ct-author-input">
-      </div>
+      <span class="ct-hint" id="rfo-comment-hint">💬 Double-click on any window to add a comment pin</span>
       <button class="ct-btn" id="rfo-toggle-pins" title="Show/hide pins">👁 Pins</button>
       <button class="ct-btn ct-danger" id="rfo-comments-clear" title="Clear all">🗑</button>
     </div>
@@ -61,22 +57,24 @@
     </svg>
   </button>
 
+  <!-- ═══ FLOATING AUTH BADGE (always visible, top-right) ═══ -->
+  <div id="rfo-auth-badge">
+    <button id="rfo-gh-login" class="gh-login-btn-float" title="Sign in with GitHub to leave comments">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      Sign in
+    </button>
+    <div id="rfo-gh-user" class="gh-user-float" hidden>
+      <img id="rfo-gh-avatar" class="gh-avatar" alt="" width="22" height="22">
+      <span id="rfo-gh-username"></span>
+      <button id="rfo-gh-logout" class="gh-logout-btn" title="Sign out">✕</button>
+    </div>
+  </div>
+
   <!-- ═══ CONTROL PANEL ═══ -->
   <aside id="rfo-control-panel" class="closed">
     <div class="panel-header">
       <h2>⚡ RFO UI Emulator</h2>
       <div class="panel-header-actions">
-        <div id="rfo-auth-status">
-          <button id="rfo-gh-login" class="panel-btn panel-btn-sm gh-login-btn" title="Sign in with GitHub">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-            Sign in
-          </button>
-          <div id="rfo-gh-user" class="gh-user" hidden>
-            <img id="rfo-gh-avatar" class="gh-avatar" alt="" width="20" height="20">
-            <span id="rfo-gh-username"></span>
-            <button id="rfo-gh-logout" class="gh-logout-btn" title="Sign out">✕</button>
-          </div>
-        </div>
         <button id="rfo-panel-close" title="Close (F2)">✕</button>
       </div>
     </div>

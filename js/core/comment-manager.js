@@ -28,7 +28,6 @@ class CommentManager {
     this._commentPanelList = null;
     this._pinCountEl = null;
     this._toolbar = null;
-    this._authorInput = null;
     this._loading = false;
   }
 
@@ -36,20 +35,6 @@ class CommentManager {
     this._commentPanelList = document.getElementById('rfo-comments-list');
     this._pinCountEl = document.getElementById('rfo-pin-count');
     this._toolbar = document.getElementById('rfo-comment-toolbar');
-    this._authorInput = document.getElementById('rfo-author-name');
-
-    // Load saved author name
-    const savedAuthor = settings.get('authorName');
-    if (savedAuthor && this._authorInput) {
-      this._authorInput.value = savedAuthor;
-    }
-
-    // Save author name on change
-    if (this._authorInput) {
-      this._authorInput.addEventListener('input', () => {
-        settings.set('authorName', this._authorInput.value.trim());
-      });
-    }
 
     // Double-click on any window to place a pin (works in ALL modes)
     document.getElementById('rfo-windows').addEventListener('dblclick', (e) => {
@@ -70,17 +55,13 @@ class CommentManager {
       toggleBtn.addEventListener('click', () => this.togglePinsVisibility());
     }
 
-    // Clear all local pins
+    // Clear all local pins (owner action)
     const clearBtn = document.getElementById('rfo-comments-clear');
     if (clearBtn) {
       clearBtn.addEventListener('click', () => {
         if (this._pins.length === 0) return;
-        if (githubAuth.isLoggedIn) {
-          this._toast('Remote pins are managed on GitHub — use pin delete buttons', 'info');
-          return;
-        }
         this.clearAll();
-        this._toast('All comment pins cleared', 'info');
+        this._toast('All local pins cleared', 'info');
       });
     }
 
@@ -105,30 +86,30 @@ class CommentManager {
     if (typeof window.rfoToast === 'function') window.rfoToast(msg, type);
   }
 
-  /* ── Place a new pin (local or remote) ───────────── */
+  /* ── Place a new pin (remote only — requires auth) ── */
   async _placePin(windowId, relX, relY) {
-    if (githubAuth.isLoggedIn) {
-      // Remote: create via GitHub Issues
-      try {
-        const pin = await pinStore.createPin(windowId, relX, relY, '');
-        this._pins.push(pin);
-        this._renderPin(pin);
-        this._updatePanelList();
+    if (!githubAuth.isLoggedIn) {
+      this._toast('Sign in with GitHub to create pins', 'info');
+      return;
+    }
 
-        // Open card to type first message
-        const entry = windowManager.get(pin.windowId);
-        if (entry) {
-          const pinEl = entry.container.querySelector(`[data-pin-id="gh_${pin.issueNumber}"]`);
-          if (pinEl) this._openCard(pin, pinEl, entry.container);
-        }
-        this._toast('Pin created', 'success');
-      } catch (err) {
-        console.error('[CommentManager] Create pin failed:', err);
-        this._toast('Failed to create pin — check GitHub config', 'error');
+    // Remote: create via GitHub Issues
+    try {
+      const pin = await pinStore.createPin(windowId, relX, relY, '');
+      this._pins.push(pin);
+      this._renderPin(pin);
+      this._updatePanelList();
+
+      // Open card to type first message
+      const entry = windowManager.get(pin.windowId);
+      if (entry) {
+        const pinEl = entry.container.querySelector(`[data-pin-id="gh_${pin.issueNumber}"]`);
+        if (pinEl) this._openCard(pin, pinEl, entry.container);
       }
-    } else {
-      // Local fallback
-      this._addLocalPin(windowId, relX, relY);
+      this._toast('Pin created', 'success');
+    } catch (err) {
+      console.error('[CommentManager] Create pin failed:', err);
+      this._toast('Failed to create pin — check GitHub config', 'error');
     }
   }
 
@@ -164,8 +145,7 @@ class CommentManager {
 
   _getAuthorName() {
     if (githubAuth.isLoggedIn) return githubAuth.user.login;
-    if (this._authorInput && this._authorInput.value.trim()) return this._authorInput.value.trim();
-    return settings.get('authorName') || 'Anonymous';
+    return 'Anonymous';
   }
 
   /* ── Load remote pins from GitHub Issues ─────────── */

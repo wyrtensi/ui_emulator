@@ -12,6 +12,7 @@ import config from '../config.js';
 
 const STORAGE_KEY = 'rfo_gh_token';
 const USER_KEY = 'rfo_gh_user';
+const STORAGE = localStorage;   // persist across tabs & sessions
 
 class GitHubAuth {
   constructor() {
@@ -52,8 +53,8 @@ class GitHubAuth {
   logout() {
     this._token = null;
     this._user = null;
-    sessionStorage.removeItem(STORAGE_KEY);
-    sessionStorage.removeItem(USER_KEY);
+    STORAGE.removeItem(STORAGE_KEY);
+    STORAGE.removeItem(USER_KEY);
     this._notify();
   }
 
@@ -74,8 +75,8 @@ class GitHubAuth {
       try {
         this._token = await this._exchangeCode(code);
         this._user = await this._fetchUser();
-        sessionStorage.setItem(STORAGE_KEY, this._token);
-        sessionStorage.setItem(USER_KEY, JSON.stringify(this._user));
+        STORAGE.setItem(STORAGE_KEY, this._token);
+        STORAGE.setItem(USER_KEY, JSON.stringify(this._user));
         this._notify();
         return true;
       } catch (err) {
@@ -85,14 +86,14 @@ class GitHubAuth {
       }
     }
 
-    // 2. Restore from sessionStorage
-    const saved = sessionStorage.getItem(STORAGE_KEY);
+    // 2. Restore from localStorage
+    const saved = STORAGE.getItem(STORAGE_KEY);
     if (saved) {
       this._token = saved;
       try {
-        const cachedUser = sessionStorage.getItem(USER_KEY);
+        const cachedUser = STORAGE.getItem(USER_KEY);
         this._user = cachedUser ? JSON.parse(cachedUser) : await this._fetchUser();
-        if (!cachedUser) sessionStorage.setItem(USER_KEY, JSON.stringify(this._user));
+        if (!cachedUser) STORAGE.setItem(USER_KEY, JSON.stringify(this._user));
         this._notify();
         return true;
       } catch {
