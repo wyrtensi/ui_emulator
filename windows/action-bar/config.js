@@ -26,27 +26,31 @@ export default {
     };
 
     const keys = ['F1','F2','F3','F4','F5','F6','F7','F8','F9'];
+    let lastCols = -1;
+    let rafId = 0;
 
     const fillGrid = () => {
       const w = grid.clientWidth;
-      const h = grid.clientHeight;
-      const cellW = 48, cellH = 48, gap = 4;
-      const cols = Math.floor((w + gap) / (cellW + gap)) || 1;
-      const rows = Math.floor((h + gap) / (cellH + gap)) || 1;
-      const total = cols * rows;
-      const current = grid.children.length;
+      const cellW = 48, gap = 4;
+      const cols = Math.max(1, Math.floor((w + gap) / (cellW + gap)));
+      if (cols === lastCols) return;
+      lastCols = cols;
 
-      if (total > current) {
-        for (let i = current; i < total; i++) {
+      const current = grid.children.length;
+      if (cols > current) {
+        for (let i = current; i < cols; i++) {
           const k = i < keys.length ? keys[i] : (i < 20 ? 'F'+(i+1) : '');
           grid.appendChild(slotTemplate(k));
         }
-      } else if (total < current) {
-        for (let i = current; i > total; i--) grid.removeChild(grid.lastElementChild);
+      } else if (cols < current) {
+        for (let i = current; i > cols; i--) grid.removeChild(grid.lastElementChild);
       }
     };
 
-    const ro = new ResizeObserver(() => fillGrid());
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(fillGrid);
+    });
     ro.observe(grid);
     fillGrid();
   },

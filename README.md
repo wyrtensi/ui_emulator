@@ -114,8 +114,6 @@ rfo_ui_emulator/
 | **Escape** | Close context menu / cancel |
 
 ## GitHub Comments Setup
-
-To enable collaborative GitHub-backed comments, see [SETUP-COMMENTS.md](SETUP-COMMENTS.md) for the 5-step guide covering:
 - GitHub OAuth App creation
 - Cloudflare Worker deployment for token exchange
 - Configuration in `js/config.js`

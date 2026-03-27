@@ -35,9 +35,10 @@
 }
 
 .ab-grid {
-  display: grid; width: 100%; height: 100%;
+  display: grid; width: 100%;
   grid-template-columns: repeat(auto-fill, 48px);
-  grid-auto-rows: 48px; gap: 4px;
+  grid-template-rows: 48px;
+  gap: 4px;
   align-content: end; justify-content: start; overflow: hidden;
 }
 
