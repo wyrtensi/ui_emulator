@@ -2,13 +2,10 @@
   width: 100%; height: 100%;
   position: relative; text-align: center;
   font-family: 'Rajdhani', sans-serif;
-  background: rgba(30,30,35,0.85);
-  border-radius: 2px;
-  overflow: hidden;
 }
 
 .xp-arc { width: 100%; height: 26px; display: block; overflow: visible; }
-.xp-bg-path { stroke: rgba(255,255,255,0.08); stroke-width: 4; fill: none; }
+.xp-bg-path { stroke: rgba(60,60,70,0.9); stroke-width: 4; fill: none; }
 .xp-fg-path { stroke: #fff; stroke-width: 4; fill: none; stroke-dasharray: 7777 10000; }
 
 .xp-txt {

@@ -4,11 +4,11 @@ export default {
   dragHandle: '.ab-drag-zone',
   resizable: {
     enabled: true,
-    handles: ['e', 'w'],
+    handles: ['e', 'w', 's', 'se'],
     minWidth: 200,
     minHeight: 56,
     maxWidth: 900,
-    maxHeight: 200,
+    maxHeight: 400,
   },
   exports: [
     { selector: '[data-export="ab-full"]', name: 'full', label: 'Full Action Bar' },
@@ -27,27 +27,58 @@ export default {
       return s;
     };
 
-    const keys = ['F1','F2','F3','F4','F5','F6','F7','F8','F9'];
-    let lastCols = -1;
+    const allKeys = [
+      'F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12',
+      '1','2','3','4','5','6','7','8','9','0',
+      'Q','W','E','R','T','Y','U','I','O','P',
+      'A','S','D','F','G','H','J','K','L',
+      'Z','X','C','V','B','N','M',
+    ];
+    let lastTotal = -1;
     let rafId = 0;
 
     const fillGrid = () => {
       const w = grid.clientWidth;
-      const cellW = 48, gap = 4;
+      const h = grid.clientHeight;
+      const cellW = 48, cellH = 48, gap = 4;
       const cols = Math.max(1, Math.floor((w + gap) / (cellW + gap)));
-      if (cols === lastCols) return;
-      lastCols = cols;
+      const rows = Math.max(1, Math.floor((h + gap) / (cellH + gap)));
+      const total = cols * rows;
+      if (total === lastTotal) return;
+      lastTotal = total;
 
       const current = grid.children.length;
-      if (cols > current) {
-        for (let i = current; i < cols; i++) {
-          const k = i < keys.length ? keys[i] : (i < 20 ? 'F'+(i+1) : '');
-          grid.appendChild(slotTemplate(k));
+      if (total > current) {
+        for (let i = current; i < total; i++) {
+          grid.appendChild(slotTemplate(i < allKeys.length ? allKeys[i] : ''));
         }
-      } else if (cols < current) {
-        for (let i = current; i > cols; i--) grid.removeChild(grid.lastElementChild);
+      } else if (total < current) {
+        for (let i = current; i > total; i--) grid.removeChild(grid.lastElementChild);
       }
     };
+
+    // Up/down arrows add/remove rows by resizing the container height
+    const upBtn = container.querySelector('.ab-right .ab-circ:first-child');
+    const downBtn = container.querySelector('.ab-right .ab-circ:last-child');
+    const rowH = 52; // 48px cell + 4px gap
+
+    if (upBtn) {
+      upBtn.addEventListener('click', () => {
+        const cur = container.offsetHeight;
+        container.style.height = (cur + rowH) + 'px';
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(fillGrid);
+      });
+    }
+    if (downBtn) {
+      downBtn.addEventListener('click', () => {
+        const cur = container.offsetHeight;
+        const next = Math.max(56, cur - rowH);
+        container.style.height = next + 'px';
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(fillGrid);
+      });
+    }
 
     const ro = new ResizeObserver(() => {
       cancelAnimationFrame(rafId);

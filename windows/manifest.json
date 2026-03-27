@@ -32,7 +32,7 @@
       "id": "action-bar",
       "name": "Action Bar",
       "folder": "windows/action-bar",
-      "defaultPosition": { "x": 698, "y": 940, "width": 524, "height": 80 },
+      "defaultPosition": { "x": 698, "y": 780, "width": 524, "height": 190 },
       "defaultOpen": true
     },
     {
