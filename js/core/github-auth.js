@@ -83,6 +83,10 @@ class GitHubAuth {
         console.error('[GitHubAuth] OAuth exchange failed:', err);
         this._token = null;
         this._user = null;
+        // Surface error visibly so user knows what went wrong
+        if (typeof window.rfoToast === 'function') {
+          window.rfoToast('GitHub sign-in failed: ' + (err.message || err), 'error');
+        }
       }
     }
 

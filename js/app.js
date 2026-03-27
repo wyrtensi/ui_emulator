@@ -503,14 +503,14 @@ function updateAuthUI(user) {
   const hintEl = document.getElementById('rfo-comment-hint');
 
   if (user) {
-    if (loginBtn) loginBtn.hidden = true;
-    if (userEl) userEl.hidden = false;
+    if (loginBtn) loginBtn.classList.add('hidden');
+    if (userEl) userEl.classList.remove('hidden');
     if (avatarEl) avatarEl.src = user.avatar_url;
     if (nameEl) nameEl.textContent = user.login;
     if (hintEl) hintEl.textContent = '💬 Double-click on any window to add a comment pin';
   } else {
-    if (loginBtn) loginBtn.hidden = false;
-    if (userEl) userEl.hidden = true;
+    if (loginBtn) loginBtn.classList.remove('hidden');
+    if (userEl) userEl.classList.add('hidden');
     if (hintEl) hintEl.textContent = '💬 Sign in with GitHub to leave comment pins';
   }
 }
