@@ -3,10 +3,10 @@ export default {
   title: 'Action Bar',
   dragHandle: '.ab-move-btn',
   resizable: {
-    enabled: true,
-    handles: ['e', 'w', 's', 'se'],
-    minWidth: 200,
-    minHeight: 56,
+    enabled: false,
+    handles: [],
+    minWidth: 52,
+    minHeight: 52,
     maxWidth: 900,
     maxHeight: 400,
   },
@@ -18,12 +18,13 @@ export default {
     { selector: '[data-export="ab-lock"]', name: 'lock', label: 'Lock Button' },
     { selector: '[data-export="ab-grid"]', name: 'grid', label: 'Grid Wrap' },
     { selector: '[data-export="ab-slots"]', name: 'slots', label: 'Slot Grid' },
-    { selector: '[data-export="ab-right"]', name: 'right', label: 'Corner Button' },
-    { selector: '[data-export="ab-grip"]', name: 'grip', label: 'Resize Grip' },
+    { selector: '[data-export="ab-right"]', name: 'right', label: 'Resize Arrow' },
   ],
   init(container) {
     const grid = container.querySelector('.ab-grid');
     if (!grid) return;
+
+    const cellW = 48, cellH = 48, gap = 4;
 
     const slotTemplate = (key) => {
       const s = document.createElement('div');
@@ -42,10 +43,29 @@ export default {
     let lastTotal = -1;
     let rafId = 0;
 
+    // Snap container size to cell grid
+    const snapToCell = () => {
+      const leftW = container.querySelector('.ab-left')?.offsetWidth || 0;
+      const mainGap = 2; // .ab-main gap
+      const gridW = container.offsetWidth - leftW - mainGap;
+      const gridH = container.offsetHeight;
+
+      const cols = Math.max(1, Math.floor((gridW + gap) / (cellW + gap)));
+      const rows = Math.max(1, Math.floor((gridH + gap) / (cellH + gap)));
+
+      const snappedGridW = cols * (cellW + gap) - gap;
+      const snappedGridH = rows * (cellH + gap) - gap;
+
+      const snappedW = snappedGridW + leftW + mainGap;
+      const snappedH = snappedGridH;
+
+      container.style.width = snappedW + 'px';
+      container.style.height = snappedH + 'px';
+    };
+
     const fillGrid = () => {
       const w = grid.clientWidth;
       const h = grid.clientHeight;
-      const cellW = 48, cellH = 48, gap = 4;
       const cols = Math.max(1, Math.floor((w + gap) / (cellW + gap)));
       const rows = Math.max(1, Math.floor((h + gap) / (cellH + gap)));
       const total = cols * rows;
@@ -62,11 +82,69 @@ export default {
       }
     };
 
+    // Custom resize via the arrow handle
+    const arrow = container.querySelector('.ab-resize-arrow');
+    if (arrow) {
+      let dragging = false, startX, startY, origW, origH, origX, origY;
+
+      arrow.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        dragging = true;
+        startX = e.clientX; startY = e.clientY;
+        origW = container.offsetWidth;
+        origH = container.offsetHeight;
+        origX = container.offsetLeft;
+        origY = container.offsetTop;
+        e.preventDefault(); e.stopPropagation();
+        arrow.setPointerCapture(e.pointerId);
+      });
+
+      arrow.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        // ne: right grows width, up grows height & moves top
+        let newW = origW + dx;
+        let newH = origH - dy;
+        let newY = origY + dy;
+
+        // Snap to cell grid
+        const leftW = container.querySelector('.ab-left')?.offsetWidth || 0;
+        const mainGap = 2;
+        const availW = newW - leftW - mainGap;
+        const cols = Math.max(1, Math.round((availW + gap) / (cellW + gap)));
+        const rows = Math.max(1, Math.round((newH + gap) / (cellH + gap)));
+
+        const snappedGridW = cols * (cellW + gap) - gap;
+        const snappedGridH = rows * (cellH + gap) - gap;
+        const snappedW = snappedGridW + leftW + mainGap;
+        const snappedH = snappedGridH;
+        const snappedY = origY + (origH - snappedH);
+
+        container.style.width = snappedW + 'px';
+        container.style.height = snappedH + 'px';
+        container.style.top = snappedY + 'px';
+      });
+
+      arrow.addEventListener('pointerup', (e) => {
+        if (!dragging) return;
+        dragging = false;
+        arrow.releasePointerCapture(e.pointerId);
+        fillGrid();
+      });
+    }
+
     const ro = new ResizeObserver(() => {
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(fillGrid);
     });
     ro.observe(grid);
-    fillGrid();
+
+    // Initial snap + fill
+    requestAnimationFrame(() => {
+      snapToCell();
+      fillGrid();
+    });
   },
 };
