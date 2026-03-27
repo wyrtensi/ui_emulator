@@ -36,8 +36,9 @@ class CommentManager {
     this._pinCountEl = document.getElementById('rfo-pin-count');
     this._toolbar = document.getElementById('rfo-comment-toolbar');
 
-    // Double-click on any window to place a pin (works in ALL modes)
+    // Double-click on any window to place a pin (only in comment mode)
     document.getElementById('rfo-windows').addEventListener('dblclick', (e) => {
+      if (settings.get('mode') !== 'comment') return;
       const windowEl = e.target.closest('.rfo-window');
       if (!windowEl) return;
       if (e.target.closest('.comment-pin, .comment-card')) return;

@@ -1,7 +1,7 @@
 export default {
   id: 'action-bar',
   title: 'Action Bar',
-  dragHandle: '.ab-drag-zone',
+  dragHandle: '.ab-move-btn',
   resizable: {
     enabled: true,
     handles: ['e', 'w', 's', 'se'],
@@ -14,7 +14,7 @@ export default {
     { selector: '[data-export="ab-full"]', name: 'full', label: 'Full Action Bar' },
     { selector: '[data-export="ab-grid"]', name: 'grid', label: 'Slot Grid' },
     { selector: '[data-export="ab-left"]', name: 'left', label: 'Left Buttons' },
-    { selector: '[data-export="ab-right"]', name: 'right', label: 'Right Arrows' },
+    { selector: '[data-export="ab-right"]', name: 'right', label: 'Corner Button' },
   ],
   init(container) {
     const grid = container.querySelector('.ab-grid');
@@ -56,29 +56,6 @@ export default {
         for (let i = current; i > total; i--) grid.removeChild(grid.lastElementChild);
       }
     };
-
-    // Up/down arrows add/remove rows by resizing the container height
-    const upBtn = container.querySelector('.ab-right .ab-circ:first-child');
-    const downBtn = container.querySelector('.ab-right .ab-circ:last-child');
-    const rowH = 52; // 48px cell + 4px gap
-
-    if (upBtn) {
-      upBtn.addEventListener('click', () => {
-        const cur = container.offsetHeight;
-        container.style.height = (cur + rowH) + 'px';
-        cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(fillGrid);
-      });
-    }
-    if (downBtn) {
-      downBtn.addEventListener('click', () => {
-        const cur = container.offsetHeight;
-        const next = Math.max(56, cur - rowH);
-        container.style.height = next + 'px';
-        cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(fillGrid);
-      });
-    }
 
     const ro = new ResizeObserver(() => {
       cancelAnimationFrame(rafId);
