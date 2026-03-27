@@ -14,6 +14,7 @@ export default {
     { selector: '[data-export="char-full"]', name: 'full', label: 'Full Character' },
     { selector: '[data-export="char-equip"]', name: 'equip', label: 'Equipment Area' },
     { selector: '[data-export="char-stats"]', name: 'stats', label: 'Stats Panel' },
+    { selector: '[data-export="char-mastery"]', name: 'mastery', label: 'Mastery Bars' },
   ],
   init(container) {
     // Tab switching

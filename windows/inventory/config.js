@@ -12,7 +12,10 @@ export default {
   },
   exports: [
     { selector: '[data-export="inv-full"]', name: 'full', label: 'Full Inventory' },
+    { selector: '[data-export="inv-header"]', name: 'header', label: 'Title Bar' },
+    { selector: '[data-export="inv-toolbar"]', name: 'toolbar', label: 'Tabs & Search' },
     { selector: '[data-export="inv-grid"]', name: 'grid', label: 'Item Grid' },
+    { selector: '[data-export="inv-footer"]', name: 'footer', label: 'Slots & Gold' },
   ],
   init(container) {
     const grid = container.querySelector('.inv-grid');

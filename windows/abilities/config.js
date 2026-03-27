@@ -12,6 +12,7 @@ export default {
   },
   exports: [
     { selector: '[data-export="abl-full"]', name: 'full', label: 'Full Abilities' },
+    { selector: '[data-export="abl-header"]', name: 'header', label: 'Header & Dots' },
     { selector: '[data-export="abl-list"]', name: 'list', label: 'Skill List' },
   ],
   init(container) {

@@ -960,8 +960,8 @@ input[type="range"]::-webkit-slider-thumb {
 
 #rfo-auth-badge {
   position: fixed;
-  top: 12px;
-  right: 60px;
+  top: 10px;
+  right: 56px;
   z-index: 100000;
   display: flex;
   align-items: center;

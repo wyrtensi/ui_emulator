@@ -55,13 +55,18 @@ class CommentManager {
       toggleBtn.addEventListener('click', () => this.togglePinsVisibility());
     }
 
-    // Clear all local pins (owner action)
+    // Clear all pins (owner-only, hard confirm)
     const clearBtn = document.getElementById('rfo-comments-clear');
     if (clearBtn) {
       clearBtn.addEventListener('click', () => {
         if (this._pins.length === 0) return;
+        if (!githubAuth.isOwner) {
+          this._toast('Only the repo owner can clear all pins', 'error');
+          return;
+        }
+        if (!confirm('Are you sure you want to delete ALL pins? This cannot be undone.')) return;
         this.clearAll();
-        this._toast('All local pins cleared', 'info');
+        this._toast('All pins cleared', 'info');
       });
     }
 

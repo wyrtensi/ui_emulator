@@ -13,6 +13,8 @@ export default {
   exports: [
     { selector: '[data-export="ab-full"]', name: 'full', label: 'Full Action Bar' },
     { selector: '[data-export="ab-grid"]', name: 'grid', label: 'Slot Grid' },
+    { selector: '[data-export="ab-left"]', name: 'left', label: 'Left Buttons' },
+    { selector: '[data-export="ab-right"]', name: 'right', label: 'Right Arrows' },
   ],
   init(container) {
     const grid = container.querySelector('.ab-grid');

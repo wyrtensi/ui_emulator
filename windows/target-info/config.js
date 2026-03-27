@@ -11,6 +11,8 @@ export default {
   },
   exports: [
     { selector: '[data-export="ti-full"]', name: 'full', label: 'Full Target' },
+    { selector: '[data-export="ti-info"]', name: 'info', label: 'Name & Level' },
+    { selector: '[data-export="ti-health"]', name: 'health', label: 'Health Bar' },
   ],
   init(container) {
     container.querySelector('.ti-close')?.addEventListener('click', () => {

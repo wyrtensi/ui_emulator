@@ -13,6 +13,7 @@ export default {
   exports: [
     { selector: '[data-export="cb-full"]', name: 'full', label: 'Full Chat' },
     { selector: '[data-export="cb-log"]', name: 'log', label: 'Chat Log' },
+    { selector: '[data-export="cb-input"]', name: 'input', label: 'Input Box' },
   ],
   init(container) {
     // Tab switching

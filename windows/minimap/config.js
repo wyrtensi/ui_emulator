@@ -13,6 +13,8 @@ export default {
   exports: [
     { selector: '[data-export="mm-full"]', name: 'full', label: 'Full Minimap' },
     { selector: '[data-export="mm-map"]', name: 'map', label: 'Map Area' },
+    { selector: '[data-export="mm-tools"]', name: 'tools', label: 'Tool Buttons' },
+    { selector: '[data-export="mm-coords"]', name: 'coords', label: 'Coordinates' },
   ],
   init(container) {
     container.querySelector('.mm-close')?.addEventListener('click', () => {

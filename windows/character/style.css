@@ -1,6 +1,7 @@
 .char-container {
   display: flex; flex-direction: column; height: 100%;
   font-family: 'Rajdhani', sans-serif; color: #c8d6e5;
+  background: rgba(8,12,16,0.92); backdrop-filter: blur(8px);
 }
 
 /* Header */
