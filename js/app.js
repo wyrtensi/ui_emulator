@@ -384,6 +384,36 @@ function wireControlPanel() {
     guideOverlay.addEventListener('click', (e) => {
       if (e.target === guideOverlay) guideOverlay.hidden = true;
     });
+
+    // Copy buttons on code blocks
+    guideOverlay.querySelectorAll('.rfo-guide-section pre').forEach(pre => {
+      const btn = document.createElement('button');
+      btn.className = 'rfo-guide-copy-btn';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', () => {
+        const code = pre.querySelector('code');
+        const text = code ? code.textContent : pre.textContent;
+        navigator.clipboard.writeText(text).then(() => {
+          btn.textContent = 'Copied!';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+        });
+      });
+      pre.appendChild(btn);
+    });
+
+    // Export guide as .md
+    document.getElementById('rfo-guide-export-md')?.addEventListener('click', () => {
+      const md = _buildGuideMD();
+      const blob = new Blob([md], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'rfo-window-guide.md';
+      a.click();
+      URL.revokeObjectURL(url);
+      window.rfoToast('Guide exported as .md', 'success');
+    });
   }
 
   // ── Mode buttons ──────────────────────────────────
@@ -726,8 +756,13 @@ function wireKeyboardShortcuts() {
       document.getElementById('rfo-control-panel').classList.toggle('closed');
     }
 
-    // Escape — close focused window (topmost)
+    // Escape — close guide dialog first, then focused window (topmost)
     if (e.key === 'Escape') {
+      const guideOverlay = document.getElementById('rfo-guide-overlay');
+      if (guideOverlay && !guideOverlay.hidden) {
+        guideOverlay.hidden = true;
+        return;
+      }
       const stack = windowManager._zStack;
       if (stack.length > 0) {
         windowManager.close(stack[stack.length - 1]);
@@ -780,6 +815,35 @@ window.addEventListener('resize', () => {
     applyScale(settings.get('scale'));
   }
 });
+
+/* ═══════════════════════════════════════════════════════
+   GUIDE EXPORT — builds markdown from guide dialog DOM
+   ═══════════════════════════════════════════════════════ */
+function _buildGuideMD() {
+  const lines = ['# How to Create & Import a Window\n'];
+  const sections = document.querySelectorAll('.rfo-guide-section');
+  sections.forEach(sec => {
+    const h4 = sec.querySelector('h4');
+    if (h4) lines.push(`## ${h4.textContent.trim()}\n`);
+    sec.querySelectorAll(':scope > p, :scope > ol, :scope > pre').forEach(el => {
+      if (el.tagName === 'P') {
+        lines.push(el.textContent.trim() + '\n');
+      } else if (el.tagName === 'OL') {
+        el.querySelectorAll('li').forEach((li, i) => {
+          lines.push(`${i + 1}. ${li.textContent.trim()}`);
+        });
+        lines.push('');
+      } else if (el.tagName === 'PRE') {
+        const code = el.querySelector('code');
+        const text = code ? code.textContent : el.textContent;
+        lines.push('```');
+        lines.push(text.trim());
+        lines.push('```\n');
+      }
+    });
+  });
+  return lines.join('\n');
+}
 
 /* ═══════════════════════════════════════════════════════
    START

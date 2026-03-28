@@ -79,6 +79,7 @@
         <a href="https://github.com/wyrtensi/ui_emulator" target="_blank" rel="noopener noreferrer" class="panel-header-link" title="View on GitHub">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         </a>
+        <button id="rfo-discussion-toggle" class="panel-header-link" title="Open Discussion Chat">🗨️</button>
         <button id="rfo-guide-btn" class="panel-header-link" title="How to create a window">?</button>
         <button id="rfo-panel-close" title="Close (F2)">✕</button>
       </div>
@@ -210,9 +211,6 @@
       <section class="panel-section" id="rfo-comment-panel" hidden>
         <h3>💬 Comments (<span id="rfo-pin-count">0</span>)</h3>
         <div id="rfo-comments-list"></div>
-        <div class="btn-row" style="margin-top:8px">
-          <button class="panel-btn panel-btn-sm" id="rfo-discussion-toggle">🗨️ Discussion</button>
-        </div>
       </section>
 
       <!-- HELP -->
@@ -255,7 +253,10 @@
     <div class="rfo-guide-dialog">
       <div class="rfo-guide-header">
         <h3>📖 How to Create &amp; Import a Window</h3>
-        <button id="rfo-guide-close" class="rfo-guide-close">✕</button>
+        <div class="rfo-guide-header-actions">
+          <button id="rfo-guide-export-md" class="rfo-guide-export-btn" title="Download this guide as a .md file">📥 Export .md</button>
+          <button id="rfo-guide-close" class="rfo-guide-close">✕</button>
+        </div>
       </div>
       <div class="rfo-guide-body">
 
@@ -269,13 +270,15 @@
         </section>
 
         <section class="rfo-guide-section">
-          <h4>📥 Importing (No Git Required)</h4>
+          <h4>📥 Importing (100% Client-Side — No Server Needed)</h4>
           <ol>
             <li>Create the 3 files (or put them in a <strong>.zip</strong>)</li>
             <li>Open Control Panel → click <strong>📥 Import Window</strong></li>
             <li>Select your .zip or the 3 files together</li>
-            <li>The window loads instantly and persists in your browser</li>
+            <li>The window loads instantly — <strong>no upload, no server</strong></li>
+            <li>Imported windows persist in your browser (localStorage) and survive page refreshes</li>
           </ol>
+          <p style="margin-top:6px"><em>Note: <code>registry.json</code> is only for the built-in windows that ship with the project. Your imported windows are stored entirely in your browser.</em></p>
         </section>
 
         <section class="rfo-guide-section">
@@ -331,13 +334,29 @@
 The emulator uses plain HTML/CSS/JS (no frameworks).
 Each window = 3 files: config.js, template.html, style.css.
 
-Rules:
-- config.js: ES module with `export default { id, title, defaultPosition, defaultOpen, dragHandle, resizable, exports, init(container) }`
+## How the emulator works
+- Windows live inside a 1920×1080 virtual viewport that scales to fit the browser
+- Each window is a draggable, resizable container — the emulator handles drag &amp; resize via config options
+- template.html provides the window's HTML content — it's injected into a container div
+- style.css is auto-scoped: all your selectors are prefixed with `[data-window-id="your-id"]` so class names never conflict with other windows
+- config.js is an ES module (`export default {}`) that declares metadata and an optional `init()` function for interactivity
+- Users can import windows client-side (ZIP or 3 files) without touching any server — windows persist in localStorage
+
+## config.js fields
+- `id` (string): unique window ID, must match folder name
+- `title` (string): display name shown in the panel
+- `defaultPosition` (object): `{ x, y, width, height }` — initial position in the 1920×1080 viewport
+- `defaultOpen` (boolean): whether the window is visible on first load
+- `dragHandle` (string): CSS selector for the draggable area (e.g. '.my-header')
+- `resizable` (object): `{ enabled: true, handles: ['se'], minWidth, minHeight }` — which edges/corners can resize
+- `exports` (array): `[{ selector, name, label }]` — elements users can export as PNG
+- `init(container)` (function): called after the window is mounted. Use `container.querySelector()` to access your elements.
+
+## Rules
 - template.html: pure HTML, use data-export="name" for exportable elements, include a drag handle element matching config.dragHandle
-- style.css: plain CSS (auto-scoped by emulator, no need to prefix selectors), @keyframes work, avoid IDs
+- style.css: plain CSS (auto-scoped, no need to prefix selectors), @keyframes work, avoid IDs
 - init(container): use container.querySelector() to wire events, animations, state changes
-- To close the window: import('../../js/core/window-manager.js').then(m => m.windowManager.close('my-id'))
-- Use sci-fi/dark UI theme: dark backgrounds (rgba(10,14,24,0.92)), cyan accents (#00e5ff), thin borders
+- To close the window: import('../../js/core/window-manager.js').then(m =&gt; m.windowManager.close('my-id'))
 - All animation via CSS @keyframes or JS in init()
 - No React, no Tailwind, no build tools, no external deps
 

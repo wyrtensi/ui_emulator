@@ -1293,6 +1293,10 @@ input[type="range"]::-webkit-slider-thumb {
   backdrop-filter: blur(4px);
 }
 
+.rfo-guide-overlay[hidden] {
+  display: none !important;
+}
+
 .rfo-guide-dialog {
   width: 640px;
   max-width: 92vw;
@@ -1313,6 +1317,31 @@ input[type="range"]::-webkit-slider-thumb {
   padding: 12px 16px;
   border-bottom: 1px solid var(--panel-border);
   flex-shrink: 0;
+  gap: 8px;
+}
+
+.rfo-guide-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.rfo-guide-export-btn {
+  background: var(--panel-btn-bg);
+  border: 1px solid var(--panel-border);
+  color: var(--panel-text);
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.rfo-guide-export-btn:hover {
+  background: var(--panel-btn-hover);
+  color: var(--panel-accent);
+  border-color: var(--panel-accent-dim);
 }
 
 .rfo-guide-header h3 {
@@ -1338,6 +1367,8 @@ input[type="range"]::-webkit-slider-thumb {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+  user-select: text;
+  cursor: auto;
 }
 
 .rfo-guide-section {
@@ -1389,6 +1420,38 @@ input[type="range"]::-webkit-slider-thumb {
   padding: 10px 12px;
   overflow-x: auto;
   margin: 6px 0;
+  position: relative;
+}
+
+.rfo-guide-copy-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0, 80, 120, 0.5);
+  border: 1px solid rgba(0, 200, 255, 0.2);
+  color: var(--panel-text-dim);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s, background 0.2s;
+  z-index: 1;
+  user-select: none;
+}
+
+.rfo-guide-section pre:hover .rfo-guide-copy-btn {
+  opacity: 1;
+}
+
+.rfo-guide-copy-btn:hover {
+  color: var(--panel-accent);
+  background: rgba(0, 120, 180, 0.5);
+}
+
+.rfo-guide-copy-btn.copied {
+  color: var(--toast-success);
+  border-color: rgba(0, 232, 120, 0.3);
 }
 
 .rfo-guide-section code {
