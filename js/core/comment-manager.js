@@ -17,6 +17,7 @@ import { settings } from './settings.js';
 import { windowManager } from './window-manager.js';
 import { githubAuth } from './github-auth.js';
 import { pinStore } from './pin-store.js';
+import { setupImagePaste } from './image-upload.js';
 
 let pinCounter = 0;
 
@@ -308,6 +309,8 @@ class CommentManager {
         const replyBtn = replyWrap.querySelector('.comment-reply-btn');
         const replyInput = replyWrap.querySelector('.comment-reply-input');
 
+        setupImagePaste(replyInput);
+
         replyBtn.addEventListener('click', async () => {
           const text = replyInput.value.trim();
           if (!text) return;
@@ -359,6 +362,8 @@ class CommentManager {
       textarea.placeholder = 'Write your comment...';
       textarea.value = pin.text || '';
       card.appendChild(textarea);
+
+      setupImagePaste(textarea);
 
       const footer = document.createElement('div');
       footer.className = 'comment-card-footer';
