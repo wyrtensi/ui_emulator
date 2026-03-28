@@ -4,6 +4,8 @@
 export default {
   id: 'example-window',
   title: 'Example Window',
+  defaultPosition: { x: 200, y: 150, width: 380, height: 320 },
+  defaultOpen: false,
   dragHandle: '.example-header',
   resizable: {
     enabled: true,

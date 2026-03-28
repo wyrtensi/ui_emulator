@@ -1,6 +1,8 @@
 export default {
   id: 'chat-box',
   title: 'Chat',
+  defaultPosition: { x: 20, y: 755, width: 440, height: 240 },
+  defaultOpen: true,
   dragHandle: '.cb-tabs',
   resizable: {
     enabled: true,

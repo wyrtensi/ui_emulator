@@ -2,14 +2,21 @@
  * Window Config — _template
  *
  * Copy this folder, rename it to your window id (e.g. "inventory"),
- * update the fields below, and register in windows/manifest.json.
+ * update the fields below, and add the window id to windows/registry.json.
  *
  * See WINDOW.md for full documentation.
  */
 export default {
   /* ── Required ─────────────────────────────────────── */
-  id: '_template',           // Must match manifest id and folder name
+  id: '_template',           // Must match folder name and registry entry
   title: 'Template Window',  // Display name in menus and panel
+
+  /**
+   * Default position and size on the 1920×1080 viewport.
+   * Width/height are optional if CSS handles sizing.
+   */
+  defaultPosition: { x: 200, y: 150, width: 380, height: 320 },
+  defaultOpen: false,         // Whether visible on first load
 
   /**
    * CSS selector for the drag handle (relative to this window's container).

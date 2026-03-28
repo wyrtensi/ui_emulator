@@ -1,6 +1,8 @@
 export default {
   id: 'abilities',
   title: 'Abilities',
+  defaultPosition: { x: 1060, y: 160, width: 320, height: 420 },
+  defaultOpen: false,
   dragHandle: '.abl-header',
   resizable: {
     enabled: true,

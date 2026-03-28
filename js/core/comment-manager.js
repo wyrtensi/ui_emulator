@@ -29,6 +29,8 @@ class CommentManager {
     this._pinCountEl = null;
     this._toolbar = null;
     this._loading = false;
+    this._moveMode = false;     // owner-only pin dragging mode
+    this._moveDrag = null;      // active drag state {pin, pinEl, startX, startY, origX, origY, container}
   }
 
   init() {
@@ -79,12 +81,22 @@ class CommentManager {
       }
     });
 
+    // Move-pins toggle (owner only)
+    const moveBtn = document.getElementById('rfo-move-pins');
+    if (moveBtn) {
+      moveBtn.addEventListener('click', () => this._toggleMoveMode());
+    }
+
     // Close card when clicking outside
     document.addEventListener('pointerdown', (e) => {
       if (this._activeCard && !this._activeCard.contains(e.target) && !e.target.closest('.comment-pin')) {
         this._closeActiveCard();
       }
     });
+
+    // Move-mode drag handlers (bound once, gated by _moveMode)
+    document.addEventListener('pointermove', (e) => this._onMoveModeDrag(e));
+    document.addEventListener('pointerup', (e) => this._onMoveModeDrop(e));
   }
 
   /* ── Toast helper ────────────────────────────────── */
@@ -201,8 +213,28 @@ class CommentManager {
     pinEl.style.left = (pin.relativeX * 100) + '%';
     pinEl.style.top = (pin.relativeY * 100) + '%';
 
+    pinEl.addEventListener('pointerdown', (e) => {
+      if (this._moveMode && pin.issueNumber && githubAuth.isOwner) {
+        e.stopPropagation();
+        e.preventDefault();
+        this._closeActiveCard();
+        this._moveDrag = {
+          pin,
+          pinEl,
+          container: entry.container,
+          startX: e.clientX,
+          startY: e.clientY,
+          origX: pin.relativeX,
+          origY: pin.relativeY,
+        };
+        pinEl.classList.add('comment-pin-moving');
+        return;
+      }
+    });
+
     pinEl.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (this._moveMode) return; // don't open card in move mode
       this._openCard(pin, pinEl, entry.container);
     });
 
@@ -281,14 +313,32 @@ class CommentManager {
           if (!text) return;
           replyBtn.disabled = true;
           try {
-            const reply = await pinStore.addReply(pin.issueNumber, text);
-            const threadEl2 = card.querySelector('.comment-thread');
-            const emptyMsg = threadEl2.querySelector('.comment-thread-empty');
-            if (emptyMsg) emptyMsg.remove();
-            threadEl2.appendChild(this._renderReply(reply, pin));
-            replyInput.value = '';
-            pin.commentCount = (pin.commentCount || 0) + 1;
-            this._toast('Reply added', 'success');
+            // If pin body is empty, set this as the first message (update issue body)
+            if (!pin.text) {
+              await pinStore.updatePinBody(pin.issueNumber, pin.windowId, pin.relativeX, pin.relativeY, text);
+              pin.text = text;
+              // Show the message in the card
+              const threadEl2 = card.querySelector('.comment-thread');
+              const emptyMsg = threadEl2.querySelector('.comment-thread-empty');
+              if (emptyMsg) emptyMsg.remove();
+              // Insert first message above thread
+              const firstMsg = document.createElement('div');
+              firstMsg.className = 'comment-message';
+              firstMsg.textContent = text;
+              card.insertBefore(firstMsg, threadEl2);
+              replyInput.value = '';
+              this._updatePanelList();
+              this._toast('Comment saved', 'success');
+            } else {
+              const reply = await pinStore.addReply(pin.issueNumber, text);
+              const threadEl2 = card.querySelector('.comment-thread');
+              const emptyMsg = threadEl2.querySelector('.comment-thread-empty');
+              if (emptyMsg) emptyMsg.remove();
+              threadEl2.appendChild(this._renderReply(reply, pin));
+              replyInput.value = '';
+              pin.commentCount = (pin.commentCount || 0) + 1;
+              this._toast('Reply added', 'success');
+            }
           } catch {
             this._toast('Failed to post reply', 'error');
           } finally {
@@ -344,6 +394,27 @@ class CommentManager {
           this._removeLocalPin(pin.id);
         }
       });
+    }
+
+    // Owner moderation: resolve (complete) button
+    if (pin.issueNumber && githubAuth.isOwner) {
+      const resolveBtn = document.createElement('button');
+      resolveBtn.className = 'comment-resolve-btn';
+      resolveBtn.title = 'Mark as resolved';
+      resolveBtn.textContent = '✓';
+      resolveBtn.addEventListener('click', async () => {
+        try {
+          await pinStore.resolvePin(pin.issueNumber);
+          this._pins = this._pins.filter(p => p !== pin);
+          this._closeActiveCard();
+          this._rerenderAll();
+          this._updatePanelList();
+          this._toast('Pin resolved', 'success');
+        } catch {
+          this._toast('Failed to resolve pin', 'error');
+        }
+      });
+      header.insertBefore(resolveBtn, header.querySelector('.comment-delete'));
     }
 
     // Owner moderation: lock button
@@ -516,6 +587,61 @@ class CommentManager {
     this._closeActiveCard();
     this._rerenderAll();
     this._updatePanelList();
+  }
+
+  /* ── Move-pins mode (owner only) ──────────────────── */
+  _toggleMoveMode() {
+    if (!githubAuth.isOwner) {
+      this._toast('Only the repo owner can move pins', 'error');
+      return;
+    }
+    this._moveMode = !this._moveMode;
+    const btn = document.getElementById('rfo-move-pins');
+    if (btn) btn.classList.toggle('ct-btn-active', this._moveMode);
+
+    // Toggle visual class on all pin layers
+    document.querySelectorAll('.rfo-pins-layer').forEach(layer => {
+      layer.classList.toggle('rfo-pins-move-mode', this._moveMode);
+    });
+
+    this._toast(this._moveMode ? 'Move mode ON — drag pins to reposition' : 'Move mode OFF', 'info');
+  }
+
+  _onMoveModeDrag(e) {
+    if (!this._moveDrag) return;
+    const { pin, pinEl, container } = this._moveDrag;
+    const rect = container.getBoundingClientRect();
+    const relX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const relY = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+    pinEl.style.left = (relX * 100) + '%';
+    pinEl.style.top = (relY * 100) + '%';
+    this._moveDrag._newX = relX;
+    this._moveDrag._newY = relY;
+  }
+
+  async _onMoveModeDrop(e) {
+    if (!this._moveDrag) return;
+    const { pin, pinEl } = this._moveDrag;
+    const newX = this._moveDrag._newX;
+    const newY = this._moveDrag._newY;
+    pinEl.classList.remove('comment-pin-moving');
+
+    // If moved to a new position, update GitHub
+    if (newX !== undefined && (newX !== pin.relativeX || newY !== pin.relativeY)) {
+      try {
+        await pinStore.movePin(pin.issueNumber, pin.windowId, newX, newY, pin.text);
+        pin.relativeX = newX;
+        pin.relativeY = newY;
+        this._toast('Pin moved', 'success');
+      } catch {
+        // Revert position
+        pinEl.style.left = (pin.relativeX * 100) + '%';
+        pinEl.style.top = (pin.relativeY * 100) + '%';
+        this._toast('Failed to move pin', 'error');
+      }
+    }
+
+    this._moveDrag = null;
   }
 
   /* ── HTML escape helpers ─────────────────────────── */

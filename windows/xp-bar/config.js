@@ -1,6 +1,8 @@
 export default {
   id: 'xp-bar',
   title: 'XP Bar',
+  defaultPosition: { x: 650, y: 1000, width: 620, height: 50 },
+  defaultOpen: true,
   dragHandle: '.xp-container',
   resizable: {
     enabled: true,

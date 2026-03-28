@@ -1,6 +1,8 @@
 export default {
   id: 'inventory',
   title: 'Inventory',
+  defaultPosition: { x: 580, y: 130, width: 340, height: 380 },
+  defaultOpen: false,
   dragHandle: '.inv-header',
   resizable: {
     enabled: true,

@@ -7,7 +7,7 @@ Each window in the RFO UI Emulator is an independent module consisting of 3 file
 ```
 windows/
   my-window/
-    config.js       ← Module config (drag handle, resize, export definitions)
+    config.js       ← Module config (position, drag handle, resize, export definitions)
     template.html   ← HTML content of the window
     style.css       ← Window-specific styles (auto-scoped by core)
 ```
@@ -24,28 +24,28 @@ Copy the entire `windows/_template/` folder and rename it to your window's ID:
 windows/_template/  →  windows/inventory/
 ```
 
-The folder name **must match** the window's `id` in config.js and manifest.json.
+The folder name **must match** the window's `id` in config.js.
 
-### 2. Register in Manifest
+### 2. Register in Registry
 
-Add an entry to `windows/manifest.json`:
+Add your window's ID to `windows/registry.json`:
 
 ```json
-{
-  "id": "inventory",
-  "name": "Inventory",
-  "folder": "windows/inventory",
-  "defaultPosition": { "x": 100, "y": 100, "width": 400, "height": 500 },
-  "defaultOpen": false
-}
+[
+  "player-status",
+  "inventory"
+]
 ```
 
-Fields:
-- `id` — Unique identifier (use kebab-case)
-- `name` — Human-readable display name
-- `folder` — Relative path to the window folder (from project root)
-- `defaultPosition` — Initial position and size in pixels (at 1920×1080 base)
-- `defaultOpen` — Whether the window is open on first load
+That's it — no complex manifest needed. All metadata lives in your window's `config.js`.
+
+### 2b. Or Import Client-Side (No Git Required)
+
+You can also test your window without adding it to the repository:
+1. ZIP your 3 files (config.js, template.html, style.css)
+2. In the emulator, open the Control Panel (F2)
+3. Click **📥 Import Window** and select your ZIP
+4. The window loads instantly and persists in localStorage
 
 ### 3. Edit config.js
 
@@ -53,6 +53,8 @@ Fields:
 export default {
   id: 'inventory',
   title: 'Inventory',
+  defaultPosition: { x: 100, y: 100, width: 400, height: 500 },
+  defaultOpen: false,
   dragHandle: '.inventory-header',  // CSS selector for the drag zone
   resizable: {
     enabled: true,

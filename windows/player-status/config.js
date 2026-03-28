@@ -1,6 +1,8 @@
 export default {
   id: 'player-status',
   title: 'Player Status',
+  defaultPosition: { x: 20, y: 170, width: 380, height: 200 },
+  defaultOpen: true,
   dragHandle: '.ps-header',
   resizable: {
     enabled: false,

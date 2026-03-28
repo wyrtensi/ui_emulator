@@ -58,13 +58,17 @@ class PinStore {
     const pins = [];
     let page = 1;
 
+    // Use search API to find all [PIN] issues regardless of label
+    // (non-collaborators can't add labels, so label filter misses their pins)
     while (true) {
+      const q = encodeURIComponent(`repo:${repo} is:issue is:open "[PIN]" in:title`);
       const resp = await fetch(
-        `${API}/repos/${repo}/issues?labels=${encodeURIComponent(pinLabel)}&state=open&per_page=100&page=${page}`,
+        `${API}/search/issues?q=${q}&per_page=100&page=${page}`,
         { headers: this._headers(false) }
       );
       if (!resp.ok) throw new Error('Failed to load pins: ' + resp.status);
-      const issues = await resp.json();
+      const data = await resp.json();
+      const issues = data.items || [];
       if (issues.length === 0) break;
 
       for (const issue of issues) {
@@ -140,6 +144,46 @@ class PinStore {
       timestamp: c.created_at,
       canDelete: true,
     };
+  }
+
+  /* ── Update pin body (set first message text) ────── */
+
+  async updatePinBody(issueNumber, windowId, relX, relY, text) {
+    const meta = { windowId, relativeX: relX, relativeY: relY, v: 1 };
+    const body = `<!-- RFO_PIN ${JSON.stringify(meta)} -->\n\n${text}`;
+
+    const resp = await fetch(`${API}/repos/${repo}/issues/${issueNumber}`, {
+      method: 'PATCH',
+      headers: { ...this._headers(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body }),
+    });
+    if (!resp.ok) throw new Error('Failed to update pin body: ' + resp.status);
+  }
+
+  /* ── Move pin (update coordinates) ─────────────── */
+
+  async movePin(issueNumber, windowId, relX, relY, existingText) {
+    const meta = { windowId, relativeX: relX, relativeY: relY, v: 1 };
+    const body = `<!-- RFO_PIN ${JSON.stringify(meta)} -->\n\n${existingText || ''}`;
+    const title = `[PIN] ${windowId} | ${relX.toFixed(3)},${relY.toFixed(3)}`;
+
+    const resp = await fetch(`${API}/repos/${repo}/issues/${issueNumber}`, {
+      method: 'PATCH',
+      headers: { ...this._headers(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body }),
+    });
+    if (!resp.ok) throw new Error('Failed to move pin: ' + resp.status);
+  }
+
+  /* ── Resolve pin (close issue as completed) ──────── */
+
+  async resolvePin(issueNumber) {
+    const resp = await fetch(`${API}/repos/${repo}/issues/${issueNumber}`, {
+      method: 'PATCH',
+      headers: { ...this._headers(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: 'closed', state_reason: 'completed' }),
+    });
+    if (!resp.ok) throw new Error('Failed to resolve pin: ' + resp.status);
   }
 
   /* ── Delete pin (close issue) ────────────────────── */

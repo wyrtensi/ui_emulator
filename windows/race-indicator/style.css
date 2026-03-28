@@ -1,0 +1,162 @@
+/* ── Race Indicator ─────────────────────────────────── */
+.ri-indicator {
+  --ri-color: #00e5ff;
+  --ri-glow: rgba(0,229,255,0.5);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  user-select: none;
+}
+
+/* ── Ring assembly ─────────────────────────────────── */
+.ri-ring {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Invisible drag handle covering the ring area */
+.ri-drag-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: move;
+  z-index: 1;
+}
+
+.ri-ring-layer {
+  position: absolute;
+  border-radius: 50%;
+}
+
+/* Ambient glow layer */
+.ri-ring-glow {
+  width: 120px;
+  height: 120px;
+  border: 2px solid var(--ri-color);
+  box-shadow: 0 0 25px 10px var(--ri-glow), inset 0 0 20px 4px var(--ri-glow);
+  background: rgba(0,0,0,0.3);
+  animation: riAuthentic 3s ease-in-out infinite;
+  transition: border-color 0.4s, box-shadow 0.4s;
+}
+
+/* Spinning ring — visible on attack */
+.ri-ring-spin {
+  width: 115px;
+  height: 115px;
+  border: none;
+  opacity: 0;
+  transition: opacity 0.4s, border-color 0.4s;
+}
+
+[data-state="attack"] .ri-ring-spin {
+  border: 4px solid transparent;
+  border-bottom-color: var(--ri-color);
+  box-shadow: 0 5px 20px var(--ri-glow);
+  opacity: 1;
+  animation: riSpinFast 1.5s linear infinite;
+}
+
+/* Pulse ring — visible on warning */
+.ri-ring-pulse {
+  width: 100px;
+  height: 100px;
+  border: 3px solid var(--ri-color);
+  opacity: 0;
+  transition: opacity 0.4s, border-color 0.4s;
+}
+
+[data-state="warning"] .ri-ring-pulse {
+  opacity: 1;
+  animation: riRipple 1.2s cubic-bezier(0.1,0.6,0.4,1) infinite;
+}
+
+[data-state="attack"] .ri-ring-glow {
+  animation: riAuthentic 1.2s ease-in-out infinite;
+}
+
+[data-state="warning"] .ri-ring-glow {
+  animation: riAuthentic 0.8s ease-in-out infinite;
+}
+
+/* ── Logo ──────────────────────────────────────────── */
+.ri-logo-wrap {
+  position: relative;
+  z-index: 5;
+  width: 70px;
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  /* slight offset to visually center the asymmetric SVG */
+  transform: translate(4%, 5%);
+  pointer-events: auto;
+}
+
+.ri-logo {
+  width: 100%;
+  height: 100%;
+  color: var(--ri-color);
+  filter: drop-shadow(0 0 12px var(--ri-glow)) drop-shadow(0 0 4px var(--ri-color));
+  animation: riGlowPulse 1.5s ease-in-out infinite;
+  transition: color 0.4s, filter 0.4s;
+}
+
+[data-state="attack"] .ri-logo {
+  animation: riGlowPulse 0.6s ease-in-out infinite;
+}
+
+[data-state="warning"] .ri-logo {
+  animation: riGlowPulse 0.35s ease-in-out infinite;
+}
+
+/* ── State label ───────────────────────────────────── */
+.ri-state-label {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Rajdhani', 'Jura', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ri-color);
+  text-shadow: 0 0 6px var(--ri-glow);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: color 0.4s;
+}
+
+[data-state="safe"] .ri-state-label::after { content: 'SAFE'; }
+[data-state="attack"] .ri-state-label::after { content: 'ATTACK'; }
+[data-state="warning"] .ri-state-label::after { content: 'WARNING'; }
+
+/* ── Keyframes ─────────────────────────────────────── */
+@keyframes riAuthentic {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.04); opacity: 0.5; }
+}
+
+@keyframes riSpinFast {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes riRipple {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+@keyframes riGlowPulse {
+  0%, 100% { filter: drop-shadow(0 0 5px var(--ri-glow)); }
+  50% { filter: drop-shadow(0 0 25px var(--ri-color)); }
+}

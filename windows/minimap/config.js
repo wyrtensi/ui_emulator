@@ -1,6 +1,8 @@
 export default {
   id: 'minimap',
   title: 'Minimap',
+  defaultPosition: { x: 1660, y: 20, width: 240, height: 240 },
+  defaultOpen: true,
   dragHandle: '.mm-header',
   resizable: {
     enabled: true,

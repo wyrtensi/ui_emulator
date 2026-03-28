@@ -1,6 +1,6 @@
 /**
- * app.js v3 — Bootstrap: load manifest, init core managers, wire UI.
- * v3: GitHub auth integration, remote pin loading.
+ * app.js v4 — Bootstrap: load registry, init core managers, wire UI.
+ * v4: Per-window config (no central manifest), client-side window import.
  */
 
 import { settings } from './core/settings.js';
@@ -12,8 +12,9 @@ import { layoutManager } from './core/layout-manager.js';
 import { commentManager } from './core/comment-manager.js';
 import { exportManager } from './core/export-manager.js';
 import { githubAuth } from './core/github-auth.js';
+import { discussionManager } from './core/discussion-manager.js';
 
-let manifest = null;
+let manifest = null;  // built dynamically from registry + per-window configs
 let backgroundsList = [];
 
 /* ── Global toast function ────────────────────────────── */
@@ -34,9 +35,12 @@ async function boot() {
   const viewport = document.getElementById('rfo-viewport');
   const windowsLayer = document.getElementById('rfo-windows');
 
-  // 1. Load manifest
-  const resp = await fetch('windows/manifest.json');
-  manifest = await resp.json();
+  // 1. Load window registry (simple array of window IDs)
+  const regResp = await fetch('windows/registry.json');
+  const registry = await regResp.json();
+
+  // Build manifest from per-window configs
+  manifest = { windows: [] };
 
   // 2. Load backgrounds list
   try {
@@ -50,6 +54,7 @@ async function boot() {
   dragEngine.init(viewport);
   resizeEngine.init(viewport);
   commentManager.init();
+  discussionManager.init();
   layoutManager.init({ commentManager });
   exportManager.init();
 
@@ -58,10 +63,13 @@ async function boot() {
   githubAuth.onAuthChange(updateAuthUI);
   updateAuthUI(githubAuth.user);
 
-  // 4. Load each window module
-  for (const wDef of manifest.windows) {
-    await loadWindow(wDef, windowsLayer);
+  // 4. Load each window from registry
+  for (const windowId of registry) {
+    await loadWindowById(windowId, windowsLayer);
   }
+
+  // 4b. Restore any imported windows from localStorage
+  restoreImportedWindows(windowsLayer);
 
   // 5. Init context menu (needs manifest)
   contextMenu.init({
@@ -107,17 +115,38 @@ async function boot() {
 /* ═══════════════════════════════════════════════════════
    WINDOW LOADER
    ═══════════════════════════════════════════════════════ */
-async function loadWindow(wDef, windowsLayer) {
-  const folder = wDef.folder;
+async function loadWindowById(windowId, windowsLayer) {
+  const folder = `windows/${windowId}`;
 
   const configModule = await import(`../${folder}/config.js`);
   const config = configModule.default;
 
+  // Build wDef from config (per-window manifest)
+  const wDef = {
+    id: config.id,
+    name: config.title,
+    folder,
+    defaultPosition: config.defaultPosition || { x: 100, y: 100, width: 300, height: 200 },
+    defaultOpen: config.defaultOpen ?? false,
+  };
+  manifest.windows.push(wDef);
+
+  await _mountWindow(wDef, config, folder, windowsLayer);
+}
+
+/** Mount a window given its wDef, config, folder path, and DOM layer */
+async function _mountWindow(wDef, config, folder, windowsLayer) {
   const htmlResp = await fetch(`${folder}/template.html`);
   const htmlText = await htmlResp.text();
 
   const cssResp = await fetch(`${folder}/style.css`);
   const cssText = await cssResp.text();
+
+  _injectWindow(wDef, config, htmlText, cssText, windowsLayer);
+}
+
+/** Inject window from raw strings (used by both file-based and imported). */
+function _injectWindow(wDef, config, htmlText, cssText, windowsLayer) {
   const scopedCSS = scopeCSS(cssText, wDef.id);
 
   const styleEl = document.createElement('style');
@@ -148,6 +177,153 @@ async function loadWindow(wDef, windowsLayer) {
     config.init(container);
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   CLIENT-SIDE WINDOW IMPORT
+   ═══════════════════════════════════════════════════════ */
+const IMPORT_STORAGE_KEY = 'rfo_imported_windows';
+
+/** Import a window from user-provided files (ZIP or individual files). */
+async function importWindowFromFiles(files) {
+  let configText = '', htmlText = '', cssText = '';
+
+  // Check if it's a ZIP file
+  if (files.length === 1 && files[0].name.toLowerCase().endsWith('.zip')) {
+    if (typeof JSZip === 'undefined') {
+      window.rfoToast('JSZip not loaded', 'error');
+      return;
+    }
+    const zip = await JSZip.loadAsync(files[0]);
+
+    // Find files — may be at root or inside a subfolder
+    for (const [path, entry] of Object.entries(zip.files)) {
+      if (entry.dir) continue;
+      const name = path.split('/').pop().toLowerCase();
+      if (name === 'config.js') configText = await entry.async('string');
+      else if (name === 'template.html') htmlText = await entry.async('string');
+      else if (name === 'style.css') cssText = await entry.async('string');
+    }
+  } else {
+    // Individual files
+    for (const file of files) {
+      const name = file.name.toLowerCase();
+      const text = await file.text();
+      if (name === 'config.js') configText = text;
+      else if (name === 'template.html') htmlText = text;
+      else if (name === 'style.css') cssText = text;
+    }
+  }
+
+  if (!configText) {
+    window.rfoToast('config.js not found in import', 'error');
+    return;
+  }
+  if (!htmlText) {
+    window.rfoToast('template.html not found in import', 'error');
+    return;
+  }
+
+  // Parse config.js via blob URL dynamic import
+  const blob = new Blob([configText], { type: 'application/javascript' });
+  const blobUrl = URL.createObjectURL(blob);
+  let config;
+  try {
+    const mod = await import(blobUrl);
+    config = mod.default;
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
+
+  if (!config || !config.id) {
+    window.rfoToast('Invalid config.js — missing id', 'error');
+    return;
+  }
+
+  // Check for duplicate
+  if (windowManager.get(config.id)) {
+    window.rfoToast(`Window "${config.id}" already exists`, 'error');
+    return;
+  }
+
+  const wDef = {
+    id: config.id,
+    name: config.title || config.id,
+    folder: `_imported/${config.id}`,
+    defaultPosition: config.defaultPosition || { x: 100, y: 100, width: 380, height: 320 },
+    defaultOpen: true,
+    _imported: true,
+  };
+
+  manifest.windows.push(wDef);
+
+  const windowsLayer = document.getElementById('rfo-windows');
+  _injectWindow(wDef, config, htmlText, cssText || '', windowsLayer);
+  windowManager.open(wDef.id);
+
+  // Persist to localStorage so it survives refresh
+  _saveImportedWindow(config.id, configText, htmlText, cssText);
+
+  // Rebuild windows list in panel
+  _rebuildWindowsList();
+
+  window.rfoToast(`Window "${config.title || config.id}" imported!`, 'success');
+}
+
+function _saveImportedWindow(id, configText, htmlText, cssText) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(IMPORT_STORAGE_KEY) || '{}');
+    stored[id] = { configText, htmlText, cssText };
+    localStorage.setItem(IMPORT_STORAGE_KEY, JSON.stringify(stored));
+  } catch { /* storage full — non-critical */ }
+}
+
+function _removeImportedWindow(id) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(IMPORT_STORAGE_KEY) || '{}');
+    delete stored[id];
+    localStorage.setItem(IMPORT_STORAGE_KEY, JSON.stringify(stored));
+  } catch {}
+}
+
+async function restoreImportedWindows(windowsLayer) {
+  let stored;
+  try {
+    stored = JSON.parse(localStorage.getItem(IMPORT_STORAGE_KEY) || '{}');
+  } catch { return; }
+
+  for (const [id, data] of Object.entries(stored)) {
+    if (windowManager.get(id)) continue; // already loaded from registry
+
+    // Parse config.js
+    const blob = new Blob([data.configText], { type: 'application/javascript' });
+    const blobUrl = URL.createObjectURL(blob);
+    let config;
+    try {
+      const mod = await import(blobUrl);
+      config = mod.default;
+    } catch {
+      console.warn(`[Import] Failed to restore window "${id}"`);
+      continue;
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
+
+    const wDef = {
+      id: config.id,
+      name: config.title || config.id,
+      folder: `_imported/${config.id}`,
+      defaultPosition: config.defaultPosition || { x: 100, y: 100, width: 380, height: 320 },
+      defaultOpen: false,
+      _imported: true,
+    };
+
+    manifest.windows.push(wDef);
+    _injectWindow(wDef, config, data.htmlText, data.cssText || '', windowsLayer);
+  }
+}
+
+/** Expose for rebuildWindowsList after import */
+let _rebuildWindowsList = () => {};
 
 function scopeCSS(cssText, windowId) {
   const scope = `[data-window-id="${windowId}"]`;
@@ -198,6 +374,18 @@ function wireControlPanel() {
   toggleBtn.addEventListener('click', () => panel.classList.toggle('closed'));
   closeBtn.addEventListener('click', () => panel.classList.add('closed'));
 
+  // ── Guide dialog ──────────────────────────────────
+  const guideBtn = document.getElementById('rfo-guide-btn');
+  const guideOverlay = document.getElementById('rfo-guide-overlay');
+  const guideClose = document.getElementById('rfo-guide-close');
+  if (guideBtn && guideOverlay) {
+    guideBtn.addEventListener('click', () => { guideOverlay.hidden = false; });
+    guideClose?.addEventListener('click', () => { guideOverlay.hidden = true; });
+    guideOverlay.addEventListener('click', (e) => {
+      if (e.target === guideOverlay) guideOverlay.hidden = true;
+    });
+  }
+
   // ── Mode buttons ──────────────────────────────────
   const modeButtons = document.querySelectorAll('.mode-btn');
   const exportPanel = document.getElementById('rfo-export-panel');
@@ -237,8 +425,20 @@ function wireControlPanel() {
   }
 
   buildWindowsList();
+  _rebuildWindowsList = buildWindowsList; // expose for import
   windowManager.on('window:opened', buildWindowsList);
   windowManager.on('window:closed', buildWindowsList);
+
+  // ── Import Window ─────────────────────────────────
+  const importFile = document.getElementById('rfo-import-file');
+  if (importFile) {
+    importFile.addEventListener('change', async (e) => {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+      await importWindowFromFiles(files);
+      importFile.value = '';
+    });
+  }
 
   // ── Open All / Close All ──────────────────────────
   document.getElementById('rfo-open-all')?.addEventListener('click', () => {

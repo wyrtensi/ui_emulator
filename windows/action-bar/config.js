@@ -1,6 +1,8 @@
 export default {
   id: 'action-bar',
   title: 'Action Bar',
+  defaultPosition: { x: 698, y: 780, width: 524, height: 190 },
+  defaultOpen: true,
   dragHandle: '.ab-move-btn',
   resizable: {
     enabled: false,

@@ -1,6 +1,8 @@
 export default {
   id: 'character',
   title: 'Character',
+  defaultPosition: { x: 390, y: 130, width: 340, height: 480 },
+  defaultOpen: false,
   dragHandle: '.char-header',
   resizable: {
     enabled: true,
