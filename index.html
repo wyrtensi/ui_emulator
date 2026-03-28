@@ -11,6 +11,11 @@
 </head>
 <body>
 
+  <!-- ═══ LOADING OVERLAY ═══ -->
+  <div id="rfo-loading-screen">
+    <div class="loader-content">Loading...</div>
+  </div>
+
   <!-- ═══ VIEWPORT ═══ -->
   <div id="rfo-viewport">
     <div id="rfo-background"></div>
@@ -58,6 +63,9 @@
       <circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
     </svg>
   </button>
+  <div id="rfo-panel-arrow" hidden>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 19 12 12 5"></polyline></svg>
+  </div>
 
   <!-- ═══ FLOATING AUTH BADGE (always visible, top-right) ═══ -->
   <div id="rfo-auth-badge">

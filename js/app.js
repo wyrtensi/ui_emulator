@@ -106,6 +106,27 @@ async function boot() {
   // 9. Load remote pins from GitHub (non-blocking)
   commentManager.loadRemotePins().catch(() => {});
 
+  // 10. Hide loading screen and open all windows initially
+  const loadingScreen = document.getElementById('rfo-loading-screen');
+  if (loadingScreen) {
+    loadingScreen.classList.add('hidden');
+    setTimeout(() => loadingScreen.remove(), 500); // Wait for transition
+  }
+
+  // Open all windows
+  for (const w of windowManager.getAll()) {
+    windowManager.open(w.id);
+  }
+
+  // 11. Show panel arrow briefly
+  const arrow = document.getElementById('rfo-panel-arrow');
+  if (arrow) {
+    arrow.removeAttribute('hidden');
+    setTimeout(() => {
+      arrow.setAttribute('hidden', '');
+    }, 2000);
+  }
+
   console.log('[RFO UI Emulator] Ready —', manifest.windows.length, 'windows loaded');
 }
 
