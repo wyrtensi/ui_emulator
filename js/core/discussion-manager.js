@@ -295,12 +295,27 @@ class DiscussionManager {
   }
 
   _escAndLinkify(text) {
-    // Escape first, then linkify URLs
-    const escaped = this._esc(text);
-    return escaped.replace(
+    const images = [];
+    const textWithPlaceholders = (text || '').replace(/<img\s+[^>]*src="([^"]+)"[^>]*>/gi, (match, src) => {
+      images.push(src);
+      return `__IMG_PLACEHOLDER_${images.length - 1}__`;
+    });
+
+    let escaped = this._esc(textWithPlaceholders);
+
+    // Linkify URLs
+    escaped = escaped.replace(
       /(https?:\/\/[^\s<]+)/g,
       '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
     );
+
+    // Re-inject images safely
+    escaped = escaped.replace(/__IMG_PLACEHOLDER_(\d+)__/g, (match, idx) => {
+      const safeSrc = this._escAttr(images[idx]);
+      return `<img src="${safeSrc}" alt="Image" loading="lazy" />`;
+    });
+
+    return escaped;
   }
 }
 

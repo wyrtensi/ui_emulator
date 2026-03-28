@@ -897,6 +897,35 @@ function _buildGuideMD() {
 }
 
 /* ═══════════════════════════════════════════════════════
+   IMAGE ZOOM MODAL (Global click handler)
+   ═══════════════════════════════════════════════════════ */
+document.addEventListener('click', (e) => {
+  if (e.target.tagName === 'IMG') {
+    const isZoomable = e.target.closest('.rfo-discussion-text') ||
+                       e.target.closest('.comment-message') ||
+                       e.target.closest('.comment-reply-text');
+    if (isZoomable) {
+      const modal = document.getElementById('rfo-image-modal');
+      const img = document.getElementById('rfo-image-modal-img');
+      if (modal && img) {
+        img.src = e.target.src;
+        modal.hidden = false;
+      }
+    }
+  }
+
+  // Close modal logic
+  if (e.target.id === 'rfo-image-modal-close' || e.target.classList.contains('rfo-image-modal-backdrop')) {
+    const modal = document.getElementById('rfo-image-modal');
+    const img = document.getElementById('rfo-image-modal-img');
+    if (modal && img) {
+      modal.hidden = true;
+      img.src = '';
+    }
+  }
+});
+
+/* ═══════════════════════════════════════════════════════
    START
    ═══════════════════════════════════════════════════════ */
 boot().catch(err => console.error('[RFO UI Emulator] Boot failed:', err));
