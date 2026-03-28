@@ -4,15 +4,13 @@
     font-family: 'Jura', sans-serif;
     color: #ffffff;
     user-select: none;
-    --text-main: #ffffff;
-    --text-dim: #a0aab5;
 }
 
 .top-bar {
     display: flex;
     height: 65px;
     position: relative;
-    width: 250px;
+    width: 100%;
     filter: drop-shadow(0 15px 25px rgba(0,0,0,0.6));
 }
 

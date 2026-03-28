@@ -1,30 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Jura:wght@500;600;700&display=swap');
 
 :host {
-    /* Futuristic Neon Theme Colors */
-    --hp-rgb: 235, 64, 64;
-    --hp-border: rgb(var(--hp-rgb));
-    --hp-bg: rgba(40, 10, 10, 0.6);
-    --hp-glow: rgba(235, 64, 64, 0.5);
-
-    --fp-rgb: 79, 195, 247;
-    --fp-border: rgb(var(--fp-rgb));
-    --fp-bg: rgba(10, 30, 45, 0.6);
-    --fp-glow: rgba(79, 195, 247, 0.5);
-
-    --sp-rgb: 250, 210, 52;
-    --sp-border: rgb(var(--sp-rgb));
-    --sp-bg: rgba(40, 35, 10, 0.6);
-    --sp-glow: rgba(250, 210, 52, 0.5);
-
-    --def-rgb: 210, 210, 210;
-    --def-border: rgb(var(--def-rgb));
-    --def-bg: rgba(30, 30, 30, 0.6);
-    --def-glow: rgba(210, 210, 210, 0.4);
-
-    --text-main: #ffffff;
-    --text-dim: #a0aab5;
-
     font-family: 'Jura', sans-serif;
     color: #ffffff;
     user-select: none;
@@ -45,7 +21,8 @@
     background-size: 12px 12px;
     background-repeat: no-repeat;
     filter: drop-shadow(0 15px 25px rgba(0,0,0,0.6));
-    width: fit-content;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .bars-container {
@@ -60,9 +37,6 @@
     position: relative;
     display: flex;
     align-items: center;
-    background-color: var(--bg-color);
-    border: 1px solid rgba(var(--border-rgb), 0.5);
-    box-shadow: 0 0 10px rgba(var(--border-rgb), 0.2), inset 0 0 15px rgba(0,0,0,0.8);
     overflow: hidden;
     /* Tech grid in the empty space */
     background-image:
@@ -71,13 +45,12 @@
     background-size: 6px 6px;
 }
 
-/* Glowing Bar Fill */
+/* Glowing Bar Fill Base */
 .hud-fill {
     height: 100%;
     position: absolute;
     top: 0; left: 0;
     z-index: 1;
-    background: linear-gradient(90deg, rgba(var(--border-rgb), 0.3) 0%, rgba(var(--border-rgb), 0.9) 100%);
     box-shadow: inset 0 0 10px rgba(255,255,255,0.3);
     /* Sci-fi slanted stripes inside the fill */
     background-image: repeating-linear-gradient(
@@ -87,17 +60,6 @@
         rgba(0, 0, 0, 0.15) 8px,
         rgba(0, 0, 0, 0.15) 16px
     );
-}
-
-/* Bright Leading Edge Power Indicator */
-.hud-fill::after {
-    content: '';
-    position: absolute;
-    right: 0; top: 0; bottom: 0;
-    width: 3px;
-    background: #ffffff;
-    box-shadow: 0 0 8px #ffffff, 0 0 15px rgb(var(--border-rgb));
-    border-radius: 2px;
 }
 
 /* Content Layer (Z-index above fill) */
@@ -125,13 +87,7 @@
 .hud-label svg {
     width: 16px;
     height: 16px;
-    filter: drop-shadow(0 0 4px rgb(var(--border-rgb)));
-    fill: rgb(var(--border-rgb));
 }
-
-/* Specific Icon Overrides */
-.hp-bar .hud-label svg { fill: #ff6b6b; }
-.fp-bar .hud-label svg { fill: #81d4fa; }
 
 .hud-value {
     font-size: 17px;
@@ -139,22 +95,97 @@
     text-shadow: 1px 1px 0px rgba(0,0,0,0.9), 0 0 5px rgba(0,0,0,0.6);
 }
 
-.hud-value .current { color: var(--text-main); }
-.hud-value .separator { color: var(--text-dim); margin: 0 3px; font-weight: 500;}
-.hud-value .max { color: var(--text-dim); }
+.hud-value .current { color: #ffffff; }
+.hud-value .separator { color: #a0aab5; margin: 0 3px; font-weight: 500;}
+.hud-value .max { color: #a0aab5; }
 
-/* Specific Bar Configurations */
-.hp-bar { width: 400px; --border-rgb: var(--hp-rgb); --bg-color: var(--hp-bg); }
-.hp-bar .hud-fill { width: 97.8%; background-color: rgb(var(--hp-rgb)); }
+/* ------------------------------------- */
+/* Specific Bar Configurations           */
+/* ------------------------------------- */
 
-.fp-bar { width: 340px; --border-rgb: var(--fp-rgb); --bg-color: var(--fp-bg); }
-.fp-bar .hud-fill { width: 98.5%; background-color: rgb(var(--fp-rgb)); }
+/* HP Bar (Red) */
+.hp-bar {
+    width: 400px;
+    background-color: rgba(40, 10, 10, 0.6);
+    border: 1px solid rgba(235, 64, 64, 0.5);
+    box-shadow: 0 0 10px rgba(235, 64, 64, 0.2), inset 0 0 15px rgba(0,0,0,0.8);
+}
+.hp-bar .hud-fill {
+    width: 97.8%;
+    background-color: rgb(235, 64, 64);
+    background-image: linear-gradient(90deg, rgba(235, 64, 64, 0.3) 0%, rgba(235, 64, 64, 0.9) 100%),
+        repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(0, 0, 0, 0.15) 8px, rgba(0, 0, 0, 0.15) 16px);
+}
+.hp-bar .hud-fill::after {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 3px;
+    background: #ffffff; box-shadow: 0 0 8px #ffffff, 0 0 15px rgb(235, 64, 64); border-radius: 2px;
+}
+.hp-bar .hud-label svg {
+    fill: #ff6b6b; filter: drop-shadow(0 0 4px rgb(235, 64, 64));
+}
 
-.sp-bar { width: 230px; --border-rgb: var(--sp-rgb); --bg-color: var(--sp-bg); }
-.sp-bar .hud-fill { width: 88.8%; background-color: rgb(var(--sp-rgb)); }
+/* FP Bar (Blue) */
+.fp-bar {
+    width: 340px;
+    background-color: rgba(10, 30, 45, 0.6);
+    border: 1px solid rgba(79, 195, 247, 0.5);
+    box-shadow: 0 0 10px rgba(79, 195, 247, 0.2), inset 0 0 15px rgba(0,0,0,0.8);
+}
+.fp-bar .hud-fill {
+    width: 98.5%;
+    background-color: rgb(79, 195, 247);
+    background-image: linear-gradient(90deg, rgba(79, 195, 247, 0.3) 0%, rgba(79, 195, 247, 0.9) 100%),
+        repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(0, 0, 0, 0.15) 8px, rgba(0, 0, 0, 0.15) 16px);
+}
+.fp-bar .hud-fill::after {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 3px;
+    background: #ffffff; box-shadow: 0 0 8px #ffffff, 0 0 15px rgb(79, 195, 247); border-radius: 2px;
+}
+.fp-bar .hud-label svg {
+    fill: #81d4fa; filter: drop-shadow(0 0 4px rgb(79, 195, 247));
+}
 
-.def-bar { width: 220px; --border-rgb: var(--def-rgb); --bg-color: var(--def-bg); }
-.def-bar .hud-fill { width: 95.2%; background-color: rgb(var(--def-rgb)); }
+/* SP Bar (Yellow) */
+.sp-bar {
+    width: 230px;
+    background-color: rgba(40, 35, 10, 0.6);
+    border: 1px solid rgba(250, 210, 52, 0.5);
+    box-shadow: 0 0 10px rgba(250, 210, 52, 0.2), inset 0 0 15px rgba(0,0,0,0.8);
+}
+.sp-bar .hud-fill {
+    width: 88.8%;
+    background-color: rgb(250, 210, 52);
+    background-image: linear-gradient(90deg, rgba(250, 210, 52, 0.3) 0%, rgba(250, 210, 52, 0.9) 100%),
+        repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(0, 0, 0, 0.15) 8px, rgba(0, 0, 0, 0.15) 16px);
+}
+.sp-bar .hud-fill::after {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 3px;
+    background: #ffffff; box-shadow: 0 0 8px #ffffff, 0 0 15px rgb(250, 210, 52); border-radius: 2px;
+}
+.sp-bar .hud-label svg {
+    fill: rgb(250, 210, 52); filter: drop-shadow(0 0 4px rgb(250, 210, 52));
+}
+
+/* DEF Bar (White/Grey) */
+.def-bar {
+    width: 220px;
+    background-color: rgba(30, 30, 30, 0.6);
+    border: 1px solid rgba(210, 210, 210, 0.5);
+    box-shadow: 0 0 10px rgba(210, 210, 210, 0.2), inset 0 0 15px rgba(0,0,0,0.8);
+}
+.def-bar .hud-fill {
+    width: 95.2%;
+    background-color: rgb(210, 210, 210);
+    background-image: linear-gradient(90deg, rgba(210, 210, 210, 0.3) 0%, rgba(210, 210, 210, 0.9) 100%),
+        repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(0, 0, 0, 0.15) 8px, rgba(0, 0, 0, 0.15) 16px);
+}
+.def-bar .hud-fill::after {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 3px;
+    background: #ffffff; box-shadow: 0 0 8px #ffffff, 0 0 15px rgb(210, 210, 210); border-radius: 2px;
+}
+.def-bar .hud-label svg {
+    fill: rgb(210, 210, 210); filter: drop-shadow(0 0 4px rgb(210, 210, 210));
+}
 
 /* Scanning overlay effect across all bars */
 .scanline {
