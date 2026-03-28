@@ -88,22 +88,16 @@ rfo_ui_emulator/
 
 ## Creating a New Window
 
-1. Copy `windows/_template/` to `windows/my-window/`
-2. Edit the three files:
-   - **config.js** — export `id`, `title`, `dragHandle` selector, `resizable` settings, `exports[]` for image export, and optional `init(container)` function
-   - **template.html** — the window's inner HTML (wrap in a root div with a data-export attribute)
-   - **style.css** — styles scoped with `[data-window-id="my-window"]` attribute selector
-3. Register in `windows/manifest.json`:
+1. Read the full guide at **[HOW_TO_CREATE_WINDOWS.md](HOW_TO_CREATE_WINDOWS.md)**.
+2. Copy `windows/_template/` to `windows/my-window/`
+3. Edit the three files (`config.js`, `template.html`, `style.css`)
+4. Register your window in `windows/registry.json`:
    ```json
-   {
-     "id": "my-window",
-     "name": "My Window",
-     "folder": "windows/my-window",
-     "defaultPosition": { "x": 100, "y": 100, "width": 300, "height": 200 },
-     "defaultOpen": true
-   }
+   [
+     "my-window"
+   ]
    ```
-4. Reload the page — the window manager picks it up automatically.
+5. Reload the page — the window manager picks it up automatically.
 
 ## Keyboard Shortcuts
 

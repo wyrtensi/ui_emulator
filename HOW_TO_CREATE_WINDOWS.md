@@ -47,6 +47,15 @@ You can also test your window without adding it to the repository:
 3. Click **📥 Import Window** and select your ZIP
 4. The window loads instantly and persists in localStorage
 
+### 2c. Or Import from GitHub Repository (Branch)
+
+You can import custom windows directly from a GitHub repository using a branch URL:
+1. Ensure your custom windows are in their own folders (e.g., `my-window/`) containing `config.js`, `template.html`, and `style.css`.
+2. Push them to a GitHub repository branch.
+3. In the emulator, open the Control Panel (F2).
+4. Enter the GitHub branch URL (e.g., `https://github.com/{user}/{repo}/tree/{branch}`) and click **Import from GitHub**.
+5. The emulator will automatically fetch and load all valid windows from that branch into your local instance.
+
 ### 3. Edit config.js
 
 ```js
@@ -78,6 +87,7 @@ export default {
 Write your window's HTML. Important attributes:
 
 ```html
+<!-- Wrapper for the full window export -->
 <div class="inventory-container" data-export="inventory-full">
   <!-- This is the drag handle (matches config.dragHandle) -->
   <div class="inventory-header">
@@ -86,8 +96,11 @@ Write your window's HTML. Important attributes:
   </div>
 
   <!-- Mark individual exportable elements -->
-  <div class="inv-grid" data-export="inv-grid">
-    <div class="inv-cell" data-export="inv-cell">...</div>
+  <!-- IMPORTANT: Use padded wrappers for elements with box-shadows, drop-shadows, or clip-paths -->
+  <div data-export="inv-grid" style="padding: 10px; margin: -10px;">
+    <div class="inv-grid">
+      <div class="inv-cell">...</div>
+    </div>
   </div>
 </div>
 ```
@@ -126,16 +139,27 @@ Write plain CSS — **no scoping needed**. The core loader automatically prefixe
 - The name is used in the export filename: `{window-id}_{name}_{scale}x.png`
 - In Export Mode, these elements get highlighted and become clickable for instant download
 
-### Export Groups (`data-export-group`)
-When multiple separate DOM elements should be captured as **one image**, wrap them:
+### IMPORTANT FOR AI AGENTS: Preventing Visual Clipping on Export
+When `html2canvas` generates PNG exports, it strictly crops to the bounding box of the element marked with `data-export`.
+**If your element uses `box-shadow`, `drop-shadow()`, thick borders, or `clip-path` effects that extend beyond its standard bounding box, they WILL BE CUT OFF.**
 
+**To fix this, you must wrap the target element in a padded container and move the `data-export` attribute to the wrapper.**
+
+**Incorrect:**
 ```html
-<div data-export-group="stats-block" data-export="stats-block">
-  <div class="attack">1971</div>
-  <div class="defense">1529</div>
-  <!-- These two export together as one PNG -->
+<!-- The glow shadow will be cut off! -->
+<div class="glowing-orb" data-export="orb"></div>
+```
+
+**Correct:**
+```html
+<!-- The wrapper gives 15px of breathing room on all sides so the shadow is captured.
+     The negative margin ensures it doesn't break the layout flow. -->
+<div data-export="orb" style="padding: 15px; margin: -15px;">
+  <div class="glowing-orb"></div>
 </div>
 ```
+Always use this padded wrapper pattern when defining `data-export` regions for elements that have visual overlap, glows, or borders.
 
 ### CSS Scoping Rules
 - The loader prefixes ALL your CSS selectors with `[data-window-id="your-id"]`
@@ -228,6 +252,7 @@ export default {
 - [ ] Folder created under `windows/` with matching name
 - [ ] `config.js` exports valid config with `id`, `title`, `dragHandle`
 - [ ] `template.html` contains the window HTML with `data-export` attributes
+- [ ] Visual elements marked for export are wrapped in padded containers to prevent clipping
 - [ ] `style.css` uses class selectors (no IDs, no `!important` unless necessary)
-- [ ] Entry added to `windows/manifest.json`
+- [ ] Entry added to `windows/registry.json`
 - [ ] Tested: window opens, drags, resizes, exports elements
