@@ -1804,3 +1804,55 @@ input[type="range"]::-webkit-slider-thumb {
   opacity: 0.4;
   cursor: default;
 }
+/* Optional styles for Discussion Manager additions */
+.rfo-discussion-msg-del {
+  background: none;
+  border: none;
+  color: #ff4c4c;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 8px;
+  padding: 0;
+}
+.rfo-discussion-msg-del:hover {
+  color: #ff0000;
+}
+
+.rfo-discussion-reactions {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.rfo-discussion-reaction {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 12px;
+  padding: 2px 6px;
+  font-size: 10px;
+  cursor: pointer;
+  color: #ccc;
+  user-select: none;
+}
+.rfo-discussion-reaction:hover {
+  background: #333;
+}
+.rfo-discussion-reaction.active {
+  background: #1a3a5a;
+  border-color: #3a7aca;
+  color: #fff;
+}
+.rfo-discussion-reaction-add {
+  background: none;
+  border: 1px dashed #666;
+  border-radius: 12px;
+  padding: 2px 6px;
+  font-size: 10px;
+  cursor: pointer;
+  color: #888;
+  user-select: none;
+}
+.rfo-discussion-reaction-add:hover {
+  border-color: #aaa;
+  color: #ccc;
+}
