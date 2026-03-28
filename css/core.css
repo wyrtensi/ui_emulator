@@ -420,7 +420,7 @@ body[data-mode="comment"] #rfo-mode-indicator {
   position: fixed;
   top: 0;
   right: 0;
-  width: var(--panel-width);
+  width: calc(var(--panel-width) + 120px);
   height: 100vh;
   z-index: var(--z-panel);
   background: var(--panel-bg);
@@ -451,6 +451,10 @@ body[data-mode="comment"] #rfo-mode-indicator {
   font-weight: 700;
   color: var(--panel-accent);
   letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .panel-header button {
@@ -1269,8 +1273,10 @@ input[type="range"]::-webkit-slider-thumb {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
+  width: auto;
   height: 26px;
+  padding: 0 10px;
+  gap: 6px;
   background: none;
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 4px;
