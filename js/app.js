@@ -349,9 +349,9 @@ function scopeCSS(cssText, windowId) {
    MODE INDICATOR
    ═══════════════════════════════════════════════════════ */
 const modeInfo = {
-  design:  { icon: '🎨', label: 'Design Mode' },
-  export:  { icon: '📸', label: 'Export Mode' },
-  comment: { icon: '💬', label: 'Comment Mode' },
+  design:  { icon: '<svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>', label: 'Design Mode' },
+  export:  { icon: '<svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>', label: 'Export Mode' },
+  comment: { icon: '<svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>', label: 'Comment Mode' },
 };
 
 function updateModeIndicator(mode) {
@@ -359,7 +359,7 @@ function updateModeIndicator(mode) {
   const indicator = document.getElementById('rfo-mode-indicator');
   if (!indicator) return;
   const info = modeInfo[mode] || modeInfo.design;
-  indicator.querySelector('.mode-icon').textContent = info.icon;
+  indicator.querySelector('.mode-icon').innerHTML = info.icon;
   indicator.querySelector('.mode-label').textContent = info.label;
 }
 
@@ -737,11 +737,11 @@ function updateAuthUI(user) {
     if (userEl) userEl.classList.remove('hidden');
     if (avatarEl) avatarEl.src = user.avatar_url;
     if (nameEl) nameEl.textContent = user.login;
-    if (hintEl) hintEl.textContent = '💬 Double-click on any window to add a comment pin';
+    if (hintEl) hintEl.innerHTML = '<svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Double-click on any window to add a comment pin';
   } else {
     if (loginBtn) loginBtn.classList.remove('hidden');
     if (userEl) userEl.classList.add('hidden');
-    if (hintEl) hintEl.textContent = '💬 Sign in with GitHub to leave comment pins';
+    if (hintEl) hintEl.innerHTML = '<svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Sign in with GitHub to leave comment pins';
   }
 }
 

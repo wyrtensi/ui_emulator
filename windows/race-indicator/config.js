@@ -1,7 +1,7 @@
 export default {
   id: 'race-indicator',
   title: 'Race Indicator',
-  defaultPosition: { x: 20, y: 20, width: 140, height: 140 },
+  defaultPosition: { x: 890, y: 10, width: 140, height: 140 },
   defaultOpen: true,
   dragHandle: '.ri-drag-ring',
   resizable: { enabled: false },

@@ -1,7 +1,7 @@
 export default {
   id: 'target-info',
   title: 'Target Info',
-  defaultPosition: { x: 170, y: 25, width: 380, height: 110 },
+  defaultPosition: { x: 1100, y: 45, width: 380, height: 110 },
   defaultOpen: true,
   dragHandle: '.ti-header',
   resizable: {

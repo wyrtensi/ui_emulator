@@ -69,6 +69,15 @@ body {
   user-select: none;
 }
 
+/* ── SVG inline icon ───────────────────────────────── */
+.si {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  vertical-align: -2px;
+  flex-shrink: 0;
+}
+
 /* ── Viewport ──────────────────────────────────────── */
 #rfo-viewport {
   position: absolute;

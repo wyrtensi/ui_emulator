@@ -36,7 +36,7 @@
   border-radius: 50%;
 }
 
-/* Ambient glow layer */
+/* ── Ambient glow layer (always visible) ─────────── */
 .ri-ring-glow {
   width: 120px;
   height: 120px;
@@ -47,25 +47,29 @@
   transition: border-color 0.4s, box-shadow 0.4s;
 }
 
-/* Spinning ring — visible on attack */
+/* ── Forward spinner (attack) ────────────────────── */
 .ri-ring-spin {
   width: 115px;
   height: 115px;
-  border: none;
+  border: 4px solid transparent;
+  border-bottom-color: var(--ri-color);
+  box-shadow: 0 5px 20px var(--ri-glow);
   opacity: 0;
   transition: opacity 0.4s, border-color 0.4s;
 }
 
-[data-state="attack"] .ri-ring-spin {
-  border: 4px solid transparent;
-  border-bottom-color: var(--ri-color);
-  box-shadow: 0 5px 20px var(--ri-glow);
-  opacity: 1;
-  animation: riSpinFast 1.5s linear infinite;
+/* ── Reverse spinner (attack) ────────────────────── */
+.ri-ring-rev {
+  width: 125px;
+  height: 125px;
+  border: 2px solid transparent;
+  border-top-color: var(--ri-color);
+  opacity: 0;
+  transition: opacity 0.4s, border-color 0.4s;
 }
 
-/* Pulse ring — visible on warning */
-.ri-ring-pulse {
+/* ── Ripple ring (attack) ────────────────────────── */
+.ri-ring-ripple {
   width: 100px;
   height: 100px;
   border: 3px solid var(--ri-color);
@@ -73,17 +77,34 @@
   transition: opacity 0.4s, border-color 0.4s;
 }
 
-[data-state="warning"] .ri-ring-pulse {
+/* ── SAFE state ──────────────────────────────────── */
+[data-state="safe"] .ri-ring-glow {
+  animation: riAuthentic 3s ease-in-out infinite;
+}
+
+/* ── ATTACK state ────────────────────────────────── */
+[data-state="attack"] .ri-ring-glow {
+  animation: riAuthentic 1.5s ease-in-out infinite;
+}
+
+[data-state="attack"] .ri-ring-spin {
+  opacity: 1;
+  animation: riSpinFwd 1.5s linear infinite;
+}
+
+[data-state="attack"] .ri-ring-rev {
+  opacity: 0.6;
+  animation: riSpinRev 2s linear infinite;
+}
+
+[data-state="attack"] .ri-ring-ripple {
   opacity: 1;
   animation: riRipple 1.2s cubic-bezier(0.1,0.6,0.4,1) infinite;
 }
 
-[data-state="attack"] .ri-ring-glow {
-  animation: riAuthentic 1.2s ease-in-out infinite;
-}
-
+/* ── WARNING state ───────────────────────────────── */
 [data-state="warning"] .ri-ring-glow {
-  animation: riAuthentic 0.8s ease-in-out infinite;
+  animation: riAuthentic 2s ease-in-out infinite;
 }
 
 /* ── Logo ──────────────────────────────────────────── */
@@ -96,7 +117,6 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  /* slight offset to visually center the asymmetric SVG */
   transform: translate(4%, 5%);
   pointer-events: auto;
 }
@@ -106,39 +126,17 @@
   height: 100%;
   color: var(--ri-color);
   filter: drop-shadow(0 0 12px var(--ri-glow)) drop-shadow(0 0 4px var(--ri-color));
-  animation: riGlowPulse 1.5s ease-in-out infinite;
+  animation: riGlowPulse 5s ease-in-out infinite;
   transition: color 0.4s, filter 0.4s;
 }
 
 [data-state="attack"] .ri-logo {
-  animation: riGlowPulse 0.6s ease-in-out infinite;
+  animation: riGlowPulse 1.5s ease-in-out infinite;
 }
 
 [data-state="warning"] .ri-logo {
-  animation: riGlowPulse 0.35s ease-in-out infinite;
+  animation: riGlowPulse 0.5s ease-in-out infinite;
 }
-
-/* ── State label ───────────────────────────────────── */
-.ri-state-label {
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: 'Rajdhani', 'Jura', sans-serif;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--ri-color);
-  text-shadow: 0 0 6px var(--ri-glow);
-  white-space: nowrap;
-  pointer-events: none;
-  transition: color 0.4s;
-}
-
-[data-state="safe"] .ri-state-label::after { content: 'SAFE'; }
-[data-state="attack"] .ri-state-label::after { content: 'ATTACK'; }
-[data-state="warning"] .ri-state-label::after { content: 'WARNING'; }
 
 /* ── Keyframes ─────────────────────────────────────── */
 @keyframes riAuthentic {
@@ -146,9 +144,14 @@
   50% { transform: scale(1.04); opacity: 0.5; }
 }
 
-@keyframes riSpinFast {
+@keyframes riSpinFwd {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+@keyframes riSpinRev {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
 }
 
 @keyframes riRipple {
@@ -158,5 +161,5 @@
 
 @keyframes riGlowPulse {
   0%, 100% { filter: drop-shadow(0 0 5px var(--ri-glow)); }
-  50% { filter: drop-shadow(0 0 25px var(--ri-color)); }
+  50% { filter: drop-shadow(0 0 18px var(--ri-glow)) drop-shadow(0 0 6px var(--ri-color)); }
 }
