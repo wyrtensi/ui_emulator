@@ -68,9 +68,6 @@ async function boot() {
     await loadWindowById(windowId, windowsLayer);
   }
 
-  // 4b. Restore any imported windows from localStorage
-  restoreImportedWindows(windowsLayer);
-
   // 5. Init context menu (needs manifest)
   contextMenu.init({
     manifest,
@@ -181,7 +178,6 @@ function _injectWindow(wDef, config, htmlText, cssText, windowsLayer) {
 /* ═══════════════════════════════════════════════════════
    CLIENT-SIDE WINDOW IMPORT
    ═══════════════════════════════════════════════════════ */
-const IMPORT_STORAGE_KEY = 'rfo_imported_windows';
 
 /** Import a window from user-provided files (ZIP or individual files). */
 async function importWindowFromFiles(files) {
@@ -260,65 +256,104 @@ async function importWindowFromFiles(files) {
   _injectWindow(wDef, config, htmlText, cssText || '', windowsLayer);
   windowManager.open(wDef.id);
 
-  // Persist to localStorage so it survives refresh
-  _saveImportedWindow(config.id, configText, htmlText, cssText);
-
   // Rebuild windows list in panel
   _rebuildWindowsList();
 
   window.rfoToast(`Window "${config.title || config.id}" imported!`, 'success');
 }
 
-function _saveImportedWindow(id, configText, htmlText, cssText) {
+/** Import windows directly from a GitHub branch URL */
+async function importWindowsFromGithub(url) {
+  // Expected URL format: https://github.com/{user}/{repo}/tree/{branch}
+
+  const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/tree\/(.+)/);
+  if (!match) {
+    window.rfoToast('Invalid GitHub URL. Must be a branch tree URL (e.g. github.com/user/repo/tree/branch)', 'error');
+    return;
+  }
+
+  const [_, user, repo, branch] = match;
+  window.rfoToast(`Fetching windows from ${user}/${repo} (${branch})...`, 'info');
+
   try {
-    const stored = JSON.parse(localStorage.getItem(IMPORT_STORAGE_KEY) || '{}');
-    stored[id] = { configText, htmlText, cssText };
-    localStorage.setItem(IMPORT_STORAGE_KEY, JSON.stringify(stored));
-  } catch { /* storage full — non-critical */ }
-}
-
-function _removeImportedWindow(id) {
-  try {
-    const stored = JSON.parse(localStorage.getItem(IMPORT_STORAGE_KEY) || '{}');
-    delete stored[id];
-    localStorage.setItem(IMPORT_STORAGE_KEY, JSON.stringify(stored));
-  } catch {}
-}
-
-async function restoreImportedWindows(windowsLayer) {
-  let stored;
-  try {
-    stored = JSON.parse(localStorage.getItem(IMPORT_STORAGE_KEY) || '{}');
-  } catch { return; }
-
-  for (const [id, data] of Object.entries(stored)) {
-    if (windowManager.get(id)) continue; // already loaded from registry
-
-    // Parse config.js
-    const blob = new Blob([data.configText], { type: 'application/javascript' });
-    const blobUrl = URL.createObjectURL(blob);
-    let config;
-    try {
-      const mod = await import(blobUrl);
-      config = mod.default;
-    } catch {
-      console.warn(`[Import] Failed to restore window "${id}"`);
-      continue;
-    } finally {
-      URL.revokeObjectURL(blobUrl);
+    const apiURL = `https://api.github.com/repos/${user}/${repo}/contents/windows?ref=${branch}`;
+    const response = await fetch(apiURL);
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
     }
 
-    const wDef = {
-      id: config.id,
-      name: config.title || config.id,
-      folder: `_imported/${config.id}`,
-      defaultPosition: config.defaultPosition || { x: 100, y: 100, width: 380, height: 320 },
-      defaultOpen: false,
-      _imported: true,
-    };
+    const contents = await response.json();
+    if (!Array.isArray(contents)) throw new Error('Could not read windows directory');
 
-    manifest.windows.push(wDef);
-    _injectWindow(wDef, config, data.htmlText, data.cssText || '', windowsLayer);
+    let importedCount = 0;
+    const windowsLayer = document.getElementById('rfo-windows');
+
+    for (const item of contents) {
+      if (item.type !== 'dir') continue;
+
+      const folderName = item.name;
+      // Skip if already in registry/imported
+      if (windowManager.get(folderName)) continue;
+
+      try {
+        const rawBase = `https://raw.githubusercontent.com/${user}/${repo}/${branch}/windows/${folderName}`;
+
+        // Fetch config.js
+        const configResp = await fetch(`${rawBase}/config.js`);
+        if (!configResp.ok) continue;
+        const configText = await configResp.text();
+
+        // Fetch template.html
+        const htmlResp = await fetch(`${rawBase}/template.html`);
+        if (!htmlResp.ok) continue;
+        const htmlText = await htmlResp.text();
+
+        // Fetch style.css (optional)
+        const cssResp = await fetch(`${rawBase}/style.css`);
+        const cssText = cssResp.ok ? await cssResp.text() : '';
+
+        // Import the window dynamically
+        const blob = new Blob([configText], { type: 'application/javascript' });
+        const blobUrl = URL.createObjectURL(blob);
+        let config;
+        try {
+          const mod = await import(blobUrl);
+          config = mod.default;
+        } finally {
+          URL.revokeObjectURL(blobUrl);
+        }
+
+        if (!config || !config.id) continue;
+
+        const wDef = {
+          id: config.id,
+          name: config.title || config.id,
+          folder: `_imported/${config.id}`,
+          defaultPosition: config.defaultPosition || { x: 100, y: 100, width: 380, height: 320 },
+          defaultOpen: true,
+          _imported: true,
+        };
+
+        manifest.windows.push(wDef);
+        _injectWindow(wDef, config, htmlText, cssText, windowsLayer);
+        windowManager.open(wDef.id);
+
+        importedCount++;
+      } catch (err) {
+        console.warn(`[GitHub Import] Failed to import ${folderName}:`, err);
+      }
+    }
+
+    if (importedCount > 0) {
+      _rebuildWindowsList();
+      window.rfoToast(`Imported ${importedCount} new windows from GitHub!`, 'success');
+    } else {
+      window.rfoToast('No new windows found to import.', 'info');
+    }
+
+  } catch (error) {
+    console.error('[GitHub Import]', error);
+    window.rfoToast(`GitHub Import Failed: ${error.message}`, 'error');
   }
 }
 
@@ -467,6 +502,22 @@ function wireControlPanel() {
       if (!files || files.length === 0) return;
       await importWindowFromFiles(files);
       importFile.value = '';
+    });
+  }
+
+  // ── Import from GitHub ────────────────────────────
+  const ghUrlInput = document.getElementById('rfo-import-gh-url');
+  const ghImportBtn = document.getElementById('rfo-import-gh-btn');
+  if (ghUrlInput && ghImportBtn) {
+    ghImportBtn.addEventListener('click', async () => {
+      const url = ghUrlInput.value.trim();
+      if (!url) return;
+      ghImportBtn.disabled = true;
+      ghImportBtn.style.opacity = '0.5';
+      await importWindowsFromGithub(url);
+      ghImportBtn.disabled = false;
+      ghImportBtn.style.opacity = '1';
+      ghUrlInput.value = '';
     });
   }
 
