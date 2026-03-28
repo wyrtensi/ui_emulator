@@ -271,7 +271,7 @@ class CommentManager {
     if (pin.text) {
       const msg = document.createElement('div');
       msg.className = 'comment-message';
-      msg.textContent = pin.text;
+      msg.innerHTML = this._escAndParseMedia(pin.text);
       card.appendChild(msg);
     }
 
@@ -324,7 +324,7 @@ class CommentManager {
               // Insert first message above thread
               const firstMsg = document.createElement('div');
               firstMsg.className = 'comment-message';
-              firstMsg.textContent = text;
+              firstMsg.innerHTML = this._escAndParseMedia(text);
               card.insertBefore(firstMsg, threadEl2);
               replyInput.value = '';
               this._updatePanelList();
@@ -466,7 +466,7 @@ class CommentManager {
           <span class="comment-time">${new Date(reply.timestamp).toLocaleString()}</span>
           ${reply.canDelete ? `<button class="comment-reply-delete" data-reply-id="${reply.id}" title="Delete">✕</button>` : ''}
         </div>
-        <div class="comment-reply-text">${this._esc(reply.text)}</div>
+        <div class="comment-reply-text">${this._escAndParseMedia(reply.text)}</div>
       </div>
     `;
 
@@ -652,6 +652,29 @@ class CommentManager {
   }
   _escAttr(str) {
     return (str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  _escAndParseMedia(text) {
+    const images = [];
+    const textWithPlaceholders = (text || '').replace(/<img\s+[^>]*src="([^"]+)"[^>]*>/gi, (match, src) => {
+      images.push(src);
+      return `__IMG_PLACEHOLDER_${images.length - 1}__`;
+    });
+
+    let escaped = this._esc(textWithPlaceholders);
+
+    // Linkify URLs
+    escaped = escaped.replace(
+      /(https?:\/\/[^\s<]+)/g,
+      '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+    );
+
+    // Re-inject images safely
+    escaped = escaped.replace(/__IMG_PLACEHOLDER_(\d+)__/g, (match, idx) => {
+      const safeSrc = this._escAttr(images[idx]);
+      return `<img src="${safeSrc}" alt="Image" loading="lazy" />`;
+    });
+
+    return escaped;
   }
 }
 
