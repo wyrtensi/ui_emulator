@@ -9,5 +9,6 @@ export default {
     repo: 'wyrtensi/ui_emulator',
     workerUrl: 'https://ui-emulator-auth.wyrtensi.workers.dev',
     pinLabel: 'ui-emulator-pin',
+    discussionNumber: 35,
   },
 };

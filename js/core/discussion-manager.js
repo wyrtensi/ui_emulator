@@ -1,29 +1,27 @@
 /**
- * Discussion Manager — global chat via a single GitHub Issue.
+ * Discussion Manager — global chat via a single GitHub Discussion.
  *
- * Uses one issue titled "[DISCUSSION] UI Emulator Chat" as a shared chatroom.
- * Issue comments = messages. Polls every 15s for new messages.
+ * Uses one Discussion as a shared chatroom.
+ * Discussion comments = messages. Polls every 15s for new messages.
  */
 
 import config from '../config.js';
 import { githubAuth } from './github-auth.js';
 import { setupImagePaste } from './image-upload.js';
 
-const API = 'https://api.github.com';
-const { repo, pinLabel } = config.github;
-const DISCUSSION_TITLE = '[DISCUSSION] UI Emulator Chat';
+const GRAPHQL_API = 'https://api.github.com/graphql';
+const { repo, discussionNumber } = config.github;
 const POLL_INTERVAL = 15000; // 15 seconds
 
 class DiscussionManager {
   constructor() {
-    this._issueNumber = null;
+    this._discussionId = null; // Node ID for mutations
     this._messages = [];
     this._panel = null;
     this._messagesEl = null;
     this._inputEl = null;
     this._sendBtn = null;
     this._pollTimer = null;
-    this._lastMessageId = 0;
     this._open = false;
   }
 
@@ -87,78 +85,89 @@ class DiscussionManager {
     this._stopPoll();
   }
 
-  /* ── Find or create the discussion issue ─────────── */
-
-  async _findOrCreateIssue() {
-    if (this._issueNumber) return this._issueNumber;
-
-    // Search for existing discussion issue
-    const q = encodeURIComponent(`repo:${repo} is:issue is:open "${DISCUSSION_TITLE}" in:title`);
-    const resp = await fetch(`${API}/search/issues?q=${q}&per_page=5`, {
-      headers: this._headers(false),
-    });
-
-    if (resp.ok) {
-      const data = await resp.json();
-      const found = (data.items || []).find(i => i.title === DISCUSSION_TITLE);
-      if (found) {
-        this._issueNumber = found.number;
-        return this._issueNumber;
-      }
+  async _gqlQuery(query, variables = {}) {
+    const h = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    if (githubAuth.token) {
+      h.Authorization = `bearer ${githubAuth.token}`;
     }
 
-    // Create if not found (requires auth)
-    if (!githubAuth.isLoggedIn) return null;
-
-    const createResp = await fetch(`${API}/repos/${repo}/issues`, {
+    const resp = await fetch(GRAPHQL_API, {
       method: 'POST',
-      headers: { ...this._headers(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: DISCUSSION_TITLE,
-        body: 'This issue serves as the global discussion chat for the RFO UI Emulator.\n\nAdd comments below to chat with other users.',
-        labels: [pinLabel],
-      }),
+      headers: h,
+      body: JSON.stringify({ query, variables })
     });
 
-    if (createResp.ok) {
-      const issue = await createResp.json();
-      this._issueNumber = issue.number;
-      return this._issueNumber;
+    if (!resp.ok) {
+      throw new Error(`GraphQL Error: ${resp.status}`);
     }
 
-    return null;
+    const json = await resp.json();
+    if (json.errors) {
+      throw new Error(json.errors[0].message);
+    }
+    return json.data;
+  }
+
+  async _fetchDiscussionData() {
+    const [owner, name] = repo.split('/');
+    const query = `
+      query($owner: String!, $name: String!, $number: Int!) {
+        repository(owner: $owner, name: $name) {
+          discussion(number: $number) {
+            id
+            comments(last: 100) {
+              nodes {
+                id
+                body
+                createdAt
+                author {
+                  login
+                  avatarUrl
+                }
+                reactions(first: 100) {
+                  nodes {
+                    content
+                    user {
+                      login
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+    const data = await this._gqlQuery(query, { owner, name, number: discussionNumber });
+    return data.repository.discussion;
   }
 
   /* ── Load all messages ───────────────────────────── */
 
   async _loadDiscussion() {
-    this._messagesEl.innerHTML = '<div class="rfo-discussion-loading">Loading discussion...</div>';
+    this._messagesEl.innerHTML = '<div class="rfo-discussion-loading">Loading discussion...<br><small style="color:#aaa;">Messages may take ~30s to appear due to platform delays.</small></div>';
 
     try {
-      const issueNum = await this._findOrCreateIssue();
-      if (!issueNum) {
-        this._messagesEl.innerHTML = '<div class="rfo-discussion-loading">Sign in to start a discussion</div>';
+      const discussion = await this._fetchDiscussionData();
+      if (!discussion) {
+        this._messagesEl.innerHTML = '<div class="rfo-discussion-loading">Discussion not found.</div>';
         return;
       }
-
-      const messages = await this._fetchMessages();
-      this._messages = messages;
+      this._discussionId = discussion.id;
+      this._messages = discussion.comments.nodes || [];
       this._renderMessages();
+      this._scrollToBottom();
     } catch (err) {
       console.error('[Discussion] Load failed:', err);
-      this._messagesEl.innerHTML = '<div class="rfo-discussion-loading">Failed to load discussion</div>';
+      if (err.message && err.message.includes('401') || err.message.includes('403')) {
+        this._messagesEl.innerHTML = '<div class="rfo-discussion-loading">Sign in to view and participate in the discussion.<br><small style="color:#aaa;">GitHub Discussions require authentication to view.</small></div>';
+      } else {
+        this._messagesEl.innerHTML = '<div class="rfo-discussion-loading">Failed to load discussion</div>';
+      }
     }
-  }
-
-  async _fetchMessages() {
-    if (!this._issueNumber) return [];
-
-    const resp = await fetch(
-      `${API}/repos/${repo}/issues/${this._issueNumber}/comments?per_page=100&sort=created&direction=asc`,
-      { headers: this._headers(false) }
-    );
-    if (!resp.ok) return [];
-    return await resp.json();
   }
 
   /* ── Poll for new messages ───────────────────────── */
@@ -176,12 +185,30 @@ class DiscussionManager {
   }
 
   async _pollNewMessages() {
-    if (!this._open || !this._issueNumber) return;
+    if (!this._open || !this._discussionId) return;
 
     try {
-      const messages = await this._fetchMessages();
-      if (messages.length !== this._messages.length) {
-        this._messages = messages;
+      const discussion = await this._fetchDiscussionData();
+      const newMessages = discussion.comments.nodes || [];
+
+      let shouldRender = false;
+      if (newMessages.length !== this._messages.length) {
+        shouldRender = true;
+      } else {
+        for (let i = 0; i < newMessages.length; i++) {
+          if (newMessages[i].id !== this._messages[i]?.id) {
+            shouldRender = true; break;
+          }
+          const oldRx = this._messages[i]?.reactions?.nodes || [];
+          const newRx = newMessages[i].reactions.nodes || [];
+          if (oldRx.length !== newRx.length) {
+            shouldRender = true; break;
+          }
+        }
+      }
+
+      if (shouldRender) {
+        this._messages = newMessages;
         const wasAtBottom = this._isScrolledToBottom();
         this._renderMessages();
         if (wasAtBottom) this._scrollToBottom();
@@ -204,18 +231,34 @@ class DiscussionManager {
     this._inputEl.disabled = true;
 
     try {
-      const issueNum = await this._findOrCreateIssue();
-      if (!issueNum) throw new Error('No discussion issue');
+      if (!this._discussionId) throw new Error('No discussion ID');
 
-      const resp = await fetch(`${API}/repos/${repo}/issues/${issueNum}/comments`, {
-        method: 'POST',
-        headers: { ...this._headers(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: text }),
-      });
+      const query = `
+        mutation($discussionId: ID!, $body: String!) {
+          addDiscussionComment(input: {discussionId: $discussionId, body: $body}) {
+            comment {
+              id
+              body
+              createdAt
+              author {
+                login
+                avatarUrl
+              }
+              reactions(first: 100) {
+                nodes {
+                  content
+                  user {
+                    login
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+      const data = await this._gqlQuery(query, { discussionId: this._discussionId, body: text });
+      const newMsg = data.addDiscussionComment.comment;
 
-      if (!resp.ok) throw new Error('Failed to send');
-
-      const newMsg = await resp.json();
       this._messages.push(newMsg);
       this._renderMessages();
       this._scrollToBottom();
@@ -230,40 +273,170 @@ class DiscussionManager {
     }
   }
 
+  /* ── Delete message ──────────────────────────────── */
+
+  async _deleteMessage(commentId) {
+    if (!githubAuth.isLoggedIn) return;
+
+    try {
+      const query = `
+        mutation($id: ID!) {
+          deleteDiscussionComment(input: {id: $id}) {
+            clientMutationId
+          }
+        }
+      `;
+      await this._gqlQuery(query, { id: commentId });
+
+      this._messages = this._messages.filter(m => m.id !== commentId);
+      this._renderMessages();
+    } catch (err) {
+      console.error('[Discussion] Delete failed:', err);
+      if (typeof window.rfoToast === 'function') window.rfoToast('Failed to delete message', 'error');
+    }
+  }
+
+  /* ── Toggle reaction ─────────────────────────────── */
+
+  async _toggleReaction(commentId, content) {
+    if (!githubAuth.isLoggedIn) {
+      if (typeof window.rfoToast === 'function') window.rfoToast('Sign in to react', 'info');
+      return;
+    }
+
+    const myLogin = githubAuth.user.login;
+    const msg = this._messages.find(m => m.id === commentId);
+    if (!msg) return;
+
+    const currentReactions = msg.reactions.nodes || [];
+    const hasReacted = currentReactions.some(r => r.user.login === myLogin && r.content === content);
+
+    // Optimistic update
+    if (hasReacted) {
+      msg.reactions.nodes = currentReactions.filter(r => !(r.user.login === myLogin && r.content === content));
+    } else {
+      msg.reactions.nodes.push({ content, user: { login: myLogin } });
+    }
+    this._renderMessages();
+
+    try {
+      const mutationName = hasReacted ? 'removeReaction' : 'addReaction';
+      const query = `
+        mutation($subjectId: ID!, $content: ReactionContent!) {
+          ${mutationName}(input: {subjectId: $subjectId, content: $content}) {
+            reaction {
+              content
+            }
+          }
+        }
+      `;
+      await this._gqlQuery(query, { subjectId: commentId, content: content });
+    } catch (err) {
+      console.error('[Discussion] Reaction failed:', err);
+      // Revert optimistic update on failure would be nice, but next poll will fix it.
+    }
+  }
+
   /* ── Render messages ─────────────────────────────── */
 
   _renderMessages() {
     if (!this._messagesEl) return;
     this._messagesEl.innerHTML = '';
 
+    // Add delay notice to the top
+    const notice = document.createElement('div');
+    notice.style.fontSize = '10px';
+    notice.style.color = '#aaa';
+    notice.style.textAlign = 'center';
+    notice.style.marginBottom = '8px';
+    notice.innerText = 'Messages may take up to 30s to appear for others due to platform delays.';
+    this._messagesEl.appendChild(notice);
+
     if (this._messages.length === 0) {
-      this._messagesEl.innerHTML = '<div class="rfo-discussion-loading">No messages yet — be the first to chat!</div>';
+      const noMsg = document.createElement('div');
+      noMsg.className = 'rfo-discussion-loading';
+      noMsg.innerText = 'No messages yet — be the first to chat!';
+      this._messagesEl.appendChild(noMsg);
       return;
     }
 
     for (const msg of this._messages) {
-      const el = document.createElement('div');
-      const isOwn = githubAuth.user?.login === msg.user.login;
-      el.className = 'rfo-discussion-msg' + (isOwn ? ' rfo-discussion-msg-own' : '');
+      if (!msg || !msg.author) continue;
 
-      const time = new Date(msg.created_at);
+      const el = document.createElement('div');
+      const isOwn = githubAuth.user?.login === msg.author.login;
+      // Author and Repo Owner can delete
+      const canDelete = isOwn || (githubAuth.isLoggedIn && githubAuth.isOwner);
+      el.className = 'rfo-discussion-msg' + (isOwn ? ' rfo-discussion-msg-own' : '');
+      el.dataset.id = msg.id;
+
+      const time = new Date(msg.createdAt);
       const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const dateStr = time.toLocaleDateString();
 
+      const reactionCounts = {};
+      const reactionTypes = ['THUMBS_UP', 'HEART', 'LAUGH', 'HOORAY', 'CONFUSED', 'MINUS_ONE', 'ROCKET', 'EYES'];
+      const emojis = { THUMBS_UP: '👍', HEART: '❤️', LAUGH: '😄', HOORAY: '🎉', CONFUSED: '😕', MINUS_ONE: '👎', ROCKET: '🚀', EYES: '👀' };
+
+      if (msg.reactions && msg.reactions.nodes) {
+        for (const r of msg.reactions.nodes) {
+          if (!reactionCounts[r.content]) reactionCounts[r.content] = [];
+          reactionCounts[r.content].push(r.user.login);
+        }
+      }
+
+      let reactionsHtml = '';
+      for (const rt of reactionTypes) {
+        const users = reactionCounts[rt] || [];
+        if (users.length > 0) {
+          const reactedByMe = githubAuth.user && users.includes(githubAuth.user.login);
+          reactionsHtml += `<span class="rfo-discussion-reaction ${reactedByMe ? 'active' : ''}" data-type="${rt}" data-id="${msg.id}" title="${users.join(', ')}">${emojis[rt]} ${users.length}</span>`;
+        }
+      }
+      reactionsHtml += `<span class="rfo-discussion-reaction-add" data-id="${msg.id}">+👍</span>`;
+
       el.innerHTML = `
-        <img class="rfo-discussion-avatar" src="${this._escAttr(msg.user.avatar_url)}" alt="" width="24" height="24">
+        <img class="rfo-discussion-avatar" src="${this._escAttr(msg.author.avatarUrl)}" alt="" width="24" height="24">
         <div class="rfo-discussion-msg-body">
           <div class="rfo-discussion-msg-header">
-            <span class="rfo-discussion-author">${this._esc(msg.user.login)}</span>
+            <span class="rfo-discussion-author">${this._esc(msg.author.login)}</span>
             <span class="rfo-discussion-time" title="${dateStr}">${timeStr}</span>
+            ${canDelete ? `<button class="rfo-discussion-msg-del" data-id="${msg.id}" title="Delete Message">&times;</button>` : ''}
           </div>
           <div class="rfo-discussion-text">${this._escAndLinkify(msg.body)}</div>
+          <div class="rfo-discussion-reactions">
+            ${reactionsHtml}
+          </div>
         </div>
       `;
       this._messagesEl.appendChild(el);
     }
 
-    this._lastMessageId = this._messages[this._messages.length - 1]?.id || 0;
+    const delBtns = this._messagesEl.querySelectorAll('.rfo-discussion-msg-del');
+    delBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (confirm('Delete this message?')) {
+          this._deleteMessage(btn.getAttribute('data-id'));
+        }
+      });
+    });
+
+    const rxBtns = this._messagesEl.querySelectorAll('.rfo-discussion-reaction');
+    rxBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const type = btn.getAttribute('data-type');
+        this._toggleReaction(id, type);
+      });
+    });
+
+    const addRxBtns = this._messagesEl.querySelectorAll('.rfo-discussion-reaction-add');
+    addRxBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        this._toggleReaction(id, 'THUMBS_UP');
+      });
+    });
   }
 
   _scrollToBottom() {
@@ -278,14 +451,6 @@ class DiscussionManager {
   }
 
   /* ── Helpers ─────────────────────────────────────── */
-
-  _headers(auth = true) {
-    const h = { Accept: 'application/vnd.github.v3+json' };
-    if (auth && githubAuth.token) {
-      h.Authorization = `token ${githubAuth.token}`;
-    }
-    return h;
-  }
 
   _esc(str) {
     const d = document.createElement('div');
@@ -315,7 +480,7 @@ class DiscussionManager {
     // Re-inject images safely
     escaped = escaped.replace(/__IMG_PLACEHOLDER_(\d+)__/g, (match, idx) => {
       const safeSrc = this._escAttr(images[idx]);
-      return `<img src="${safeSrc}" alt="Image" loading="lazy" />`;
+      return `<img src="${safeSrc}" alt="Image" loading="lazy" style="max-width: 100%;" />`;
     });
 
     return escaped;
