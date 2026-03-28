@@ -4,7 +4,7 @@ export default {
   defaultPosition: { x: 890, y: 10, width: 140, height: 140 },
   defaultOpen: true,
   dragHandle: '.ri-drag-ring',
-  resizable: { enabled: false },
+  resizable: { enabled: true },
   exports: [
     { selector: '[data-export="ri-full"]', name: 'full', label: 'Full Indicator' },
     { selector: '[data-export="ri-logo"]', name: 'logo', label: 'Logo Only' },

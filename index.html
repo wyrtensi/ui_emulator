@@ -36,6 +36,7 @@
   <div id="rfo-comment-toolbar" hidden>
     <div class="ct-inner">
       <span class="ct-hint" id="rfo-comment-hint"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Double-click on any window to add a comment pin</span>
+      <button class="ct-btn" id="rfo-discussion-toggle" title="Open discussion"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Discussion</button>
       <button class="ct-btn" id="rfo-toggle-pins" title="Show/hide pins"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Pins</button>
       <button class="ct-btn" id="rfo-move-pins" title="Move pins (owner)"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg> Move</button>
       <button class="ct-btn ct-danger" id="rfo-comments-clear" title="Clear all"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
@@ -76,10 +77,10 @@
     <div class="panel-header">
       <h2><svg class="si" style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="var(--panel-accent)" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> RFO UI Emulator</h2>
       <div class="panel-header-actions">
-        <a href="https://github.com/wyrtensi/ui_emulator" target="_blank" rel="noopener noreferrer" class="panel-header-link" title="View on GitHub">
+        <a href="https://github.com/wyrtensi/ui_emulator" target="_blank" rel="noopener noreferrer" class="panel-header-link" title="View on GitHub" style="display: flex; align-items: center; gap: 4px; text-decoration: none;">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          <span style="font-size: 11px; font-weight: bold;">GitHub</span>
         </a>
-        <button id="rfo-guide-btn" class="panel-header-link" title="How to create a window">?</button>
         <button id="rfo-panel-close" title="Close (F2)">✕</button>
       </div>
     </div>
@@ -114,6 +115,7 @@
             <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Import Window
             <input type="file" id="rfo-import-file" accept=".zip,.js,.html,.css" multiple hidden>
           </label>
+          <button id="rfo-guide-btn" class="panel-btn panel-btn-sm" title="How to create a window" style="width: auto; padding: 0 10px;">?</button>
         </div>
       </section>
 
@@ -210,9 +212,6 @@
       <section class="panel-section" id="rfo-comment-panel" hidden>
         <h3><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Comments (<span id="rfo-pin-count">0</span>)</h3>
         <div id="rfo-comments-list"></div>
-        <div class="btn-row" style="margin-top:8px">
-          <button class="panel-btn panel-btn-sm" id="rfo-discussion-toggle"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Discussion</button>
-        </div>
       </section>
 
       <!-- HELP -->
