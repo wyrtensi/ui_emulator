@@ -1,0 +1,80 @@
+<div class="group-container" data-export="group-full">
+  <div class="group-header" data-export="group-header">
+    <span class="group-title" data-export="group-title">PARTY</span>
+    <button class="group-close" data-export="group-close" title="Close">✕</button>
+  </div>
+
+  <div class="group-body">
+    <!-- Controls (Invite, Leave, etc) -->
+    <div class="group-controls" data-export="group-controls">
+      <button class="group-btn" data-export="group-btn-invite">INVITE</button>
+      <button class="group-btn" data-export="group-btn-leave">LEAVE</button>
+      <button class="group-btn" data-export="group-btn-kick">KICK</button>
+      <button class="group-btn" data-export="group-btn-delegate">DELEGATE</button>
+    </div>
+
+    <!-- Member List -->
+    <div class="group-list" data-export="group-list">
+      <!-- Member 1 (Leader) -->
+      <div class="group-member is-leader" data-export="group-member-1">
+        <div class="member-icon" data-export="member-1-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+        </div>
+        <div class="member-info">
+          <div class="member-top">
+            <span class="member-name">Commander</span>
+            <span class="member-level">Lv. 55</span>
+          </div>
+          <div class="member-bars">
+            <div class="member-bar hp-bar"><div class="member-bar-fill" style="width: 100%;"></div></div>
+            <div class="member-bar fp-bar"><div class="member-bar-fill" style="width: 80%;"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Member 2 -->
+      <div class="group-member" data-export="group-member-2">
+        <div class="member-icon" data-export="member-2-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22l-4-4h8l-4 4zm0-20l4 4H8l4-4zM2 12l4-4v8l-4-4zm20 0l-4 4V8l4 4z"/></svg>
+        </div>
+        <div class="member-info">
+          <div class="member-top">
+            <span class="member-name">Striker</span>
+            <span class="member-level">Lv. 53</span>
+          </div>
+          <div class="member-bars">
+            <div class="member-bar hp-bar"><div class="member-bar-fill" style="width: 45%;"></div></div>
+            <div class="member-bar fp-bar"><div class="member-bar-fill" style="width: 90%;"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Member 3 -->
+      <div class="group-member is-offline" data-export="group-member-3">
+        <div class="member-icon" data-export="member-3-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        </div>
+        <div class="member-info">
+          <div class="member-top">
+            <span class="member-name">Healer</span>
+            <span class="member-level">Lv. 50</span>
+          </div>
+          <div class="member-bars">
+            <div class="member-bar hp-bar"><div class="member-bar-fill" style="width: 0%;"></div></div>
+            <div class="member-bar fp-bar"><div class="member-bar-fill" style="width: 0%;"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loot Settings -->
+    <div class="group-footer" data-export="group-footer">
+      <span class="group-loot-label">LOOTING:</span>
+      <select class="group-loot-select">
+        <option>FREE FOR ALL</option>
+        <option>ROUND ROBIN</option>
+        <option>LEADER ONLY</option>
+      </select>
+    </div>
+  </div>
+</div>

@@ -9,5 +9,6 @@
   "inventory",
   "character",
   "abilities",
-  "example-window"
+  "example-window",
+  "group-manager"
 ]

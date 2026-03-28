@@ -69,6 +69,13 @@
       "folder": "windows/example-window",
       "defaultPosition": { "x": 200, "y": 150, "width": 380, "height": 320 },
       "defaultOpen": false
+    },
+    {
+      "id": "group-manager",
+      "name": "Group Manager",
+      "folder": "windows/group-manager",
+      "defaultPosition": { "x": 400, "y": 200, "width": 320, "height": 400 },
+      "defaultOpen": false
     }
   ]
 }
