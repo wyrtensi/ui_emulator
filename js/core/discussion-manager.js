@@ -7,6 +7,7 @@
 
 import config from '../config.js';
 import { githubAuth } from './github-auth.js';
+import { setupImagePaste } from './image-upload.js';
 
 const API = 'https://api.github.com';
 const { repo, pinLabel } = config.github;
@@ -31,6 +32,8 @@ class DiscussionManager {
     this._messagesEl = document.getElementById('rfo-discussion-messages');
     this._inputEl = document.getElementById('rfo-discussion-input');
     this._sendBtn = document.getElementById('rfo-discussion-send');
+
+    setupImagePaste(this._inputEl);
 
     const toggleBtn = document.getElementById('rfo-discussion-toggle');
     const closeBtn = document.getElementById('rfo-discussion-close');
