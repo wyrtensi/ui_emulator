@@ -1,6 +1,7 @@
 [
+  "top-panel",
+  "hp-bars",
   "race-indicator",
-  "player-status",
   "target-info",
   "minimap",
   "chat-box",

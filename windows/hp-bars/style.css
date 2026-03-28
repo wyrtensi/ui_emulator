@@ -1,0 +1,199 @@
+@import url('https://fonts.googleapis.com/css2?family=Jura:wght@500;600;700&display=swap');
+
+:host {
+    font-family: 'Jura', sans-serif;
+    color: #ffffff;
+    user-select: none;
+}
+
+/* --- High-Tech Status Bars --- */
+.bars-background-wrapper {
+    position: relative;
+    padding: 10px 10px 10px 15px;
+    background: rgba(15, 20, 25, 0.4);
+    border-left: 2px solid rgba(255,255,255,0.05);
+    border-bottom: 2px solid rgba(255,255,255,0.05);
+    /* Corner tech brackets */
+    background-image:
+        linear-gradient(to right, rgba(255,255,255,0.2) 10px, transparent 10px),
+        linear-gradient(to bottom, rgba(255,255,255,0.2) 10px, transparent 10px);
+    background-position: left bottom;
+    background-size: 12px 12px;
+    background-repeat: no-repeat;
+    filter: drop-shadow(0 15px 25px rgba(0,0,0,0.6));
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.bars-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Base Futuristic Bar */
+.hud-bar {
+    height: 26px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    /* Tech grid in the empty space */
+    background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 6px 6px;
+}
+
+/* Glowing Bar Fill Base */
+.hud-fill {
+    height: 100%;
+    position: absolute;
+    top: 0; left: 0;
+    z-index: 1;
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.3);
+    /* Sci-fi slanted stripes inside the fill */
+    background-image: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 8px,
+        rgba(0, 0, 0, 0.15) 8px,
+        rgba(0, 0, 0, 0.15) 16px
+    );
+}
+
+/* Content Layer (Z-index above fill) */
+.hud-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 12px;
+    align-items: center;
+}
+
+.hud-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    text-shadow: 1px 1px 0px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);
+    letter-spacing: 1px;
+    color: #fff;
+}
+
+.hud-label svg {
+    width: 16px;
+    height: 16px;
+}
+
+.hud-value {
+    font-size: 17px;
+    font-weight: 600;
+    text-shadow: 1px 1px 0px rgba(0,0,0,0.9), 0 0 5px rgba(0,0,0,0.6);
+}
+
+.hud-value .current { color: #ffffff; }
+.hud-value .separator { color: #a0aab5; margin: 0 3px; font-weight: 500;}
+.hud-value .max { color: #a0aab5; }
+
+/* ------------------------------------- */
+/* Specific Bar Configurations           */
+/* ------------------------------------- */
+
+/* HP Bar (Red) */
+.hp-bar {
+    width: 400px;
+    background-color: rgba(40, 10, 10, 0.6);
+    border: 1px solid rgba(235, 64, 64, 0.5);
+    box-shadow: 0 0 10px rgba(235, 64, 64, 0.2), inset 0 0 15px rgba(0,0,0,0.8);
+}
+.hp-bar .hud-fill {
+    width: 97.8%;
+    background-color: rgb(235, 64, 64);
+    background-image: linear-gradient(90deg, rgba(235, 64, 64, 0.3) 0%, rgba(235, 64, 64, 0.9) 100%),
+        repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(0, 0, 0, 0.15) 8px, rgba(0, 0, 0, 0.15) 16px);
+}
+.hp-bar .hud-fill::after {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 3px;
+    background: #ffffff; box-shadow: 0 0 8px #ffffff, 0 0 15px rgb(235, 64, 64); border-radius: 2px;
+}
+.hp-bar .hud-label svg {
+    fill: #ff6b6b; filter: drop-shadow(0 0 4px rgb(235, 64, 64));
+}
+
+/* FP Bar (Blue) */
+.fp-bar {
+    width: 340px;
+    background-color: rgba(10, 30, 45, 0.6);
+    border: 1px solid rgba(79, 195, 247, 0.5);
+    box-shadow: 0 0 10px rgba(79, 195, 247, 0.2), inset 0 0 15px rgba(0,0,0,0.8);
+}
+.fp-bar .hud-fill {
+    width: 98.5%;
+    background-color: rgb(79, 195, 247);
+    background-image: linear-gradient(90deg, rgba(79, 195, 247, 0.3) 0%, rgba(79, 195, 247, 0.9) 100%),
+        repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(0, 0, 0, 0.15) 8px, rgba(0, 0, 0, 0.15) 16px);
+}
+.fp-bar .hud-fill::after {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 3px;
+    background: #ffffff; box-shadow: 0 0 8px #ffffff, 0 0 15px rgb(79, 195, 247); border-radius: 2px;
+}
+.fp-bar .hud-label svg {
+    fill: #81d4fa; filter: drop-shadow(0 0 4px rgb(79, 195, 247));
+}
+
+/* SP Bar (Yellow) */
+.sp-bar {
+    width: 230px;
+    background-color: rgba(40, 35, 10, 0.6);
+    border: 1px solid rgba(250, 210, 52, 0.5);
+    box-shadow: 0 0 10px rgba(250, 210, 52, 0.2), inset 0 0 15px rgba(0,0,0,0.8);
+}
+.sp-bar .hud-fill {
+    width: 88.8%;
+    background-color: rgb(250, 210, 52);
+    background-image: linear-gradient(90deg, rgba(250, 210, 52, 0.3) 0%, rgba(250, 210, 52, 0.9) 100%),
+        repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(0, 0, 0, 0.15) 8px, rgba(0, 0, 0, 0.15) 16px);
+}
+.sp-bar .hud-fill::after {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 3px;
+    background: #ffffff; box-shadow: 0 0 8px #ffffff, 0 0 15px rgb(250, 210, 52); border-radius: 2px;
+}
+.sp-bar .hud-label svg {
+    fill: rgb(250, 210, 52); filter: drop-shadow(0 0 4px rgb(250, 210, 52));
+}
+
+/* DEF Bar (White/Grey) */
+.def-bar {
+    width: 220px;
+    background-color: rgba(30, 30, 30, 0.6);
+    border: 1px solid rgba(210, 210, 210, 0.5);
+    box-shadow: 0 0 10px rgba(210, 210, 210, 0.2), inset 0 0 15px rgba(0,0,0,0.8);
+}
+.def-bar .hud-fill {
+    width: 95.2%;
+    background-color: rgb(210, 210, 210);
+    background-image: linear-gradient(90deg, rgba(210, 210, 210, 0.3) 0%, rgba(210, 210, 210, 0.9) 100%),
+        repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(0, 0, 0, 0.15) 8px, rgba(0, 0, 0, 0.15) 16px);
+}
+.def-bar .hud-fill::after {
+    content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 3px;
+    background: #ffffff; box-shadow: 0 0 8px #ffffff, 0 0 15px rgb(210, 210, 210); border-radius: 2px;
+}
+.def-bar .hud-label svg {
+    fill: rgb(210, 210, 210); filter: drop-shadow(0 0 4px rgb(210, 210, 210));
+}
+
+/* Scanning overlay effect across all bars */
+.scanline {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.2) 51%);
+    background-size: 100% 4px;
+    z-index: 20;
+    pointer-events: none;
+    opacity: 0.5;
+}

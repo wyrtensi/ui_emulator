@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Jura:wght@500;600;700&display=swap');
+
+:host {
+    font-family: 'Jura', sans-serif;
+    color: #ffffff;
+    user-select: none;
+}
+
+.top-bar {
+    display: flex;
+    height: 65px;
+    position: relative;
+    width: 100%;
+    filter: drop-shadow(0 15px 25px rgba(0,0,0,0.6));
+}
+
+/* Gold Emblem */
+.gold-emblem {
+    width: 85px;
+    background: linear-gradient(180deg, #b88645 0%, #e6c175 45%, #fff2ba 75%, #cca45b 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 10;
+    box-shadow:
+        inset 0 -8px 15px rgba(255, 255, 255, 0.6),
+        4px 0 10px rgba(0,0,0,0.4);
+}
+
+.gold-emblem::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0; height: 16px;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="10" viewBox="0 0 20 10"><path d="M 0 10 A 10 10 0 0 1 20 10" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/><circle cx="10" cy="5" r="2" fill="rgba(255,255,255,0.8)"/></svg>');
+    background-repeat: repeat-x;
+    background-position: bottom;
+}
+
+.gold-emblem > svg {
+    width: 44px;
+    height: 44px;
+    fill: #ffffff;
+    filter: drop-shadow(0px 3px 3px rgba(0,0,0,0.4));
+    z-index: 2;
+    margin-top: -5px;
+}
+
+/* Middle Panel: Left vertical, Right slanted inward (/) */
+.middle-panel {
+    width: 125px;
+    background: linear-gradient(180deg, #5c6e7d 0%, #3e4c57 100%);
+    clip-path: polygon(0 0, 100% 0, calc(100% - 25px) 100%, 0 100%);
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding-left: 15px;
+    gap: 15px;
+    position: relative;
+    z-index: 9;
+}
+
+/* Cyan separator on the slanted right edge */
+.middle-panel::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: #64b5f6;
+    box-shadow: -2px 0 8px rgba(100, 181, 246, 0.8);
+}
+
+/* Timer Panel: Left slanted (/), Cubic with bottom right corner cut */
+.timer-panel {
+    flex-grow: 1;
+    background: linear-gradient(180deg, #3c464d 0%, #252d33 100%);
+    /* Coordinates create the straight right edge and angled bottom-right cut */
+    clip-path: polygon(25px 0, 100% 0, 100% calc(100% - 25px), calc(100% - 25px) 100%, 0 100%);
+    margin-left: -25px; /* Perfectly interlocks with the middle panel */
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding-left: 45px;
+    position: relative;
+    z-index: 8;
+}
+
+/* Neon accent line at the bottom-right cut */
+.timer-panel::after {
+    content: '';
+    position: absolute;
+    right: 0; bottom: 0;
+    width: 25px;
+    height: 25px;
+    background: linear-gradient(135deg, transparent 48%, rgba(100, 181, 246, 0.7) 50%, transparent 52%);
+    pointer-events: none;
+}
+
+.timer-text {
+    font-size: 46px;
+    font-weight: 500;
+    color: #e0e5eb;
+    letter-spacing: 2px;
+    text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+    margin-top: -4px;
+}
