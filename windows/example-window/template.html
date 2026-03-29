@@ -1,26 +1,20 @@
-<div data-export="example-full" style="padding: 10px; margin: -10px;">
-<div class="example-container">
+<div class="example-container" data-export="example-full">
 
   <!-- HEADER (drag handle) -->
-  <div data-export="example-header" style="padding: 10px; margin: -10px;">
-    <div class="example-header">
-      <span class="example-title">EXAMPLE WINDOW</span>
-      <button class="example-close" title="Close">✕</button>
-    </div>
+  <div class="example-header" data-export="example-header">
+    <span class="example-title">EXAMPLE WINDOW</span>
+    <button class="example-close" title="Close">✕</button>
   </div>
 
   <!-- TABS -->
-  <div data-export="example-tabs" style="padding: 10px; margin: -10px;">
-    <div class="example-tabs">
-      <div data-export="example-tab" style="padding: 10px; margin: -10px; display: flex;"><button class="example-tab active" data-tab="info">INFO</button></div>
-      <button class="example-tab" data-tab="stats">STATS</button>
-      <button class="example-tab" data-tab="settings">SETTINGS</button>
-    </div>
+  <div class="example-tabs" data-export="example-tabs">
+    <button class="example-tab active" data-tab="info" data-export="example-tab">INFO</button>
+    <button class="example-tab" data-tab="stats">STATS</button>
+    <button class="example-tab" data-tab="settings">SETTINGS</button>
   </div>
 
   <!-- CONTENT PANELS -->
-  <div data-export="example-content" style="padding: 10px; margin: -10px; flex: 1; display: flex; flex-direction: column;">
-    <div class="example-body" style="flex: 1;">
+  <div class="example-body" data-export="example-content">
 
     <div class="example-panel active" data-panel="info">
       <div class="example-row">
@@ -77,7 +71,5 @@
       <p class="example-hint">Each window can have its own interactive logic defined in <code>config.init()</code>.</p>
     </div>
 
-    </div>
   </div>
-</div>
 </div>

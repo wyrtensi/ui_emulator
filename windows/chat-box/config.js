@@ -21,6 +21,7 @@ export default {
     { selector: '[data-export="cb-input"]', name: 'input', label: 'Input Box' },
     { selector: '[data-export="cb-type"]', name: 'type', label: 'Channel Label' },
     { selector: '[data-export="cb-field"]', name: 'field', label: 'Text Field' },
+    { selector: '[data-export="cb-msg"]', name: 'msg', label: 'Chat Messages' },
   ],
   init(container) {
     // Tab switching

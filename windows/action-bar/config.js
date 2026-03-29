@@ -20,6 +20,7 @@ export default {
     { selector: '[data-export="ab-lock"]', name: 'lock', label: 'Lock Button' },
     { selector: '[data-export="ab-grid"]', name: 'grid', label: 'Grid Wrap' },
     { selector: '[data-export="ab-slots"]', name: 'slots', label: 'Slot Grid' },
+    { selector: '[data-export="ab-slot"]', name: 'slot', label: 'Individual Slots' },
     { selector: '[data-export="ab-right"]', name: 'right', label: 'Resize Arrow' },
   ],
   init(container) {
@@ -30,8 +31,14 @@ export default {
 
     const slotTemplate = (key) => {
       const s = document.createElement('div');
-      s.className = 'ab-slot';
-      s.innerHTML = `<div class="ab-slot-inner"></div><div class="ab-dot"></div><span class="ab-label">${key}</span>`;
+      s.dataset.export = "ab-slot";
+      s.style.padding = "10px";
+      s.style.margin = "-10px";
+
+      const inner = document.createElement('div');
+      inner.className = 'ab-slot';
+      inner.innerHTML = `<div class="ab-slot-inner"></div><div class="ab-dot"></div><span class="ab-label">${key}</span>`;
+      s.appendChild(inner);
       return s;
     };
 

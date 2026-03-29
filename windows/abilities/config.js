@@ -20,6 +20,7 @@ export default {
     { selector: '[data-export="abl-close"]', name: 'close', label: 'Close Button' },
     { selector: '[data-export="abl-cats"]', name: 'cats', label: 'Category Tabs' },
     { selector: '[data-export="abl-list"]', name: 'list', label: 'Skill List' },
+    { selector: '[data-export="abl-skill"]', name: 'skill', label: 'Individual Skills' },
   ],
   init(container) {
     // Color-circle tab switching
