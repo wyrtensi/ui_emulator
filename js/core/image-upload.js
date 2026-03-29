@@ -49,35 +49,23 @@ export function setupImagePaste(textarea) {
     textarea.selectionStart = textarea.selectionEnd = start + placeholder.length;
 
     try {
-      const base64 = await fileToBase64(file);
-      const base64Data = base64.split(',')[1];
+      const formData = new FormData();
+      formData.append('reqtype', 'fileupload');
+      formData.append('userhash', '');
+      formData.append('fileToUpload', file);
 
-      const filename = `upload_${Date.now()}_${Math.floor(Math.random() * 1000)}.png`;
-      const path = `assets/uploads/${filename}`;
-      const repo = config.github.repo;
-
-      const response = await fetch(`${API}/repos/${repo}/contents/${path}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `token ${githubAuth.token}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          message: `Upload image ${filename}`,
-          content: base64Data
-        })
+      const response = await fetch('https://catbox.moe/user/api.php', {
+        method: 'POST',
+        body: formData
       });
 
       if (!response.ok) {
         throw new Error(`Upload failed: ${response.status}`);
       }
 
-      const data = await response.json();
+      const url = await response.text();
 
-      if (data.content && data.content.download_url) {
-        const url = data.content.download_url;
-
+      if (url && url.startsWith('http')) {
         // Format similar to GitHub's markdown image tags
         const imgTag = `<img alt="Image" src="${url}" />`;
 
@@ -87,7 +75,7 @@ export function setupImagePaste(textarea) {
           textarea.setRangeText(imgTag, startIdx, startIdx + placeholder.length, 'end');
         }
       } else {
-        throw new Error('Invalid response from GitHub');
+        throw new Error('Invalid response from image host');
       }
     } catch (err) {
       console.error('[ImageUpload] Error:', err);

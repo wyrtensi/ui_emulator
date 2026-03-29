@@ -104,6 +104,9 @@ class ExportManager {
       this._updateProgress(++i, checked.length);
       const result = await this.exportElement(windowId, exportName);
       if (result) files.push(result);
+
+      // Yield to main thread to prevent freezing during batch export
+      await new Promise(r => setTimeout(r, 50));
     }
 
     this._hideProgress();
@@ -140,6 +143,9 @@ class ExportManager {
       const { windowId, exportName } = allExports[i];
       const result = await this.exportElement(windowId, exportName);
       if (result) files.push(result);
+
+      // Yield to main thread to prevent freezing during batch export
+      await new Promise(r => setTimeout(r, 50));
     }
 
     this._hideProgress();
@@ -244,6 +250,32 @@ class ExportManager {
     if (!this._exportTreeEl) return;
     this._exportTreeEl.innerHTML = '';
 
+    const globalControls = document.createElement('div');
+    globalControls.className = 'export-tree-controls';
+    globalControls.style.display = 'flex';
+    globalControls.style.gap = '8px';
+    globalControls.style.marginBottom = '12px';
+
+    const selectAllBtn = document.createElement('button');
+    selectAllBtn.textContent = 'Select All';
+    selectAllBtn.className = 'panel-btn';
+    selectAllBtn.style.flex = '1';
+    selectAllBtn.addEventListener('click', () => {
+      this._exportTreeEl.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+    });
+
+    const deselectAllBtn = document.createElement('button');
+    deselectAllBtn.textContent = 'Deselect All';
+    deselectAllBtn.className = 'panel-btn';
+    deselectAllBtn.style.flex = '1';
+    deselectAllBtn.addEventListener('click', () => {
+      this._exportTreeEl.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    });
+
+    globalControls.appendChild(selectAllBtn);
+    globalControls.appendChild(deselectAllBtn);
+    this._exportTreeEl.appendChild(globalControls);
+
     for (const w of windowManager.getAll()) {
       if (!w.config.exports || w.config.exports.length === 0) continue;
 
@@ -252,7 +284,29 @@ class ExportManager {
       details.open = true;
 
       const summary = document.createElement('summary');
-      summary.textContent = w.config.title || w.id;
+      summary.style.display = 'flex';
+      summary.style.alignItems = 'center';
+
+      const toggleAllCb = document.createElement('input');
+      toggleAllCb.type = 'checkbox';
+      toggleAllCb.checked = true;
+      toggleAllCb.style.marginRight = '8px';
+
+      // Stop the details from toggling when clicking the checkbox
+      toggleAllCb.addEventListener('click', (e) => e.stopPropagation());
+
+      toggleAllCb.addEventListener('change', (e) => {
+        const isChecked = e.target.checked;
+        details.querySelectorAll('input[type="checkbox"][data-window-id]').forEach(cb => {
+          cb.checked = isChecked;
+        });
+      });
+
+      const titleSpan = document.createElement('span');
+      titleSpan.textContent = w.config.title || w.id;
+
+      summary.appendChild(toggleAllCb);
+      summary.appendChild(titleSpan);
       details.appendChild(summary);
 
       for (const exp of w.config.exports) {
@@ -262,6 +316,16 @@ class ExportManager {
           <input type="checkbox" checked data-window-id="${w.id}" data-export-name="${exp.name}">
           <span>${exp.label || exp.name}</span>
         `;
+
+        // Update the parent toggle checkbox if children are toggled
+        const cb = item.querySelector('input');
+        cb.addEventListener('change', () => {
+          const total = details.querySelectorAll('input[type="checkbox"][data-window-id]').length;
+          const checked = details.querySelectorAll('input[type="checkbox"][data-window-id]:checked').length;
+          toggleAllCb.checked = (total === checked);
+          toggleAllCb.indeterminate = (checked > 0 && checked < total);
+        });
+
         details.appendChild(item);
       }
 
