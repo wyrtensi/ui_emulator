@@ -3,11 +3,13 @@
  *
  * Exchanges a GitHub OAuth code for an access_token.
  * Keeps the client_secret safe server-side.
+ * Proxies Catbox image uploads to bypass browser CORS constraints.
  *
  * Required environment variables (set in Cloudflare dashboard):
  *   GITHUB_CLIENT_ID      — from your GitHub OAuth App
  *   GITHUB_CLIENT_SECRET   — from your GitHub OAuth App
  *   ALLOWED_ORIGIN         — your GitHub Pages URL, e.g. https://username.github.io
+ *   CATBOX_USERHASH        — Optional: Your Catbox.moe user hash for permanent uploads
  */
 
 export default {
@@ -30,10 +32,18 @@ export default {
 
     if (url.pathname === '/catbox' && request.method === 'POST') {
       try {
-        // Forward FormData directly to Catbox.moe
+        // Read incoming form data
+        const clientFormData = await request.formData();
+
+        // Append userhash securely server-side if provided in Cloudflare environment
+        if (env.CATBOX_USERHASH) {
+          clientFormData.set('userhash', env.CATBOX_USERHASH);
+        }
+
+        // Forward FormData to Catbox.moe
         const catboxResponse = await fetch('https://catbox.moe/user/api.php', {
           method: 'POST',
-          body: await request.formData()
+          body: clientFormData
         });
 
         const text = await catboxResponse.text();

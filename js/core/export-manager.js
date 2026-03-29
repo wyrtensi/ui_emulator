@@ -71,11 +71,21 @@ class ExportManager {
     const exportDef = entry.config.exports?.find(e => e.name === exportName);
     if (!exportDef) return null;
 
-    const el = entry.container.querySelector(exportDef.selector);
-    if (!el) return null;
+    const els = entry.container.querySelectorAll(exportDef.selector);
+    if (!els || els.length === 0) return null;
 
     const scale = parseInt(this._exportScaleEl?.value || '2');
-    return this._renderToPNG(el, windowId, exportName, scale);
+
+    if (els.length === 1) {
+      return this._renderToPNG(els[0], windowId, exportName, scale);
+    }
+
+    const results = [];
+    for (let i = 0; i < els.length; i++) {
+      const res = await this._renderToPNG(els[i], windowId, `${exportName}_${i + 1}`, scale);
+      if (res) results.push(res);
+    }
+    return results.length > 0 ? results : null;
   }
 
   /* ── Export entire window ──────────────────────────── */
@@ -89,7 +99,8 @@ class ExportManager {
 
   /* ── Export selected checkboxes ─────────────────────── */
   async exportSelected() {
-    const checked = this._exportTreeEl?.querySelectorAll('input[type="checkbox"]:checked') ?? [];
+    // Exclude indeterminate or unchecked parent toggles without data-window-id
+    const checked = this._exportTreeEl?.querySelectorAll('input[type="checkbox"][data-window-id]:checked') ?? [];
     if (checked.length === 0) {
       this._toast('No elements selected for export', 'error');
       return;
@@ -105,7 +116,13 @@ class ExportManager {
 
       try {
         const result = await this.exportElement(windowId, exportName);
-        if (result) files.push(result);
+        if (result) {
+          if (Array.isArray(result)) {
+            files.push(...result);
+          } else {
+            files.push(result);
+          }
+        }
       } catch (err) {
         console.error(`[ExportManager] Failed to export ${windowId}/${exportName}:`, err);
       }
@@ -149,7 +166,13 @@ class ExportManager {
 
       try {
         const result = await this.exportElement(windowId, exportName);
-        if (result) files.push(result);
+        if (result) {
+          if (Array.isArray(result)) {
+            files.push(...result);
+          } else {
+            files.push(result);
+          }
+        }
       } catch (err) {
         console.error(`[ExportManager] Failed to export ${windowId}/${exportName}:`, err);
       }
@@ -261,9 +284,14 @@ class ExportManager {
     );
     if (!exportDef) return;
 
+    // Find if it's one of multiple to append an index
+    const els = Array.from(entry.container.querySelectorAll(exportDef.selector));
+    const index = els.indexOf(el);
+    const suffix = index >= 0 && els.length > 1 ? `_${index + 1}` : '';
+
     this._showProgress('Exporting element...');
     const scale = parseInt(this._exportScaleEl?.value || '2');
-    const result = await this._renderToPNG(el, windowId, exportDef.name, scale);
+    const result = await this._renderToPNG(el, windowId, `${exportDef.name}${suffix}`, scale);
     this._hideProgress();
 
     if (result) {

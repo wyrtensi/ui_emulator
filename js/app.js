@@ -103,16 +103,6 @@ async function boot() {
   wireAuthButtons();
   updateModeIndicator(settings.get('mode'));
 
-  // Load Catbox Hash setting
-  const catboxHashEl = document.getElementById('rfo-catbox-hash');
-  if (catboxHashEl) {
-    catboxHashEl.value = settings.get('catboxHash') || '';
-    document.getElementById('rfo-save-catbox')?.addEventListener('click', () => {
-      settings.set('catboxHash', catboxHashEl.value.trim());
-      window.rfoToast('Catbox Hash saved', 'success');
-    });
-  }
-
   // 9. Load remote pins from GitHub (non-blocking)
   commentManager.loadRemotePins().catch(() => {});
 
