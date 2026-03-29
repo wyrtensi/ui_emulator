@@ -51,15 +51,13 @@ export function setupImagePaste(textarea) {
     try {
       const formData = new FormData();
       formData.append('reqtype', 'fileupload');
-
-      const userHash = (await import('./settings.js')).settings.get('catboxHash');
-      if (userHash) {
-        formData.append('userhash', userHash);
-      }
-
       formData.append('fileToUpload', file);
+      // The secure userhash is automatically appended by the Cloudflare Worker server-side
+      // via the CATBOX_USERHASH environment variable.
 
-      const response = await fetch('https://catbox.moe/user/api.php', {
+      // Use the Cloudflare Worker to proxy the request and avoid browser CORS blocks
+      const workerUrl = config.github.workerUrl || 'https://ui-emulator-auth.wyrtensi.workers.dev';
+      const response = await fetch(`${workerUrl}/catbox`, {
         method: 'POST',
         body: formData
       });
