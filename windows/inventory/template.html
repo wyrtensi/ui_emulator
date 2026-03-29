@@ -1,23 +1,37 @@
-<div class="inv-container" data-export="inv-full">
-  <div class="inv-header" data-export="inv-header">
-    <span class="inv-title" data-export="inv-title">INVENTORY</span>
-    <button class="inv-close" data-export="inv-close" title="Close">✕</button>
-  </div>
-
-  <div class="inv-toolbar" data-export="inv-toolbar">
-    <div class="inv-tabs" data-export="inv-tabs">
-      <button class="inv-tab active">ALL</button>
-      <button class="inv-tab">EQUIP</button>
-      <button class="inv-tab">USE</button>
-      <button class="inv-tab">ETC</button>
+<div data-export="inv-full" style="padding: 10px; margin: -10px;">
+  <div class="inv-container">
+    <div data-export="inv-header" style="padding: 10px; margin: -10px;">
+      <div class="inv-header">
+        <div data-export="inv-title" style="padding: 10px; margin: -10px; display: flex;"><span class="inv-title">INVENTORY</span></div>
+        <div data-export="inv-close" style="padding: 10px; margin: -10px; display: flex;"><button class="inv-close" title="Close">✕</button></div>
+      </div>
     </div>
-    <input class="inv-search" data-export="inv-search" type="text" placeholder="Search..." />
-  </div>
 
-  <div class="inv-grid" data-export="inv-grid"></div>
+    <div data-export="inv-toolbar" style="padding: 10px; margin: -10px;">
+      <div class="inv-toolbar">
+        <div data-export="inv-tabs" style="padding: 10px; margin: -10px; display: flex;">
+          <div class="inv-tabs">
+            <button class="inv-tab active">ALL</button>
+            <button class="inv-tab">EQUIP</button>
+            <button class="inv-tab">USE</button>
+            <button class="inv-tab">ETC</button>
+          </div>
+        </div>
+        <div data-export="inv-search" style="padding: 10px; margin: -10px; display: flex; flex: 1;">
+          <input class="inv-search" type="text" placeholder="Search..." style="width: 100%;" />
+        </div>
+      </div>
+    </div>
 
-  <div class="inv-footer" data-export="inv-footer">
-    <span class="inv-count" data-export="inv-count">7/200 SLOTS</span>
-    <span class="inv-gold" data-export="inv-gold">💰 4,250,000</span>
+    <div data-export="inv-grid" style="padding: 10px; margin: -10px; flex: 1; display: flex; flex-direction: column;">
+      <div class="inv-grid"></div>
+    </div>
+
+    <div data-export="inv-footer" style="padding: 10px; margin: -10px;">
+      <div class="inv-footer">
+        <div data-export="inv-count" style="padding: 10px; margin: -10px; display: flex;"><span class="inv-count">7/200 SLOTS</span></div>
+        <div data-export="inv-gold" style="padding: 10px; margin: -10px; display: flex;"><span class="inv-gold">💰 4,250,000</span></div>
+      </div>
+    </div>
   </div>
 </div>

@@ -1,9 +1,16 @@
-<div class="xp-container" data-export="xp-full">
-  <svg class="xp-arc" data-export="xp-bar" viewBox="0 0 800 24" preserveAspectRatio="none">
-    <path class="xp-bg-path" data-export="xp-bg" d="M0 22 Q400 2 800 22" pathLength="10000"/>
-    <path class="xp-fg-path" data-export="xp-fg" d="M0 22 Q400 2 800 22" pathLength="10000"/>
-  </svg>
-  <div class="xp-txt" data-export="xp-text">
-    LvL <b>50</b>&nbsp;&nbsp;<span class="xp-big">77.77</span><span class="xp-sm">64</span> %
+<div data-export="xp-full" style="padding: 10px; margin: -10px;">
+<div class="xp-container">
+  <div data-export="xp-bar" style="padding: 10px; margin: -10px; display: flex; flex: 1; align-items: flex-end;">
+    <svg class="xp-arc" viewBox="0 0 800 24" preserveAspectRatio="none">
+      <!-- SVG internals should not be padded with divs -->
+      <path class="xp-bg-path" data-export="xp-bg" d="M0 22 Q400 2 800 22" pathLength="10000"/>
+      <path class="xp-fg-path" data-export="xp-fg" d="M0 22 Q400 2 800 22" pathLength="10000"/>
+    </svg>
   </div>
+  <div data-export="xp-text" style="padding: 10px; margin: -10px; display: flex;">
+    <div class="xp-txt">
+      LvL <b>50</b>&nbsp;&nbsp;<span class="xp-big">77.77</span><span class="xp-sm">64</span> %
+    </div>
+  </div>
+</div>
 </div>

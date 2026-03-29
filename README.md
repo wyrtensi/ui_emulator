@@ -20,6 +20,8 @@ A modular, browser-based interface emulator for **RF Online** — the classic sc
   - **GitHub mode** — authenticate via GitHub OAuth, pins backed by GitHub Issues API
 - **Dark Sci-Fi Aesthetic** — glassmorphism panels, cyan accents, clip-path cuts, glow effects
 
+- **GitHub URL Import** — dynamically import custom UI windows straight from a repository branch (e.g. `https://github.com/user/repo/tree/branch`)
+
 ## Included Windows
 
 | Window | Description |

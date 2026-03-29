@@ -1,21 +1,29 @@
-<div class="abl-container" data-export="abl-full">
-  <div class="abl-header" data-export="abl-header">
-    <span class="abl-title" data-export="abl-title">ABILITIES</span>
-    <div class="abl-dots" data-export="abl-dots">
-      <span class="abl-dot active" style="--dot-color:#ff2a55" title="Attack"></span>
-      <span class="abl-dot" style="--dot-color:#00e5ff" title="Defense"></span>
-      <span class="abl-dot" style="--dot-color:#ffcc00" title="Support"></span>
-      <span class="abl-dot" style="--dot-color:#8a9ba8" title="Passive"></span>
+<div data-export="abl-full" style="padding: 10px; margin: -10px;">
+  <div class="abl-container">
+    <div data-export="abl-header" style="padding: 10px; margin: -10px;">
+      <div class="abl-header">
+        <div data-export="abl-title" style="padding: 10px; margin: -10px; display: flex;"><span class="abl-title">ABILITIES</span></div>
+        <div data-export="abl-dots" style="padding: 10px; margin: -10px; display: flex;">
+          <div class="abl-dots">
+            <span class="abl-dot active" style="--dot-color:#ff2a55" title="Attack"></span>
+            <span class="abl-dot" style="--dot-color:#00e5ff" title="Defense"></span>
+            <span class="abl-dot" style="--dot-color:#ffcc00" title="Support"></span>
+            <span class="abl-dot" style="--dot-color:#8a9ba8" title="Passive"></span>
+          </div>
+        </div>
+        <div data-export="abl-close" style="padding: 10px; margin: -10px; display: flex;"><button class="abl-close" title="Close">✕</button></div>
+      </div>
     </div>
-    <button class="abl-close" data-export="abl-close" title="Close">✕</button>
-  </div>
 
-  <div class="abl-cats" data-export="abl-cats">
-    <button class="abl-cat active">BASIC</button>
-    <button class="abl-cat">EXPERT</button>
-  </div>
+    <div data-export="abl-cats" style="padding: 10px; margin: -10px;">
+      <div class="abl-cats">
+        <button class="abl-cat active">BASIC</button>
+        <button class="abl-cat">EXPERT</button>
+      </div>
+    </div>
 
-  <div class="abl-list" data-export="abl-list">
+    <div data-export="abl-list" style="padding: 10px; margin: -10px; flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+      <div class="abl-list" style="flex: 1;">
     <!-- Active skill -->
     <div class="abl-skill active">
       <div class="abl-icon"></div>
@@ -94,6 +102,8 @@
         </div>
       </div>
       <div class="abl-rank"><span class="abl-rank-lv">—</span><span class="abl-rank-pct">0%</span></div>
+    </div>
+      </div>
     </div>
   </div>
 </div>
