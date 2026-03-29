@@ -35,15 +35,29 @@ export default {
         // Read incoming form data
         const clientFormData = await request.formData();
 
+        // Reconstruct FormData to avoid 520 errors caused by Cloudflare Worker's internal FormData serialization bugs
+        const newForm = new FormData();
+
+        for (const [key, value] of clientFormData.entries()) {
+          if (value instanceof File) {
+            // Re-create the File object to ensure headers like filename and content-type are preserved correctly
+            const arrayBuffer = await value.arrayBuffer();
+            const newFile = new File([arrayBuffer], value.name, { type: value.type });
+            newForm.append(key, newFile);
+          } else {
+            newForm.append(key, value);
+          }
+        }
+
         // Append userhash securely server-side if provided in Cloudflare environment
         if (env.CATBOX_USERHASH) {
-          clientFormData.set('userhash', env.CATBOX_USERHASH);
+          newForm.append('userhash', env.CATBOX_USERHASH);
         }
 
         // Forward FormData to Catbox.moe
         const catboxResponse = await fetch('https://catbox.moe/user/api.php', {
           method: 'POST',
-          body: clientFormData
+          body: newForm
         });
 
         const text = await catboxResponse.text();
