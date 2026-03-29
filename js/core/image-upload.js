@@ -59,7 +59,9 @@ export function setupImagePaste(textarea) {
 
       formData.append('fileToUpload', file);
 
-      const response = await fetch('https://catbox.moe/user/api.php', {
+      // Use the Cloudflare Worker to proxy the request and avoid browser CORS blocks
+      const workerUrl = config.github.workerUrl || 'https://ui-emulator-auth.wyrtensi.workers.dev';
+      const response = await fetch(`${workerUrl}/catbox`, {
         method: 'POST',
         body: formData
       });

@@ -28,6 +28,25 @@ export default {
 
     const url = new URL(request.url);
 
+    if (url.pathname === '/catbox' && request.method === 'POST') {
+      try {
+        // Forward FormData directly to Catbox.moe
+        const catboxResponse = await fetch('https://catbox.moe/user/api.php', {
+          method: 'POST',
+          body: await request.formData()
+        });
+
+        const text = await catboxResponse.text();
+        if (!catboxResponse.ok) {
+          return new Response(text, { status: catboxResponse.status, headers: corsHeaders });
+        }
+
+        return new Response(text, { headers: corsHeaders });
+      } catch (err) {
+        return new Response('Catbox proxy error', { status: 500, headers: corsHeaders });
+      }
+    }
+
     if (url.pathname === '/auth/callback' && request.method === 'POST') {
       try {
         const { code } = await request.json();
