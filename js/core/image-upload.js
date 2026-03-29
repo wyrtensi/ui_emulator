@@ -49,6 +49,14 @@ export function setupImagePaste(textarea) {
     textarea.selectionStart = textarea.selectionEnd = start + placeholder.length;
 
     try {
+      const formData = new FormData();
+      formData.append('reqtype', 'fileupload');
+      formData.append('fileToUpload', file);
+      // userhash is omitted entirely for anonymous uploads per Catbox API docs
+
+      const response = await fetch('https://catbox.moe/user/api.php', {
+        method: 'POST',
+        body: formData
       const base64 = await fileToBase64(file);
       const base64Data = base64.split(',')[1];
 

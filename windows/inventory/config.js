@@ -21,6 +21,7 @@ export default {
     { selector: '[data-export="inv-tabs"]', name: 'tabs', label: 'Filter Tabs' },
     { selector: '[data-export="inv-search"]', name: 'search', label: 'Search Field' },
     { selector: '[data-export="inv-grid"]', name: 'grid', label: 'Item Grid' },
+    { selector: '[data-export="inv-cell"]', name: 'cell', label: 'Individual Cells' },
     { selector: '[data-export="inv-footer"]', name: 'footer', label: 'Footer Bar' },
     { selector: '[data-export="inv-count"]', name: 'count', label: 'Slot Count' },
     { selector: '[data-export="inv-gold"]', name: 'gold', label: 'Gold Amount' },
@@ -32,6 +33,7 @@ export default {
     const cellTemplate = (hasItem) => {
       const c = document.createElement('div');
       c.className = 'inv-cell' + (hasItem ? ' has' : '');
+      c.dataset.export = 'inv-cell'; // Missing granular export config dynamically generated
       c.innerHTML = '<div class="inv-cell-inner"></div>';
       return c;
     };

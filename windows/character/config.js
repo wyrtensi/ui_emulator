@@ -30,6 +30,7 @@ export default {
     { selector: '[data-export="char-mastery-range"]', name: 'mastery-range', label: 'Range Mastery' },
     { selector: '[data-export="char-mastery-def"]', name: 'mastery-def', label: 'Defense Mastery' },
     { selector: '[data-export="char-mastery-shield"]', name: 'mastery-shield', label: 'Shield Mastery' },
+    { selector: '[data-export="char-slot"]', name: 'slot', label: 'Equipment Slots' },
   ],
   init(container) {
     // Tab switching
