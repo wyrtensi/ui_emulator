@@ -479,7 +479,13 @@ class DiscussionManager {
 
     // Re-inject images safely
     escaped = escaped.replace(/__IMG_PLACEHOLDER_(\d+)__/g, (match, idx) => {
-      const safeSrc = this._escAttr(images[idx]);
+      let safeSrc = this._escAttr(images[idx]);
+
+      // Proxy files.catbox.moe through a public image proxy to avoid ISP blocks (ERR_TIMED_OUT)
+      if (safeSrc.includes('files.catbox.moe')) {
+        safeSrc = `https://wsrv.nl/?url=${encodeURIComponent(safeSrc)}`;
+      }
+
       return `<img src="${safeSrc}" alt="Image" loading="lazy" style="max-width: 100%;" />`;
     });
 
