@@ -54,10 +54,21 @@ export default {
           newForm.append('userhash', env.CATBOX_USERHASH);
         }
 
+        // Convert FormData to an ArrayBuffer to force a Content-Length header and prevent
+        // Cloudflare from using Transfer-Encoding: chunked, which Catbox's PHP server rejects (causing 520 errors)
+        const tempResponse = new Response(newForm);
+        const bodyBuffer = await tempResponse.arrayBuffer();
+        const contentType = tempResponse.headers.get('Content-Type');
+
         // Forward FormData to Catbox.moe
         const catboxResponse = await fetch('https://catbox.moe/user/api.php', {
           method: 'POST',
-          body: newForm
+          headers: {
+            'Content-Type': contentType,
+            'Content-Length': bodyBuffer.byteLength.toString(),
+            'User-Agent': 'Cloudflare Worker Proxy'
+          },
+          body: bodyBuffer
         });
 
         const text = await catboxResponse.text();
