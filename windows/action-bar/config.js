@@ -31,14 +31,9 @@ export default {
 
     const slotTemplate = (key) => {
       const s = document.createElement('div');
-      s.dataset.export = "ab-slot";
-      s.style.padding = "10px";
-      s.style.margin = "-10px";
-
-      const inner = document.createElement('div');
-      inner.className = 'ab-slot';
-      inner.innerHTML = `<div class="ab-slot-inner"></div><div class="ab-dot"></div><span class="ab-label">${key}</span>`;
-      s.appendChild(inner);
+      s.className = 'ab-slot';
+      s.dataset.export = 'ab-slot'; // Expose individual slot for export
+      s.innerHTML = `<div class="ab-slot-inner"></div><div class="ab-dot"></div><span class="ab-label">${key}</span>`;
       return s;
     };
 

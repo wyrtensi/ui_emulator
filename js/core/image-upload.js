@@ -51,8 +51,8 @@ export function setupImagePaste(textarea) {
     try {
       const formData = new FormData();
       formData.append('reqtype', 'fileupload');
-      formData.append('userhash', '');
       formData.append('fileToUpload', file);
+      // userhash is omitted entirely for anonymous uploads per Catbox API docs
 
       const response = await fetch('https://catbox.moe/user/api.php', {
         method: 'POST',

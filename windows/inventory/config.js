@@ -32,15 +32,9 @@ export default {
 
     const cellTemplate = (hasItem) => {
       const c = document.createElement('div');
-      // Wrap cell in export padding
-      c.dataset.export = "inv-cell";
-      c.style.padding = "10px";
-      c.style.margin = "-10px";
-
-      const inner = document.createElement('div');
-      inner.className = 'inv-cell' + (hasItem ? ' has' : '');
-      inner.innerHTML = '<div class="inv-cell-inner"></div>';
-      c.appendChild(inner);
+      c.className = 'inv-cell' + (hasItem ? ' has' : '');
+      c.dataset.export = 'inv-cell'; // Missing granular export config dynamically generated
+      c.innerHTML = '<div class="inv-cell-inner"></div>';
       return c;
     };
 
