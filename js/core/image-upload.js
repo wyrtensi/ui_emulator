@@ -51,8 +51,13 @@ export function setupImagePaste(textarea) {
     try {
       const formData = new FormData();
       formData.append('reqtype', 'fileupload');
+
+      const userHash = (await import('./settings.js')).settings.get('catboxHash');
+      if (userHash) {
+        formData.append('userhash', userHash);
+      }
+
       formData.append('fileToUpload', file);
-      // userhash is omitted entirely for anonymous uploads per Catbox API docs
 
       const response = await fetch('https://catbox.moe/user/api.php', {
         method: 'POST',
@@ -60,7 +65,8 @@ export function setupImagePaste(textarea) {
       });
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Upload failed: ${response.status} - ${errorText}`);
       }
 
       const url = await response.text();

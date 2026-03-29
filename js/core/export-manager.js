@@ -102,11 +102,16 @@ class ExportManager {
     for (const cb of checked) {
       const { windowId, exportName } = cb.dataset;
       this._updateProgress(++i, checked.length);
-      const result = await this.exportElement(windowId, exportName);
-      if (result) files.push(result);
 
-      // Yield to main thread to prevent freezing during batch export
-      await new Promise(r => setTimeout(r, 50));
+      try {
+        const result = await this.exportElement(windowId, exportName);
+        if (result) files.push(result);
+      } catch (err) {
+        console.error(`[ExportManager] Failed to export ${windowId}/${exportName}:`, err);
+      }
+
+      // Yield to main thread to prevent freezing during batch export and allow GC
+      await new Promise(r => setTimeout(r, 100));
     }
 
     this._hideProgress();
@@ -141,11 +146,16 @@ class ExportManager {
     for (let i = 0; i < allExports.length; i++) {
       this._updateProgress(i + 1, allExports.length);
       const { windowId, exportName } = allExports[i];
-      const result = await this.exportElement(windowId, exportName);
-      if (result) files.push(result);
 
-      // Yield to main thread to prevent freezing during batch export
-      await new Promise(r => setTimeout(r, 50));
+      try {
+        const result = await this.exportElement(windowId, exportName);
+        if (result) files.push(result);
+      } catch (err) {
+        console.error(`[ExportManager] Failed to export ${windowId}/${exportName}:`, err);
+      }
+
+      // Yield to main thread to prevent freezing during batch export and allow GC
+      await new Promise(r => setTimeout(r, 100));
     }
 
     this._hideProgress();
@@ -160,6 +170,17 @@ class ExportManager {
   async _renderToPNG(element, windowId, exportName, scale = 2) {
     element.classList.remove('rfo-export-highlight');
 
+    // Temporarily apply padding to prevent html2canvas from clipping box-shadows/glows
+    const originalPadding = element.style.padding;
+    const originalMargin = element.style.margin;
+
+    // We only apply this hack if we're not inside an SVG (SVGs don't support HTML padding)
+    const isSVG = element.tagName.toLowerCase() === 'svg' || element.closest('svg') !== null;
+    if (!isSVG) {
+      element.style.padding = '10px';
+      element.style.margin = '-10px';
+    }
+
     const transparent = this._transparentEl?.checked ?? true;
 
     const canvas = await html2canvas(element, {
@@ -168,6 +189,12 @@ class ExportManager {
       useCORS: true,
       logging: false,
     });
+
+    // Restore original styles immediately after render
+    if (!isSVG) {
+      element.style.padding = originalPadding;
+      element.style.margin = originalMargin;
+    }
 
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     const filename = `${windowId}_${exportName}_${scale}x.png`;

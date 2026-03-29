@@ -33,7 +33,7 @@ export default {
     const cellTemplate = (hasItem) => {
       const c = document.createElement('div');
       c.className = 'inv-cell' + (hasItem ? ' has' : '');
-      c.dataset.export = 'inv-cell'; // Missing granular export config dynamically generated
+      c.dataset.export = 'inv-cell'; // Expose individual cell
       c.innerHTML = '<div class="inv-cell-inner"></div>';
       return c;
     };

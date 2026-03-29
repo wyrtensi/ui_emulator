@@ -32,7 +32,7 @@ export default {
     const slotTemplate = (key) => {
       const s = document.createElement('div');
       s.className = 'ab-slot';
-      s.dataset.export = 'ab-slot'; // Expose individual slot for export
+      s.dataset.export = 'ab-slot'; // Expose individual slot
       s.innerHTML = `<div class="ab-slot-inner"></div><div class="ab-dot"></div><span class="ab-label">${key}</span>`;
       return s;
     };
