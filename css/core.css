@@ -421,11 +421,7 @@ body[data-mode="comment"] #rfo-mode-indicator {
 }
 
 /* ── Control Panel Toggle ──────────────────────────── */
-#rfo-panel-toggle {
-  position: fixed;
-  top: 8px;
-  right: 8px;
-  z-index: var(--z-panel-toggle);
+#rfo-panel-toggle, #rfo-canvas-btn {
   width: 40px;
   height: 40px;
   border: 1px solid var(--panel-border);
@@ -440,9 +436,13 @@ body[data-mode="comment"] #rfo-mode-indicator {
   backdrop-filter: blur(12px);
 }
 
-#rfo-panel-toggle:hover {
+#rfo-panel-toggle:hover, #rfo-canvas-btn:hover {
   border-color: var(--panel-accent);
   box-shadow: 0 0 16px var(--panel-accent-dim);
+}
+
+#rfo-canvas-btn {
+  background: var(--panel-accent-dim);
 }
 
 #rfo-panel-arrow {

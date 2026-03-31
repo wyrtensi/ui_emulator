@@ -477,6 +477,12 @@ class DiscussionManager {
       '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
     );
 
+    // Linkify Canvas hashes (#canvas:Something)
+    escaped = escaped.replace(
+      /(#canvas:[a-zA-Z0-9_\-\.]+)/g,
+      '<a href="$1" class="canvas-link" target="_self">$1</a>'
+    );
+
     // Re-inject images safely
     escaped = escaped.replace(/__IMG_PLACEHOLDER_(\d+)__/g, (match, idx) => {
       let safeSrc = this._escAttr(images[idx]);

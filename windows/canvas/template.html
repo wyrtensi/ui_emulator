@@ -1,0 +1,91 @@
+<div class="canvas-window" data-export="canvas-full">
+  <div class="canvas-header">
+    <div class="canvas-title">
+      <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="3" y1="9" x2="21" y2="9"></line>
+        <line x1="9" y1="21" x2="9" y2="9"></line>
+      </svg>
+      Concept Canvas
+      <span class="canvas-saving-indicator" id="canvas-saving-indicator" hidden>Saving...</span>
+    </div>
+
+    <div class="canvas-controls">
+      <button class="canvas-btn" id="canvas-theme-toggle" title="Toggle Theme (Dark/Light)">🌓</button>
+      <button class="canvas-btn" id="canvas-zoom-out" title="Zoom Out">−</button>
+      <span class="canvas-zoom-level" id="canvas-zoom-level">100%</span>
+      <button class="canvas-btn" id="canvas-zoom-in" title="Zoom In">+</button>
+      <button class="canvas-btn" id="canvas-fit" title="Fit to Screen">⛶</button>
+      <button class="canvas-close">✕</button>
+    </div>
+  </div>
+
+  <div class="canvas-body">
+    <!-- Owner Toolbar -->
+    <div class="canvas-toolbar" id="canvas-toolbar" hidden>
+      <button class="canvas-tool-btn" data-tool="select" title="Select / Pan (V)" aria-pressed="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="M13 13l6 6"></path></svg>
+      </button>
+      <button class="canvas-tool-btn" data-tool="text" title="Add Text Node (T)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+      </button>
+      <label class="canvas-tool-btn" title="Upload Image (I)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        <input type="file" id="canvas-upload-image" accept="image/*" hidden>
+      </label>
+      <button class="canvas-tool-btn" data-tool="edge" title="Draw Connection (E)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </button>
+      <div class="canvas-toolbar-separator"></div>
+      <button class="canvas-tool-btn canvas-danger" id="canvas-delete-selected" title="Delete Selected (Del)" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+      </button>
+      <div class="canvas-toolbar-spacer"></div>
+      <button class="canvas-tool-btn canvas-save-btn" id="canvas-save-btn" title="Save Changes (Ctrl+S)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        Save
+      </button>
+    </div>
+
+    <div class="canvas-workspace">
+      <!-- Main Infinite Canvas -->
+      <div class="canvas-viewport" id="canvas-viewport" tabindex="0">
+        <div class="canvas-content" id="canvas-content">
+          <!-- Nodes and SVG edges go here -->
+          <svg class="canvas-edges" id="canvas-edges"></svg>
+          <div class="canvas-nodes" id="canvas-nodes"></div>
+
+          <!-- Edge drawing preview -->
+          <svg class="canvas-drawing-layer" id="canvas-drawing-layer">
+            <path id="canvas-drawing-edge" d="" fill="none" stroke="var(--canvas-edge-color)" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrowhead)"></path>
+            <defs>
+              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="var(--canvas-edge-color)"></polygon>
+              </marker>
+            </defs>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Integrated Discussion Chat -->
+      <div class="canvas-chat-sidebar">
+        <div class="canvas-chat-header">
+          <h3>Discussion</h3>
+          <button id="canvas-chat-toggle" title="Toggle Chat">✕</button>
+        </div>
+        <div id="canvas-discussion-messages" class="canvas-discussion-messages">
+          <div class="canvas-discussion-loading">Loading chat...</div>
+        </div>
+        <div class="canvas-discussion-input-wrap">
+          <textarea id="canvas-discussion-input" class="canvas-discussion-input" rows="2" placeholder="Join discussion..."></textarea>
+          <button id="canvas-discussion-send" class="canvas-discussion-send" title="Send">➤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading / Error Overlay -->
+  <div class="canvas-overlay" id="canvas-overlay">
+    <div class="canvas-overlay-content" id="canvas-overlay-text">Loading Canvas...</div>
+  </div>
+</div>

@@ -101,6 +101,7 @@ async function boot() {
   wireControlPanel();
   wireKeyboardShortcuts();
   wireAuthButtons();
+  wireCanvasButton();
   updateModeIndicator(settings.get('mode'));
 
   // 9. Load remote pins from GitHub (non-blocking)
@@ -127,7 +128,26 @@ async function boot() {
     }, 2000);
   }
 
+  // 12. Global hash listener for canvas links
+  checkGlobalHash(window.location.hash);
+  window.addEventListener('hashchange', () => checkGlobalHash(window.location.hash));
+
   console.log('[RFO UI Emulator] Ready —', manifest.windows.length, 'windows loaded');
+}
+
+/** Global hash interceptor to ensure canvas window opens before its internal logic runs */
+function checkGlobalHash(hash) {
+  if (hash.startsWith('#canvas:')) {
+    const canvasBtn = document.getElementById('rfo-canvas-btn');
+    if (!windowManager.get('canvas') && canvasBtn) {
+      // It's not loaded yet, simulate click to load it
+      canvasBtn.click();
+    } else if (windowManager.get('canvas') && !windowManager.isOpen('canvas')) {
+      // Loaded but closed, just open it
+      windowManager.open('canvas');
+    }
+    // The internal logic in canvas-engine.js will handle the actual zooming
+  }
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -789,6 +809,25 @@ function guessMediaType(url) {
 /* ═══════════════════════════════════════════════════════
    AUTH UI
    ═══════════════════════════════════════════════════════ */
+function wireCanvasButton() {
+  const canvasBtn = document.getElementById('rfo-canvas-btn');
+  if (canvasBtn) {
+    canvasBtn.addEventListener('click', () => {
+      // Create if not exists in registry list, then toggle
+      if (!windowManager.get('canvas')) {
+        loadWindowById('canvas', document.getElementById('rfo-windows')).then(() => {
+          windowManager.open('canvas');
+        }).catch(err => {
+          console.error("Failed to load canvas module", err);
+          window.rfoToast('Failed to load canvas module', 'error');
+        });
+      } else {
+        windowManager.toggle('canvas');
+      }
+    });
+  }
+}
+
 function wireAuthButtons() {
   document.getElementById('rfo-gh-login')?.addEventListener('click', () => githubAuth.login());
   document.getElementById('rfo-gh-logout')?.addEventListener('click', () => {
