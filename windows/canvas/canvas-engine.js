@@ -28,10 +28,31 @@ let autoSaveInterval = null;
 
 // DOM Elements
 let container, viewport, content, nodesLayer, edgesLayer, drawingLayer, drawingEdge;
-let zoomLabel, saveIndicator;
+let zoomLabel, saveIndicator, nodeToolbar;
 
 export async function initCanvas(winContainer, config) {
     container = winContainer;
+
+    // Force fullscreen overlay by resetting the window wrapper
+    const rfoWindow = container.closest('.rfo-window');
+    if (rfoWindow) {
+        // Appending to body strips it out of the scaled viewport and ensures it is truly fullscreen
+        // Keep it in DOM so windowManager can track it, but position it absolute/fixed
+        rfoWindow.style.position = 'fixed';
+        rfoWindow.style.top = '0';
+        rfoWindow.style.left = '0';
+        rfoWindow.style.width = '100vw';
+        rfoWindow.style.height = '100vh';
+        rfoWindow.style.zIndex = '9998';
+        rfoWindow.style.transform = 'none';
+
+        // Remove from the scaled 'rfo-windows' layer and append directly to document.body
+        // This fully bypasses the emulator scaling that shrinks it
+        if (rfoWindow.parentElement && rfoWindow.parentElement.id === 'rfo-windows') {
+             document.body.appendChild(rfoWindow);
+        }
+    }
+
     viewport = container.querySelector('#canvas-viewport');
     content = container.querySelector('#canvas-content');
     nodesLayer = container.querySelector('#canvas-nodes');
@@ -40,8 +61,10 @@ export async function initCanvas(winContainer, config) {
     drawingEdge = container.querySelector('#canvas-drawing-edge');
     zoomLabel = container.querySelector('#canvas-zoom-level');
     saveIndicator = container.querySelector('#canvas-saving-indicator');
+    nodeToolbar = container.querySelector('#canvas-node-toolbar');
 
     isOwner = githubAuth.isOwner;
+    setupNodeToolbar();
 
     // Toggle owner UI
     if (isOwner) {
@@ -79,6 +102,9 @@ export async function initCanvas(winContainer, config) {
                 e.returnValue = '';
             }
         });
+
+        // Global Paste Listener
+        container.addEventListener('paste', handleGlobalPaste);
     }
 }
 
@@ -244,12 +270,27 @@ function renderNode(node) {
     el.style.width = `${node.width}px`;
     el.style.height = `${node.height}px`;
 
-    if (node.color) el.style.borderColor = node.color;
+    if (node.color) {
+        if (['1','2','3','4','5','6'].includes(node.color)) {
+            el.classList.add(`color-${node.color}`);
+        } else {
+            el.style.borderColor = node.color;
+        }
+    }
 
     let contentHtml = '';
     if (node.type === 'text') {
-        const safeText = (node.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-        contentHtml = `<div class="node-content-text" data-id="${node.id}">${safeText}</div>`;
+        let renderedHtml = node.text || '';
+        try {
+            if (typeof marked !== 'undefined') {
+                renderedHtml = marked.parse(renderedHtml);
+            } else {
+                renderedHtml = renderedHtml.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+            }
+        } catch(e) {
+            renderedHtml = renderedHtml.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+        }
+        contentHtml = `<div class="node-content-text" data-id="${node.id}">${renderedHtml}</div>`;
     } else if (node.type === 'file') {
         // Handle images
         const fileExt = node.file.split('.').pop().toLowerCase();
@@ -375,29 +416,50 @@ function setupNodeInteractions(el, node) {
             if (currentTool !== 'select') return;
             e.stopPropagation();
 
-            textContent.contentEditable = true;
-            textContent.classList.add('editing');
-            textContent.focus();
+            // Swap HTML to Raw Textarea for Markdown editing
+            const textarea = document.createElement('textarea');
+            textarea.className = 'node-content-textarea';
+            textarea.style.width = '100%';
+            textarea.style.height = '100%';
+            textarea.style.resize = 'none';
+            textarea.style.border = 'none';
+            textarea.style.background = 'transparent';
+            textarea.style.color = 'inherit';
+            textarea.style.fontFamily = 'inherit';
+            textarea.style.fontSize = 'inherit';
+            textarea.style.outline = 'none';
+            textarea.value = node.text || '';
 
-            // Select all text
-            const range = document.createRange();
-            range.selectNodeContents(textContent);
-            const sel = window.getSelection();
-            sel.removeAllRanges();
-            sel.addRange(range);
-        });
+            textContent.style.display = 'none';
+            el.insertBefore(textarea, textContent);
 
-        textContent.addEventListener('blur', () => {
-            textContent.contentEditable = false;
-            textContent.classList.remove('editing');
+            textarea.focus();
 
-            // Save HTML back to markdown-ish text (simple implementation)
-            const newText = textContent.innerHTML.replace(/<br\s*[\/]?>/gi, '\n').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+            textarea.addEventListener('blur', () => {
+                const newText = textarea.value;
+                textarea.remove();
 
-            if (newText !== node.text) {
-                node.text = newText;
-                markUnsaved();
-            }
+                if (newText !== node.text) {
+                    node.text = newText;
+                    markUnsaved();
+                    // Re-render just this node's content
+                    try {
+                        if (typeof marked !== 'undefined') {
+                            textContent.innerHTML = marked.parse(node.text);
+                        } else {
+                            textContent.innerHTML = node.text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                        }
+                    } catch(err) {
+                        textContent.innerHTML = node.text;
+                    }
+                }
+                textContent.style.display = '';
+            });
+
+            textarea.addEventListener('keydown', (ke) => {
+                // Ignore emulator hotkeys when editing
+                ke.stopPropagation();
+            });
         });
     }
 
@@ -411,6 +473,8 @@ function setupNodeInteractions(el, node) {
 
             el.style.left = `${node.x}px`;
             el.style.top = `${node.y}px`;
+
+            if (selectedNode === node) showNodeToolbar(node, el);
 
             updateEdgesForNode(node.id);
             markUnsaved();
@@ -435,6 +499,8 @@ function setupNodeInteractions(el, node) {
             el.style.top = `${node.y}px`;
             el.style.width = `${node.width}px`;
             el.style.height = `${node.height}px`;
+
+            if (selectedNode === node) showNodeToolbar(node, el);
 
             updateEdgesForNode(node.id);
             markUnsaved();
@@ -582,7 +648,10 @@ function selectNode(node) {
     clearSelection();
     selectedNode = node;
     const el = nodesLayer.querySelector(`[data-id="${node.id}"]`);
-    if (el) el.classList.add('selected');
+    if (el) {
+        el.classList.add('selected');
+        showNodeToolbar(node, el);
+    }
     updateDeleteBtn();
 }
 
@@ -605,7 +674,174 @@ function clearSelection() {
         if (el) el.classList.remove('selected');
         selectedEdge = null;
     }
+    hideNodeToolbar();
     updateDeleteBtn();
+}
+
+function showNodeToolbar(node, el) {
+    if (!isOwner) return;
+
+    // Position toolbar above the node
+    const rect = el.getBoundingClientRect();
+    const contentRect = content.getBoundingClientRect();
+
+    // Calculate position relative to content layer
+    const x = node.x + (node.width / 2);
+    const y = node.y;
+
+    nodeToolbar.style.left = `${x}px`;
+    nodeToolbar.style.top = `${y}px`;
+    nodeToolbar.hidden = false;
+}
+
+function hideNodeToolbar() {
+    if (nodeToolbar) {
+        nodeToolbar.hidden = true;
+        nodeToolbar.querySelector('#node-color-palette').hidden = true;
+    }
+}
+
+function setupNodeToolbar() {
+    if (!nodeToolbar) return;
+
+    nodeToolbar.querySelector('#nt-delete').addEventListener('click', deleteSelected);
+
+    const palette = nodeToolbar.querySelector('#node-color-palette');
+    nodeToolbar.querySelector('#nt-color').addEventListener('click', () => {
+        palette.hidden = !palette.hidden;
+    });
+
+    nodeToolbar.querySelector('#nt-zoom').addEventListener('click', () => {
+        if (!selectedNode) return;
+
+        const padding = 100;
+        const rect = viewport.getBoundingClientRect();
+
+        const scaleX = rect.width / (selectedNode.width + padding * 2);
+        const scaleY = rect.height / (selectedNode.height + padding * 2);
+        scale = Math.min(1, Math.min(scaleX, scaleY));
+
+        translateX = -(selectedNode.x + selectedNode.width/2) * scale + (rect.width / 2);
+        translateY = -(selectedNode.y + selectedNode.height/2) * scale + (rect.height / 2);
+
+        updateTransform();
+    });
+
+    nodeToolbar.querySelector('#nt-edit').addEventListener('click', () => {
+        if (selectedNode && selectedNode.type === 'text') {
+            const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
+            const textContent = el.querySelector('.node-content-text');
+            if (textContent) {
+                // Simulate a double click to trigger the existing edit logic
+                textContent.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+            }
+        }
+    });
+
+    // Setup color swatches
+    nodeToolbar.querySelectorAll('.color-swatch').forEach(swatch => {
+        swatch.addEventListener('click', (e) => {
+            if (!selectedNode) return;
+            const colorCode = e.target.dataset.color;
+
+            const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
+
+            // Clear existing color classes
+            el.className = el.className.replace(/\bcolor-\S+/g, '');
+
+            if (colorCode === 'default') {
+                selectedNode.color = null;
+                el.style.borderColor = '';
+            } else {
+                selectedNode.color = colorCode; // JSON canvas standard says color can be 1-6
+                el.classList.add(`color-${colorCode}`);
+                el.style.borderColor = ''; // Let css handle it
+            }
+
+            palette.hidden = true;
+            markUnsaved();
+        });
+    });
+
+    const formatMenu = nodeToolbar.querySelector('#node-format-menu');
+
+    // Add right click context menu to nodes
+    viewport.addEventListener('contextmenu', (e) => {
+        const nodeEl = e.target.closest('.canvas-node');
+        if (nodeEl && isOwner) {
+            e.preventDefault();
+            const id = nodeEl.dataset.id;
+            const node = canvasData.nodes.find(n => n.id === id);
+            if (node && node.type === 'text') {
+                selectNode(node); // show toolbar
+                palette.hidden = true;
+                formatMenu.hidden = false;
+            }
+        } else {
+            if (formatMenu) formatMenu.hidden = true;
+            if (palette) palette.hidden = true;
+        }
+    });
+
+    // Close menus when clicking elsewhere
+    viewport.addEventListener('mousedown', (e) => {
+        if (e.button === 0 && formatMenu && !e.target.closest('.node-format-menu') && !e.target.closest('.node-color-palette')) {
+            formatMenu.hidden = true;
+            palette.hidden = true;
+        }
+    });
+
+    // Handle format actions
+    if (formatMenu) {
+        formatMenu.querySelectorAll('.format-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (!selectedNode || selectedNode.type !== 'text') return;
+
+                const fmt = e.target.dataset.format;
+                let prefix = '';
+                let suffix = '';
+
+                switch (fmt) {
+                    case 'h1': prefix = '# '; break;
+                    case 'h2': prefix = '## '; break;
+                    case 'h3': prefix = '### '; break;
+                    case 'bold': prefix = '**'; suffix = '**'; break;
+                    case 'italic': prefix = '*'; suffix = '*'; break;
+                    case 'quote': prefix = '> '; break;
+                    case 'code': prefix = '`'; suffix = '`'; break;
+                    case 'ul': prefix = '- '; break;
+                    case 'ol': prefix = '1. '; break;
+                    case 'task': prefix = '- [ ] '; break;
+                }
+
+                // If currently editing, we can't easily inject without a ref to the textarea/contenteditable.
+                // If we aren't editing, we just prepend/wrap the whole text
+                const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
+                const textContent = el.querySelector('.node-content-text');
+
+                const textarea = el.querySelector('.node-content-textarea');
+
+                if (textarea) {
+                    // Insert into active textarea
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const text = textarea.value;
+                    const selected = text.substring(start, end) || 'text';
+                    textarea.value = text.substring(0, start) + prefix + selected + suffix + text.substring(end);
+                    textarea.focus();
+                    textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
+                } else {
+                    // Append to raw text and re-render
+                    selectedNode.text = `${selectedNode.text || ''}\n${prefix}text${suffix}`;
+                    renderCanvas();
+                    selectNode(selectedNode);
+                }
+
+                formatMenu.hidden = true;
+                markUnsaved();
+            });
+        });
+    }
 }
 
 function setupOwnerTools() {
@@ -658,13 +894,42 @@ function setupOwnerTools() {
             filename = promptName;
         }
 
-        // Convert to base64
+        await uploadAndAddImage(file, filename);
+
+        // reset input
+        uploadInput.value = '';
+    });
+}
+
+async function handleGlobalPaste(e) {
+    if (!isOwner) return;
+
+    // Ignore if pasting into a text field (chat)
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return;
+    }
+
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    for (let index in items) {
+        const item = items[index];
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+            const blob = item.getAsFile();
+            const ext = blob.type.split('/')[1] || 'png';
+            const filename = `pasted_image_${Date.now()}.${ext}`;
+            await uploadAndAddImage(blob, filename);
+            break; // only handle first image
+        }
+    }
+}
+
+async function uploadAndAddImage(file, filename) {
+    // Convert to base64
+    return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = async () => {
             const base64Data = reader.result.split(',')[1];
             showOverlay('Uploading image...');
             try {
-                // Save to repo using API helper
                 const repoPath = `canvas_uploads/${filename}`;
                 await githubApi.saveFile(repoPath, base64Data, `Upload ${filename} to canvas`, true);
 
@@ -673,21 +938,17 @@ function setupOwnerTools() {
                 const x = (-translateX + rect.width / 2) / scale;
                 const y = (-translateY + rect.height / 2) / scale;
 
-                // Estimate size based on image (hardcoded generic for now)
                 createNode('file', x - 150, y - 100, 300, 200, repoPath);
-
                 window.rfoToast('Image uploaded and added', 'success');
             } catch (err) {
                 console.error("Upload failed", err);
                 window.rfoToast('Failed to upload image to repo', 'error');
             } finally {
                 hideOverlay();
+                resolve();
             }
         };
         reader.readAsDataURL(file);
-
-        // reset input
-        uploadInput.value = '';
     });
 }
 
@@ -921,6 +1182,11 @@ async function fetchDiscussion(messagesEl) {
     messagesEl.innerHTML = '<div class="canvas-discussion-loading">Loading chat...</div>';
 
     try {
+        if (!githubAuth.token) {
+            messagesEl.innerHTML = '<div class="canvas-discussion-loading">Sign in to view and participate in the discussion.<br><small style="color:#aaa;">GitHub Discussions require authentication to view.</small></div>';
+            return;
+        }
+
         const [owner, name] = config.github.repo.split('/');
         const query = `
           query($owner: String!, $name: String!, $number: Int!) {

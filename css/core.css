@@ -421,28 +421,39 @@ body[data-mode="comment"] #rfo-mode-indicator {
 }
 
 /* ── Control Panel Toggle ──────────────────────────── */
-#rfo-panel-toggle, #rfo-canvas-btn {
-  width: 40px;
-  height: 40px;
+.main-ui-btn {
+  height: 44px;
+  padding: 0 20px;
   border: 1px solid var(--panel-border);
-  border-radius: 10px;
+  border-radius: 22px;
   background: var(--panel-bg);
   color: var(--panel-accent);
   cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
   backdrop-filter: blur(12px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
-#rfo-panel-toggle:hover, #rfo-canvas-btn:hover {
+.main-ui-btn:hover {
   border-color: var(--panel-accent);
   box-shadow: 0 0 16px var(--panel-accent-dim);
+  transform: translateY(-2px);
+  color: #fff;
+  background: var(--panel-hover);
 }
 
 #rfo-canvas-btn {
-  background: var(--panel-accent-dim);
+  background: rgba(43, 117, 204, 0.2);
+}
+#rfo-canvas-btn:hover {
+  background: var(--panel-accent);
 }
 
 #rfo-panel-arrow {
