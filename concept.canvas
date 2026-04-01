@@ -1,24 +1,6 @@
 {
   "nodes": [
     {
-      "id": "3cujn4wwv9n",
-      "type": "text",
-      "x": 137,
-      "y": 397,
-      "width": 200,
-      "height": 100,
-      "text": "test\n"
-    },
-    {
-      "id": "bnciq8qqy96",
-      "type": "file",
-      "x": 653,
-      "y": -239,
-      "width": 670,
-      "height": 716,
-      "file": "canvas_uploads/pasted_image_1775055024319.png"
-    },
-    {
       "id": "zzg1jmlmhy",
       "type": "text",
       "x": 1747,
