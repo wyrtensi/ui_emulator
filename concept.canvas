@@ -12,8 +12,8 @@
     {
       "id": "bnciq8qqy96",
       "type": "file",
-      "x": 1002,
-      "y": -28,
+      "x": 653,
+      "y": -239,
       "width": 670,
       "height": 716,
       "file": "canvas_uploads/pasted_image_1775055024319.png"
@@ -26,31 +26,7 @@
       "width": 200,
       "height": 100,
       "text": "New node"
-    },
-    {
-      "id": "n_1775071366573",
-      "type": "text",
-      "x": 234,
-      "y": -185,
-      "width": 227,
-      "height": 146,
-      "text": ""
     }
   ],
-  "edges": [
-    {
-      "id": "dmai9d92oz8",
-      "fromNode": "n_1775071366573",
-      "fromSide": "right",
-      "toNode": "bnciq8qqy96",
-      "toSide": "left"
-    },
-    {
-      "id": "xuoc5clxwyp",
-      "fromNode": "bnciq8qqy96",
-      "fromSide": "left",
-      "toNode": "n_1775071366573",
-      "toSide": "right"
-    }
-  ]
+  "edges": []
 }
