@@ -21,21 +21,45 @@
     {
       "id": "n_1775079368011",
       "type": "text",
-      "x": -244,
-      "y": 5,
+      "x": -269,
+      "y": -45,
       "width": 250,
       "height": 150,
-      "text": ""
+      "text": "jhjhjkhjl\n"
     },
     {
       "id": "n_1775079373045",
       "type": "text",
-      "x": 377.7777099609375,
-      "y": 17.111083984375,
+      "x": 244,
+      "y": -12,
+      "width": 250,
+      "height": 150,
+      "text": "gdfgdfg\nbcbcvb\n"
+    },
+    {
+      "id": "n_1775079423645",
+      "type": "text",
+      "x": -362.2222900390625,
+      "y": -111.888916015625,
       "width": 250,
       "height": 150,
       "text": ""
     }
   ],
-  "edges": []
+  "edges": [
+    {
+      "id": "gunyigwtvuo",
+      "fromNode": "n_1775079368011",
+      "fromSide": "right",
+      "toNode": "n_1775079373045",
+      "toSide": "left"
+    },
+    {
+      "id": "qfwqxl7am07",
+      "fromNode": "n_1775079373045",
+      "fromSide": "left",
+      "toNode": "n_1775079368011",
+      "toSide": "right"
+    }
+  ]
 }
