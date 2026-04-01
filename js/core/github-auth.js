@@ -10,8 +10,8 @@
 
 import config from '../config.js';
 
-const STORAGE_KEY = 'rfo_gh_token';
-const USER_KEY = 'rfo_gh_user';
+const STORAGE_KEY = 'ui_gh_token';
+const USER_KEY = 'ui_gh_user';
 const STORAGE = localStorage;   // persist across tabs & sessions
 
 class GitHubAuth {
@@ -84,8 +84,8 @@ class GitHubAuth {
         this._token = null;
         this._user = null;
         // Surface error visibly so user knows what went wrong
-        if (typeof window.rfoToast === 'function') {
-          window.rfoToast('GitHub sign-in failed: ' + (err.message || err), 'error');
+        if (typeof window.uiToast === 'function') {
+          window.uiToast('GitHub sign-in failed: ' + (err.message || err), 'error');
         }
       }
     }

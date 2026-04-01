@@ -35,14 +35,14 @@ class CommentManager {
   }
 
   init() {
-    this._commentPanelList = document.getElementById('rfo-comments-list');
-    this._pinCountEl = document.getElementById('rfo-pin-count');
-    this._toolbar = document.getElementById('rfo-comment-toolbar');
+    this._commentPanelList = document.getElementById('ui-comments-list');
+    this._pinCountEl = document.getElementById('ui-pin-count');
+    this._toolbar = document.getElementById('ui-comment-toolbar');
 
     // Double-click on any window to place a pin (only in comment mode)
-    document.getElementById('rfo-windows').addEventListener('dblclick', (e) => {
+    document.getElementById('ui-windows').addEventListener('dblclick', (e) => {
       if (settings.get('mode') !== 'comment') return;
-      const windowEl = e.target.closest('.rfo-window');
+      const windowEl = e.target.closest('.ui-window');
       if (!windowEl) return;
       if (e.target.closest('.comment-pin, .comment-card')) return;
 
@@ -54,13 +54,13 @@ class CommentManager {
     });
 
     // Toggle pins visibility
-    const toggleBtn = document.getElementById('rfo-toggle-pins');
+    const toggleBtn = document.getElementById('ui-toggle-pins');
     if (toggleBtn) {
       toggleBtn.addEventListener('click', () => this.togglePinsVisibility());
     }
 
     // Clear all pins (owner-only, hard confirm)
-    const clearBtn = document.getElementById('rfo-comments-clear');
+    const clearBtn = document.getElementById('ui-comments-clear');
     if (clearBtn) {
       clearBtn.addEventListener('click', () => {
         if (this._pins.length === 0) return;
@@ -83,7 +83,7 @@ class CommentManager {
     });
 
     // Move-pins toggle (owner only)
-    const moveBtn = document.getElementById('rfo-move-pins');
+    const moveBtn = document.getElementById('ui-move-pins');
     if (moveBtn) {
       moveBtn.addEventListener('click', () => this._toggleMoveMode());
     }
@@ -102,7 +102,7 @@ class CommentManager {
 
   /* ── Toast helper ────────────────────────────────── */
   _toast(msg, type = 'info') {
-    if (typeof window.rfoToast === 'function') window.rfoToast(msg, type);
+    if (typeof window.uiToast === 'function') window.uiToast(msg, type);
   }
 
   /* ── Place a new pin (remote only — requires auth) ── */
@@ -239,12 +239,12 @@ class CommentManager {
       this._openCard(pin, pinEl, entry.container);
     });
 
-    let pinsContainer = entry.container.querySelector('.rfo-pins-layer');
+    let pinsContainer = entry.container.querySelector('.ui-pins-layer');
     if (!pinsContainer) {
       pinsContainer = document.createElement('div');
-      pinsContainer.className = 'rfo-pins-layer';
+      pinsContainer.className = 'ui-pins-layer';
       pinsContainer.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:9999;';
-      if (!this._pinsVisible) pinsContainer.classList.add('rfo-pins-hidden');
+      if (!this._pinsVisible) pinsContainer.classList.add('ui-pins-hidden');
       entry.container.appendChild(pinsContainer);
     }
     pinsContainer.appendChild(pinEl);
@@ -453,7 +453,7 @@ class CommentManager {
     }
     card.style.top = `calc(${yPct}% + 16px)`;
 
-    const pinsContainer = windowContainer.querySelector('.rfo-pins-layer');
+    const pinsContainer = windowContainer.querySelector('.ui-pins-layer');
     if (pinsContainer) pinsContainer.appendChild(card);
 
     this._activeCard = card;
@@ -502,11 +502,11 @@ class CommentManager {
   /* ── Toggle pins visibility ───────────────────────── */
   togglePinsVisibility() {
     this._pinsVisible = !this._pinsVisible;
-    const layers = document.querySelectorAll('.rfo-pins-layer');
+    const layers = document.querySelectorAll('.ui-pins-layer');
     for (const layer of layers) {
-      layer.classList.toggle('rfo-pins-hidden', !this._pinsVisible);
+      layer.classList.toggle('ui-pins-hidden', !this._pinsVisible);
     }
-    const toggleBtn = document.getElementById('rfo-toggle-pins');
+    const toggleBtn = document.getElementById('ui-toggle-pins');
     if (toggleBtn) {
       toggleBtn.textContent = this._pinsVisible ? '👁 Pins' : '👁‍🗨 Pins';
     }
@@ -524,7 +524,7 @@ class CommentManager {
   /* ── Re-render all pins ───────────────────────────── */
   _rerenderAll() {
     for (const [, entry] of windowManager._windows ?? []) {
-      const layer = entry?.container?.querySelector('.rfo-pins-layer');
+      const layer = entry?.container?.querySelector('.ui-pins-layer');
       if (layer) layer.remove();
     }
     for (const pin of this._pins) {
@@ -601,12 +601,12 @@ class CommentManager {
       return;
     }
     this._moveMode = !this._moveMode;
-    const btn = document.getElementById('rfo-move-pins');
+    const btn = document.getElementById('ui-move-pins');
     if (btn) btn.classList.toggle('ct-btn-active', this._moveMode);
 
     // Toggle visual class on all pin layers
-    document.querySelectorAll('.rfo-pins-layer').forEach(layer => {
-      layer.classList.toggle('rfo-pins-move-mode', this._moveMode);
+    document.querySelectorAll('.ui-pins-layer').forEach(layer => {
+      layer.classList.toggle('ui-pins-move-mode', this._moveMode);
     });
 
     this._toast(this._moveMode ? 'Move mode ON — drag pins to reposition' : 'Move mode OFF', 'info');

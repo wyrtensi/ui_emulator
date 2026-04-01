@@ -1,4 +1,4 @@
-# Plan: RFO UI Emulator — Modular Interface Concept Tool
+# Plan: UI Emulator — Modular Interface Concept Tool
 
 ## TL;DR
 A static-site (GitHub Pages ready) interactive emulator for RF Online UI concepts. Each game window is a standalone HTML/CSS/JS module loaded into a core shell. Supports drag, resize, z-index management, layout presets with pin comments, individual element PNG export for Photoshop, and multi-user sharing via URL/JSON.
@@ -12,7 +12,7 @@ A static-site (GitHub Pages ready) interactive emulator for RF Online UI concept
 ### Steps
 1. Create project structure:
    ```
-   rfo_ui_emulator/
+   ui_ui_emulator/
    ├── index.html
    ├── css/
    │   └── core.css
@@ -41,11 +41,11 @@ A static-site (GitHub Pages ready) interactive emulator for RF Online UI concept
    ```
 
 2. **index.html** — Main entry:
-   - `<div id="rfo-viewport">` — main container, base 1920×1080, scaled via `transform: scale()` and CSS `--ui-scale` variable
-   - `<div id="rfo-background">` — supports `<img>` or `<video loop autoplay muted>`
-   - `<div id="rfo-windows">` — window container layer
-   - `<div id="rfo-overlays">` — comment pins, export highlights
-   - `<div id="rfo-control-panel">` — side panel for emulator controls
+   - `<div id="ui-viewport">` — main container, base 1920×1080, scaled via `transform: scale()` and CSS `--ui-scale` variable
+   - `<div id="ui-background">` — supports `<img>` or `<video loop autoplay muted>`
+   - `<div id="ui-windows">` — window container layer
+   - `<div id="ui-overlays">` — comment pins, export highlights
+   - `<div id="ui-control-panel">` — side panel for emulator controls
    - Loads libs from CDN: html2canvas, JSZip, lz-string
 
 3. **css/core.css** — CSS variables for scale, viewport size, z-index layers; dark sci-fi theme for the control panel matching RF Online aesthetic
@@ -72,7 +72,7 @@ A static-site (GitHub Pages ready) interactive emulator for RF Online UI concept
    - `import()` the window's `config.js` (ES module with metadata)
    - `fetch()` the `template.html` and `style.css`
    - Inject scoped CSS (auto-prefix all selectors with `[data-window-id="{id}"]`)
-   - Create wrapper: `<div class="rfo-window" data-window-id="{id}">` + inject HTML
+   - Create wrapper: `<div class="ui-window" data-window-id="{id}">` + inject HTML
    - Call `config.init(container)` if defined
    - Register with window-manager
 
@@ -102,7 +102,7 @@ A static-site (GitHub Pages ready) interactive emulator for RF Online UI concept
    - `registerWindow(id, config, container)` — register a loaded window
    - `openWindow(id)` / `closeWindow(id)` / `toggleWindow(id)`
    - `focusWindow(id)` — bring to front, update z-index stack
-   - Click on any `.rfo-window` → automatically calls `focusWindow`
+   - Click on any `.ui-window` → automatically calls `focusWindow`
    - Track open/closed state
    - Event: `window:opened`, `window:closed`, `window:focused`
 
@@ -118,7 +118,7 @@ A static-site (GitHub Pages ready) interactive emulator for RF Online UI concept
    - Cursor changes on hover (nwse-resize, etc.)
 
 10. **context-menu.js** — Custom right-click menu:
-    - On right-click on `.rfo-window` → show custom menu
+    - On right-click on `.ui-window` → show custom menu
     - Options: "Close Window", "Reset Position", "Export Window PNG"
     - `preventDefault()` to block browser menu
     - On right-click on viewport (not window) → show "Open Window >" submenu
@@ -149,7 +149,7 @@ A static-site (GitHub Pages ready) interactive emulator for RF Online UI concept
     - **Capture layout**: iterate all registered windows → collect `{ id, open, x, y, width, height, zIndex }`
     - **Include comments**: merge pin annotations from comment-manager
     - **Export JSON**: `{ version: 1, name: "...", created: "...", resolution: "1920x1080", scale: 1.0, windows: [...], comments: [...] }`
-    - **Download as file**: `preset-name.rfo.json`
+    - **Download as file**: `preset-name.ui.json`
     - **Upload file**: FileReader → parse JSON → restore layout
     - **URL sharing**: JSON → lz-string compress → base64 → append to URL hash `#preset=...`
     - **URL loading**: on page load, check URL hash → decompress → restore layout

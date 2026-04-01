@@ -12,17 +12,19 @@ import { layoutManager } from './core/layout-manager.js';
 import { commentManager } from './core/comment-manager.js';
 import { exportManager } from './core/export-manager.js';
 import { githubAuth } from './core/github-auth.js';
+import { githubApi } from './core/github-api.js';
 import { discussionManager } from './core/discussion-manager.js';
 
 let manifest = null;  // built dynamically from registry + per-window configs
 let backgroundsList = [];
+let remoteConfig = null;
 
 /* ── Global toast function ────────────────────────────── */
-window.rfoToast = function(message, type = 'info') {
-  const container = document.getElementById('rfo-toasts');
+window.uiToast = function(message, type = 'info') {
+  const container = document.getElementById('ui-toasts');
   if (!container) return;
   const toast = document.createElement('div');
-  toast.className = `rfo-toast ${type}`;
+  toast.className = `ui-toast ${type}`;
   toast.textContent = message;
   container.appendChild(toast);
   setTimeout(() => toast.remove(), 3200);
@@ -32,8 +34,8 @@ window.rfoToast = function(message, type = 'info') {
    BOOTSTRAP
    ═══════════════════════════════════════════════════════ */
 async function boot() {
-  const viewport = document.getElementById('rfo-viewport');
-  const windowsLayer = document.getElementById('rfo-windows');
+  const viewport = document.getElementById('ui-viewport');
+  const windowsLayer = document.getElementById('ui-windows');
 
   // 1. Load window registry (simple array of window IDs)
   const regResp = await fetch('windows/registry.json');
@@ -63,6 +65,23 @@ async function boot() {
   githubAuth.onAuthChange(updateAuthUI);
   updateAuthUI(githubAuth.user);
 
+  // 3c. Load remote config if available
+  try {
+    const configResp = await fetch('config.json');
+    if (configResp.ok) {
+      remoteConfig = await configResp.json();
+      if (remoteConfig.scale !== undefined && !localStorage.getItem('ui-ui-settings')) {
+        settings.set('scale', remoteConfig.scale);
+        settings.set('autoFitScale', false);
+      }
+      if (remoteConfig.bgScale !== undefined && !localStorage.getItem('ui-ui-settings')) {
+        settings.set('bgScale', remoteConfig.bgScale);
+      }
+    }
+  } catch (err) {
+    // No remote config found, silently continue
+  }
+
   // 4. Load each window from registry
   for (const windowId of registry) {
     await loadWindowById(windowId, windowsLayer);
@@ -86,6 +105,7 @@ async function boot() {
     applyScale(settings.get('scale'));
   }
   applyBackground(settings.get('background'), settings.get('backgroundType'));
+  applyBackgroundColor(settings.get('backgroundColor'));
 
   // 7. Try to load from URL, then autosave, then default
   if (!layoutManager.loadFromURL()) {
@@ -101,13 +121,14 @@ async function boot() {
   wireControlPanel();
   wireKeyboardShortcuts();
   wireAuthButtons();
+  wireCanvasButton();
   updateModeIndicator(settings.get('mode'));
 
   // 9. Load remote pins from GitHub (non-blocking)
   commentManager.loadRemotePins().catch(() => {});
 
   // 10. Hide loading screen and open all windows initially
-  const loadingScreen = document.getElementById('rfo-loading-screen');
+  const loadingScreen = document.getElementById('ui-loading-screen');
   if (loadingScreen) {
     loadingScreen.classList.add('hidden');
     setTimeout(() => loadingScreen.remove(), 500); // Wait for transition
@@ -119,7 +140,7 @@ async function boot() {
   }
 
   // 11. Show panel arrow briefly
-  const arrow = document.getElementById('rfo-panel-arrow');
+  const arrow = document.getElementById('ui-panel-arrow');
   if (arrow) {
     arrow.removeAttribute('hidden');
     setTimeout(() => {
@@ -127,16 +148,42 @@ async function boot() {
     }, 2000);
   }
 
-  console.log('[RFO UI Emulator] Ready —', manifest.windows.length, 'windows loaded');
+  // 12. Global hash listener for canvas links
+  checkGlobalHash(window.location.hash);
+  window.addEventListener('hashchange', () => checkGlobalHash(window.location.hash));
+
+  console.log('[UI Emulator] Ready —', manifest.windows.length, 'windows loaded');
+}
+
+/** Global hash interceptor to ensure canvas window opens before its internal logic runs */
+function checkGlobalHash(hash) {
+  if (hash.startsWith('#canvas:')) {
+    const canvasBtn = document.getElementById('ui-canvas-btn');
+    if (!windowManager.get('canvas') && canvasBtn) {
+      // It's not loaded yet, simulate click to load it
+      canvasBtn.click();
+    } else if (windowManager.get('canvas') && !windowManager.isOpen('canvas')) {
+      // Loaded but closed, just open it
+      windowManager.open('canvas');
+    }
+    // The internal logic in canvas-engine.js will handle the actual zooming
+  }
 }
 
 /* ═══════════════════════════════════════════════════════
    WINDOW LOADER
    ═══════════════════════════════════════════════════════ */
 async function loadWindowById(windowId, windowsLayer) {
-  const folder = `windows/${windowId}`;
+  // If id is "canvas", force it to load from root /canvas folder instead of /windows
+  const folder = windowId === 'canvas' ? 'canvas' : `windows/${windowId}`;
 
-  const configModule = await import(`../${folder}/config.js`);
+  let configModule;
+try {
+  configModule = await import(`../${folder}/config.js`).catch(e => { console.log("CATCH CAUGHT ERROR:", e.message); throw e; });
+} catch(e) {
+  console.error("IMPORT ERROR:", e);
+  throw e;
+}
   const config = configModule.default;
 
   // Build wDef from config (per-window manifest)
@@ -173,7 +220,7 @@ function _injectWindow(wDef, config, htmlText, cssText, windowsLayer) {
   document.head.appendChild(styleEl);
 
   const container = document.createElement('div');
-  container.className = 'rfo-window';
+  container.className = 'ui-window';
   container.dataset.windowId = wDef.id;
   container.innerHTML = htmlText;
 
@@ -207,7 +254,7 @@ async function importWindowFromFiles(files) {
   // Check if it's a ZIP file
   if (files.length === 1 && files[0].name.toLowerCase().endsWith('.zip')) {
     if (typeof JSZip === 'undefined') {
-      window.rfoToast('JSZip not loaded', 'error');
+      window.uiToast('JSZip not loaded', 'error');
       return;
     }
     const zip = await JSZip.loadAsync(files[0]);
@@ -232,11 +279,11 @@ async function importWindowFromFiles(files) {
   }
 
   if (!configText) {
-    window.rfoToast('config.js not found in import', 'error');
+    window.uiToast('config.js not found in import', 'error');
     return;
   }
   if (!htmlText) {
-    window.rfoToast('template.html not found in import', 'error');
+    window.uiToast('template.html not found in import', 'error');
     return;
   }
 
@@ -252,13 +299,13 @@ async function importWindowFromFiles(files) {
   }
 
   if (!config || !config.id) {
-    window.rfoToast('Invalid config.js — missing id', 'error');
+    window.uiToast('Invalid config.js — missing id', 'error');
     return;
   }
 
   // Check for duplicate
   if (windowManager.get(config.id)) {
-    window.rfoToast(`Window "${config.id}" already exists`, 'error');
+    window.uiToast(`Window "${config.id}" already exists`, 'error');
     return;
   }
 
@@ -273,14 +320,14 @@ async function importWindowFromFiles(files) {
 
   manifest.windows.push(wDef);
 
-  const windowsLayer = document.getElementById('rfo-windows');
+  const windowsLayer = document.getElementById('ui-windows');
   _injectWindow(wDef, config, htmlText, cssText || '', windowsLayer);
   windowManager.open(wDef.id);
 
   // Rebuild windows list in panel
   _rebuildWindowsList();
 
-  window.rfoToast(`Window "${config.title || config.id}" imported!`, 'success');
+  window.uiToast(`Window "${config.title || config.id}" imported!`, 'success');
 }
 
 /** Import windows directly from a GitHub branch URL */
@@ -289,12 +336,12 @@ async function importWindowsFromGithub(url) {
 
   const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/tree\/(.+)/);
   if (!match) {
-    window.rfoToast('Invalid GitHub URL. Must be a branch tree URL (e.g. github.com/user/repo/tree/branch)', 'error');
+    window.uiToast('Invalid GitHub URL. Must be a branch tree URL (e.g. github.com/user/repo/tree/branch)', 'error');
     return;
   }
 
   const [_, user, repo, branch] = match;
-  window.rfoToast(`Fetching windows from ${user}/${repo} (${branch})...`, 'info');
+  window.uiToast(`Fetching windows from ${user}/${repo} (${branch})...`, 'info');
 
   try {
     const apiURL = `https://api.github.com/repos/${user}/${repo}/contents/windows?ref=${branch}`;
@@ -307,7 +354,7 @@ async function importWindowsFromGithub(url) {
     if (!Array.isArray(contents)) throw new Error('Could not read windows directory');
 
     let importedCount = 0;
-    const windowsLayer = document.getElementById('rfo-windows');
+    const windowsLayer = document.getElementById('ui-windows');
 
     for (const item of contents) {
       if (item.type !== 'dir') continue;
@@ -367,14 +414,14 @@ async function importWindowsFromGithub(url) {
 
     if (importedCount > 0) {
       _rebuildWindowsList();
-      window.rfoToast(`Imported ${importedCount} new windows from GitHub!`, 'success');
+      window.uiToast(`Imported ${importedCount} new windows from GitHub!`, 'success');
     } else {
-      window.rfoToast('No new windows found to import.', 'info');
+      window.uiToast('No new windows found to import.', 'info');
     }
 
   } catch (error) {
     console.error('[GitHub Import]', error);
-    window.rfoToast(`GitHub Import Failed: ${error.message}`, 'error');
+    window.uiToast(`GitHub Import Failed: ${error.message}`, 'error');
   }
 }
 
@@ -412,7 +459,7 @@ const modeInfo = {
 
 function updateModeIndicator(mode) {
   document.body.dataset.mode = mode;
-  const indicator = document.getElementById('rfo-mode-indicator');
+  const indicator = document.getElementById('ui-mode-indicator');
   if (!indicator) return;
   const info = modeInfo[mode] || modeInfo.design;
   indicator.querySelector('.mode-icon').innerHTML = info.icon;
@@ -423,17 +470,23 @@ function updateModeIndicator(mode) {
    CONTROL PANEL WIRING
    ═══════════════════════════════════════════════════════ */
 function wireControlPanel() {
-  const panel = document.getElementById('rfo-control-panel');
-  const toggleBtn = document.getElementById('rfo-panel-toggle');
-  const closeBtn = document.getElementById('rfo-panel-close');
+  const panel = document.getElementById('ui-control-panel');
+  const toggleBtn = document.getElementById('ui-panel-toggle');
+  const closeBtn = document.getElementById('ui-panel-close');
 
-  toggleBtn.addEventListener('click', () => panel.classList.toggle('closed'));
-  closeBtn.addEventListener('click', () => panel.classList.add('closed'));
+  toggleBtn.addEventListener('click', () => {
+    panel.classList.toggle('closed');
+    document.body.dataset.panelOpen = !panel.classList.contains('closed');
+  });
+  closeBtn.addEventListener('click', () => {
+    panel.classList.add('closed');
+    document.body.dataset.panelOpen = 'false';
+  });
 
   // ── Guide dialog ──────────────────────────────────
-  const guideBtn = document.getElementById('rfo-guide-btn');
-  const guideOverlay = document.getElementById('rfo-guide-overlay');
-  const guideClose = document.getElementById('rfo-guide-close');
+  const guideBtn = document.getElementById('ui-guide-btn');
+  const guideOverlay = document.getElementById('ui-guide-overlay');
+  const guideClose = document.getElementById('ui-guide-close');
   if (guideBtn && guideOverlay) {
     guideBtn.addEventListener('click', () => { guideOverlay.hidden = false; });
     guideClose?.addEventListener('click', () => { guideOverlay.hidden = true; });
@@ -442,9 +495,9 @@ function wireControlPanel() {
     });
 
     // Copy buttons on code blocks
-    guideOverlay.querySelectorAll('.rfo-guide-section pre').forEach(pre => {
+    guideOverlay.querySelectorAll('.ui-guide-section pre').forEach(pre => {
       const btn = document.createElement('button');
-      btn.className = 'rfo-guide-copy-btn';
+      btn.className = 'ui-guide-copy-btn';
       btn.textContent = 'Copy';
       btn.addEventListener('click', () => {
         const code = pre.querySelector('code');
@@ -459,23 +512,23 @@ function wireControlPanel() {
     });
 
     // Export guide as .md
-    document.getElementById('rfo-guide-export-md')?.addEventListener('click', () => {
+    document.getElementById('ui-guide-export-md')?.addEventListener('click', () => {
       const md = _buildGuideMD();
       const blob = new Blob([md], { type: 'text/markdown' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'rfo-window-guide.md';
+      a.download = 'ui-window-guide.md';
       a.click();
       URL.revokeObjectURL(url);
-      window.rfoToast('Guide exported as .md', 'success');
+      window.uiToast('Guide exported as .md', 'success');
     });
   }
 
   // ── Mode buttons ──────────────────────────────────
   const modeButtons = document.querySelectorAll('.mode-btn');
-  const exportPanel = document.getElementById('rfo-export-panel');
-  const commentPanel = document.getElementById('rfo-comment-panel');
+  const exportPanel = document.getElementById('ui-export-panel');
+  const commentPanel = document.getElementById('ui-comment-panel');
 
   function setMode(mode) {
     settings.set('mode', mode);
@@ -492,7 +545,7 @@ function wireControlPanel() {
   setMode(settings.get('mode'));
 
   // ── Windows list ──────────────────────────────────
-  const windowsList = document.getElementById('rfo-windows-list');
+  const windowsList = document.getElementById('ui-windows-list');
   function buildWindowsList() {
     windowsList.innerHTML = '';
     for (const w of windowManager.getAll()) {
@@ -516,7 +569,7 @@ function wireControlPanel() {
   windowManager.on('window:closed', buildWindowsList);
 
   // ── Import Window ─────────────────────────────────
-  const importFile = document.getElementById('rfo-import-file');
+  const importFile = document.getElementById('ui-import-file');
   if (importFile) {
     importFile.addEventListener('change', async (e) => {
       const files = e.target.files;
@@ -527,8 +580,8 @@ function wireControlPanel() {
   }
 
   // ── Import from GitHub ────────────────────────────
-  const ghUrlInput = document.getElementById('rfo-import-gh-url');
-  const ghImportBtn = document.getElementById('rfo-import-gh-btn');
+  const ghUrlInput = document.getElementById('ui-import-gh-url');
+  const ghImportBtn = document.getElementById('ui-import-gh-btn');
   if (ghUrlInput && ghImportBtn) {
     ghImportBtn.addEventListener('click', async () => {
       const url = ghUrlInput.value.trim();
@@ -543,17 +596,17 @@ function wireControlPanel() {
   }
 
   // ── Open All / Close All ──────────────────────────
-  document.getElementById('rfo-open-all')?.addEventListener('click', () => {
+  document.getElementById('ui-open-all')?.addEventListener('click', () => {
     for (const w of windowManager.getAll()) windowManager.open(w.id);
   });
-  document.getElementById('rfo-close-all')?.addEventListener('click', () => {
+  document.getElementById('ui-close-all')?.addEventListener('click', () => {
     for (const w of windowManager.getAll()) windowManager.close(w.id);
   });
 
   // ── Auto-fit toggle ───────────────────────────────
-  const autoFitCheck = document.getElementById('rfo-auto-fit');
-  const scaleSlider = document.getElementById('rfo-scale-slider');
-  const scaleValue = document.getElementById('rfo-scale-value');
+  const autoFitCheck = document.getElementById('ui-auto-fit');
+  const scaleSlider = document.getElementById('ui-scale-slider');
+  const scaleValue = document.getElementById('ui-scale-value');
 
   autoFitCheck.checked = settings.get('autoFitScale');
 
@@ -609,23 +662,99 @@ function wireControlPanel() {
   });
 
   // Fit button
-  document.getElementById('rfo-scale-fit')?.addEventListener('click', () => {
+  document.getElementById('ui-scale-fit')?.addEventListener('click', () => {
     settings.set('autoFitScale', true);
     autoFitCheck.checked = true;
     applyAutoFit();
   });
 
+  // Set default button (Owner only)
+  document.getElementById('ui-scale-default')?.addEventListener('click', async () => {
+    if (!githubAuth.isOwner) return;
+    const btn = document.getElementById('ui-scale-default');
+    const oldText = btn.textContent;
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+
+    try {
+      remoteConfig = remoteConfig || {};
+      remoteConfig.scale = settings.get('scale');
+      await githubApi.saveFile('config.json', JSON.stringify(remoteConfig, null, 2), 'chore: Update default UI scale');
+      window.uiToast('Saved default UI scale to repo', 'success');
+    } catch (err) {
+      window.uiToast('Failed to save default UI scale', 'error');
+      console.error(err);
+    } finally {
+      btn.textContent = oldText;
+      btn.disabled = false;
+    }
+  });
+
+  // ── Background Zoom ──────────────────────────────
+  const bgScaleSlider = document.getElementById('ui-bg-scale-slider');
+  const bgScaleValue = document.getElementById('ui-bg-scale-val');
+
+  if (bgScaleSlider && bgScaleValue) {
+    const currentBgPct = Math.round((settings.get('bgScale') || 1.0) * 100);
+    bgScaleSlider.value = currentBgPct;
+    bgScaleValue.textContent = currentBgPct + '%';
+    applyBgScale(settings.get('bgScale') || 1.0);
+
+    function updateBgScaleUI(pct) {
+      bgScaleSlider.value = pct;
+      bgScaleValue.textContent = pct + '%';
+      const val = pct / 100;
+      settings.set('bgScale', val);
+      applyBgScale(val);
+
+      document.querySelectorAll('.bg-scale-preset').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.scale) === pct);
+      });
+    }
+
+    bgScaleSlider.addEventListener('input', () => {
+      updateBgScaleUI(parseInt(bgScaleSlider.value));
+    });
+
+    document.querySelectorAll('.bg-scale-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        updateBgScaleUI(parseInt(btn.dataset.scale));
+      });
+    });
+
+    document.getElementById('ui-bg-scale-default')?.addEventListener('click', async () => {
+      if (!githubAuth.isOwner) return;
+      const btn = document.getElementById('ui-bg-scale-default');
+      const oldText = btn.textContent;
+      btn.textContent = 'Saving...';
+      btn.disabled = true;
+
+      try {
+        remoteConfig = remoteConfig || {};
+        remoteConfig.bgScale = settings.get('bgScale');
+        await githubApi.saveFile('config.json', JSON.stringify(remoteConfig, null, 2), 'chore: Update default Background zoom');
+        window.uiToast('Saved default Background zoom to repo', 'success');
+      } catch (err) {
+        window.uiToast('Failed to save default Background zoom', 'error');
+        console.error(err);
+      } finally {
+        btn.textContent = oldText;
+        btn.disabled = false;
+      }
+    });
+  }
+
   // ── Screen bounds ─────────────────────────────────
-  const boundsCheck = document.getElementById('rfo-screen-bounds');
+  const boundsCheck = document.getElementById('ui-screen-bounds');
   boundsCheck.checked = settings.get('screenBounds');
   boundsCheck.addEventListener('change', () => {
     settings.set('screenBounds', boundsCheck.checked);
   });
 
   // ── Snap to grid ──────────────────────────────────
-  const snapCheck = document.getElementById('rfo-snap-grid');
-  const gridSizeRow = document.getElementById('rfo-grid-size-row');
-  const gridSizeInput = document.getElementById('rfo-grid-size');
+  const snapCheck = document.getElementById('ui-snap-grid');
+  const gridSizeRow = document.getElementById('ui-grid-size-row');
+  const gridSizeInput = document.getElementById('ui-grid-size');
 
   snapCheck.checked = settings.get('snapToGrid');
   gridSizeRow.style.display = snapCheck.checked ? 'flex' : 'none';
@@ -643,8 +772,18 @@ function wireControlPanel() {
   // ── Background gallery ────────────────────────────
   buildBackgroundGallery();
 
-  const bgFile = document.getElementById('rfo-bg-file');
-  const bgClear = document.getElementById('rfo-bg-clear');
+  const bgFile = document.getElementById('ui-bg-file');
+  const bgClear = document.getElementById('ui-bg-clear');
+  const bgColorInput = document.getElementById('ui-bg-color');
+
+  if (bgColorInput) {
+    bgColorInput.value = settings.get('backgroundColor') || '#0a0e18';
+    bgColorInput.addEventListener('input', (e) => {
+      const color = e.target.value;
+      settings.set('backgroundColor', color);
+      applyBackgroundColor(color);
+    });
+  }
 
   bgFile.addEventListener('change', () => {
     const file = bgFile.files[0];
@@ -657,7 +796,7 @@ function wireControlPanel() {
       settings.set('backgroundType', type);
       applyBackground(url, type);
       clearActiveThumb();
-      window.rfoToast('Background uploaded', 'success');
+      window.uiToast('Background uploaded', 'success');
     };
     reader.readAsDataURL(file);
   });
@@ -670,33 +809,33 @@ function wireControlPanel() {
   });
 
   // ── Presets ───────────────────────────────────────
-  const presetName = document.getElementById('rfo-preset-name');
-  document.getElementById('rfo-preset-save').addEventListener('click', () => {
+  const presetName = document.getElementById('ui-preset-name');
+  document.getElementById('ui-preset-save').addEventListener('click', () => {
     layoutManager.downloadJSON(presetName.value || 'preset');
-    window.rfoToast('Preset saved', 'success');
+    window.uiToast('Preset saved', 'success');
   });
 
-  document.getElementById('rfo-preset-load').addEventListener('change', async (e) => {
+  document.getElementById('ui-preset-load').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     await layoutManager.uploadJSON(file);
     buildWindowsList();
-    window.rfoToast('Preset loaded', 'success');
+    window.uiToast('Preset loaded', 'success');
   });
 
-  document.getElementById('rfo-preset-share-url').addEventListener('click', () => {
+  document.getElementById('ui-preset-share-url').addEventListener('click', () => {
     const url = layoutManager.shareURL(presetName.value || 'shared');
     navigator.clipboard.writeText(url).then(() => {
-      window.rfoToast('URL copied to clipboard!', 'success');
+      window.uiToast('URL copied to clipboard!', 'success');
     }).catch(() => {
-      window.rfoToast('Failed to copy URL', 'error');
+      window.uiToast('Failed to copy URL', 'error');
     });
   });
 
-  document.getElementById('rfo-preset-reset').addEventListener('click', () => {
+  document.getElementById('ui-preset-reset').addEventListener('click', () => {
     layoutManager.resetAll(manifest);
     buildWindowsList();
-    window.rfoToast('Layout reset to defaults', 'info');
+    window.uiToast('Layout reset to defaults', 'info');
   });
 }
 
@@ -704,7 +843,7 @@ function wireControlPanel() {
    BACKGROUND GALLERY
    ═══════════════════════════════════════════════════════ */
 function buildBackgroundGallery() {
-  const gallery = document.getElementById('rfo-bg-gallery');
+  const gallery = document.getElementById('ui-bg-gallery');
   if (!gallery || backgroundsList.length === 0) return;
 
   gallery.innerHTML = '';
@@ -747,7 +886,7 @@ function clearActiveThumb() {
    HELPERS
    ═══════════════════════════════════════════════════════ */
 function applyScale(scale) {
-  const viewport = document.getElementById('rfo-viewport');
+  const viewport = document.getElementById('ui-viewport');
   viewport.style.setProperty('--ui-scale', scale);
   viewport.style.transform = `scale(${scale})`;
 
@@ -755,12 +894,18 @@ function applyScale(scale) {
   const vh = 1080 * scale;
   const ww = window.innerWidth;
   const wh = window.innerHeight;
-  viewport.style.left = vw < ww ? ((ww - vw) / 2) + 'px' : '0';
-  viewport.style.top = vh < wh ? ((wh - vh) / 2) + 'px' : '0';
+
+  // Calculate top-left based on scaled dimensions
+  viewport.style.left = Math.max(0, (ww - vw) / 2) + 'px';
+  viewport.style.top = Math.max(0, (wh - vh) / 2) + 'px';
+}
+
+function applyBgScale(scale) {
+  document.documentElement.style.setProperty('--bg-scale', scale);
 }
 
 function applyBackground(url, type) {
-  const bgEl = document.getElementById('rfo-background');
+  const bgEl = document.getElementById('ui-background');
   bgEl.innerHTML = '';
   if (!url) return;
 
@@ -779,6 +924,13 @@ function applyBackground(url, type) {
   }
 }
 
+function applyBackgroundColor(color) {
+  const bgEl = document.getElementById('ui-background');
+  if (bgEl && color) {
+    bgEl.style.backgroundColor = color;
+  }
+}
+
 function guessMediaType(url) {
   if (!url) return '';
   const lower = url.toLowerCase();
@@ -789,20 +941,39 @@ function guessMediaType(url) {
 /* ═══════════════════════════════════════════════════════
    AUTH UI
    ═══════════════════════════════════════════════════════ */
+function wireCanvasButton() {
+  const canvasBtn = document.getElementById('ui-canvas-btn');
+  if (canvasBtn) {
+    canvasBtn.addEventListener('click', () => {
+      // Create if not exists in registry list, then toggle
+      if (!windowManager.get('canvas')) {
+        loadWindowById('canvas', document.getElementById('ui-windows')).then(() => {
+          windowManager.open('canvas');
+        }).catch(err => {
+          console.error("Failed to load canvas module", err);
+          window.uiToast('Failed to load canvas module', 'error');
+        });
+      } else {
+        windowManager.toggle('canvas');
+      }
+    });
+  }
+}
+
 function wireAuthButtons() {
-  document.getElementById('rfo-gh-login')?.addEventListener('click', () => githubAuth.login());
-  document.getElementById('rfo-gh-logout')?.addEventListener('click', () => {
+  document.getElementById('ui-gh-login')?.addEventListener('click', () => githubAuth.login());
+  document.getElementById('ui-gh-logout')?.addEventListener('click', () => {
     githubAuth.logout();
     commentManager.loadRemotePins().catch(() => {}); // refresh pins (permissions change)
   });
 }
 
 function updateAuthUI(user) {
-  const loginBtn = document.getElementById('rfo-gh-login');
-  const userEl = document.getElementById('rfo-gh-user');
-  const avatarEl = document.getElementById('rfo-gh-avatar');
-  const nameEl = document.getElementById('rfo-gh-username');
-  const hintEl = document.getElementById('rfo-comment-hint');
+  const loginBtn = document.getElementById('ui-gh-login');
+  const userEl = document.getElementById('ui-gh-user');
+  const avatarEl = document.getElementById('ui-gh-avatar');
+  const nameEl = document.getElementById('ui-gh-username');
+  const hintEl = document.getElementById('ui-comment-hint');
 
   if (user) {
     if (loginBtn) loginBtn.classList.add('hidden');
@@ -810,6 +981,11 @@ function updateAuthUI(user) {
     if (avatarEl) avatarEl.src = user.avatar_url;
     if (nameEl) nameEl.textContent = user.login;
     if (hintEl) hintEl.innerHTML = '<svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Double-click on any window to add a comment pin';
+
+    if (githubAuth.isOwner) {
+      document.getElementById('ui-scale-default')?.removeAttribute('hidden');
+      document.getElementById('ui-bg-scale-default')?.removeAttribute('hidden');
+    }
   } else {
     if (loginBtn) loginBtn.classList.remove('hidden');
     if (userEl) userEl.classList.add('hidden');
@@ -825,12 +1001,12 @@ function wireKeyboardShortcuts() {
     // F2 — toggle panel
     if (e.key === 'F2') {
       e.preventDefault();
-      document.getElementById('rfo-control-panel').classList.toggle('closed');
+      document.getElementById('ui-control-panel').classList.toggle('closed');
     }
 
     // Escape — close guide dialog first, then focused window (topmost)
     if (e.key === 'Escape') {
-      const guideOverlay = document.getElementById('rfo-guide-overlay');
+      const guideOverlay = document.getElementById('ui-guide-overlay');
       if (guideOverlay && !guideOverlay.hidden) {
         guideOverlay.hidden = true;
         return;
@@ -845,7 +1021,7 @@ function wireKeyboardShortcuts() {
     if (e.ctrlKey && e.key === 's') {
       e.preventDefault();
       layoutManager._autoSave();
-      window.rfoToast('Layout saved', 'success');
+      window.uiToast('Layout saved', 'success');
     }
 
     // 1/2/3 — quick mode switch (when not in input)
@@ -859,8 +1035,8 @@ function wireKeyboardShortcuts() {
         document.querySelectorAll('.mode-btn').forEach(btn =>
           btn.classList.toggle('active', btn.dataset.mode === mode)
         );
-        document.getElementById('rfo-export-panel').hidden = mode !== 'export';
-        document.getElementById('rfo-comment-panel').hidden = mode !== 'comment';
+        document.getElementById('ui-export-panel').hidden = mode !== 'export';
+        document.getElementById('ui-comment-panel').hidden = mode !== 'comment';
         commentManager.showToolbar(mode === 'comment');
         updateModeIndicator(mode);
       }
@@ -879,8 +1055,8 @@ window.addEventListener('resize', () => {
     settings.set('scale', fit);
     applyScale(fit);
     // Sync slider UI if panel is open
-    const slider = document.getElementById('rfo-scale-slider');
-    const label = document.getElementById('rfo-scale-value');
+    const slider = document.getElementById('ui-scale-slider');
+    const label = document.getElementById('ui-scale-value');
     if (slider) slider.value = Math.round(fit * 100);
     if (label) label.textContent = Math.round(fit * 100) + '%';
   } else {
@@ -893,7 +1069,7 @@ window.addEventListener('resize', () => {
    ═══════════════════════════════════════════════════════ */
 function _buildGuideMD() {
   const lines = ['# How to Create & Import a Window\n'];
-  const sections = document.querySelectorAll('.rfo-guide-section');
+  const sections = document.querySelectorAll('.ui-guide-section');
   sections.forEach(sec => {
     const h4 = sec.querySelector('h4');
     if (h4) lines.push(`## ${h4.textContent.trim()}\n`);
@@ -922,12 +1098,12 @@ function _buildGuideMD() {
    ═══════════════════════════════════════════════════════ */
 document.addEventListener('click', (e) => {
   if (e.target.tagName === 'IMG') {
-    const isZoomable = e.target.closest('.rfo-discussion-text') ||
+    const isZoomable = e.target.closest('.ui-discussion-text') ||
                        e.target.closest('.comment-message') ||
                        e.target.closest('.comment-reply-text');
     if (isZoomable) {
-      const modal = document.getElementById('rfo-image-modal');
-      const img = document.getElementById('rfo-image-modal-img');
+      const modal = document.getElementById('ui-image-modal');
+      const img = document.getElementById('ui-image-modal-img');
       if (modal && img) {
         img.src = e.target.src;
         modal.hidden = false;
@@ -936,9 +1112,9 @@ document.addEventListener('click', (e) => {
   }
 
   // Close modal logic
-  if (e.target.id === 'rfo-image-modal-close' || e.target.classList.contains('rfo-image-modal-backdrop')) {
-    const modal = document.getElementById('rfo-image-modal');
-    const img = document.getElementById('rfo-image-modal-img');
+  if (e.target.id === 'ui-image-modal-close' || e.target.classList.contains('ui-image-modal-backdrop')) {
+    const modal = document.getElementById('ui-image-modal');
+    const img = document.getElementById('ui-image-modal-img');
     if (modal && img) {
       modal.hidden = true;
       img.src = '';
@@ -949,4 +1125,4 @@ document.addEventListener('click', (e) => {
 /* ═══════════════════════════════════════════════════════
    START
    ═══════════════════════════════════════════════════════ */
-boot().catch(err => console.error('[RFO UI Emulator] Boot failed:', err));
+boot().catch(err => console.error('[UI Emulator] Boot failed:', err));

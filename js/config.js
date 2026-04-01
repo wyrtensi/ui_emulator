@@ -1,5 +1,5 @@
 /**
- * RFO UI Emulator — Configuration
+ * UI Emulator — Configuration
  * Fill in the values below after setting up your GitHub OAuth App
  * and Cloudflare Worker.
  */

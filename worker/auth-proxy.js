@@ -1,5 +1,5 @@
 /**
- * Cloudflare Worker — RFO Auth Proxy
+ * Cloudflare Worker — UI Auth Proxy
  *
  * Exchanges a GitHub OAuth code for an access_token.
  * Keeps the client_secret safe server-side.

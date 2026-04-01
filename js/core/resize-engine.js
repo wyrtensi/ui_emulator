@@ -29,7 +29,7 @@ class ResizeEngine {
     const handles = r.handles || ['se'];
     for (const dir of handles) {
       const handle = document.createElement('div');
-      handle.className = `rfo-resize-handle ${dir}`;
+      handle.className = `ui-resize-handle ${dir}`;
       handle.addEventListener('pointerdown', (e) => this._onDown(e, id, dir));
       container.appendChild(handle);
     }

@@ -3,53 +3,54 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RFO UI Emulator</title>
+  <title>UI Emulator</title>
   <link rel="stylesheet" href="css/core.css">
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js" defer></script>
 </head>
 <body>
 
   <!-- ═══ LOADING OVERLAY ═══ -->
-  <div id="rfo-loading-screen">
+  <div id="ui-loading-screen">
     <div class="loader-content">Loading...</div>
   </div>
 
   <!-- ═══ VIEWPORT ═══ -->
-  <div id="rfo-viewport">
-    <div id="rfo-background"></div>
-    <div id="rfo-windows"></div>
-    <div id="rfo-overlays"></div>
+  <div id="ui-viewport">
+    <div id="ui-background"></div>
+    <div id="ui-windows"></div>
+    <div id="ui-overlays"></div>
   </div>
 
   <!-- ═══ TOAST NOTIFICATIONS ═══ -->
-  <div id="rfo-toasts"></div>
+  <div id="ui-toasts"></div>
 
   <!-- ═══ CONTEXT MENU ═══ -->
-  <div id="rfo-context-menu" class="rfo-context-menu" hidden>
+  <div id="ui-context-menu" class="ui-context-menu" hidden>
     <ul></ul>
   </div>
 
   <!-- ═══ MODE INDICATOR (top-left corner) ═══ -->
-  <div id="rfo-mode-indicator">
+  <div id="ui-mode-indicator">
     <span class="mode-icon"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg></span>
     <span class="mode-label">Design Mode</span>
   </div>
 
   <!-- ═══ COMMENT FLOATING TOOLBAR ═══ -->
-  <div id="rfo-comment-toolbar" hidden>
+  <div id="ui-comment-toolbar" hidden>
     <div class="ct-inner">
-      <span class="ct-hint" id="rfo-comment-hint"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Double-click on any window to add a comment pin</span>
-      <button class="ct-btn" id="rfo-discussion-toggle" title="Open discussion"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Discussion</button>
-      <button class="ct-btn" id="rfo-toggle-pins" title="Show/hide pins"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Pins</button>
-      <button class="ct-btn" id="rfo-move-pins" title="Move pins (owner)"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg> Move</button>
-      <button class="ct-btn ct-danger" id="rfo-comments-clear" title="Clear all"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+      <span class="ct-hint" id="ui-comment-hint"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Double-click on any window to add a comment pin</span>
+      <button class="ct-btn" id="ui-discussion-toggle" title="Open discussion"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Discussion</button>
+      <button class="ct-btn" id="ui-toggle-pins" title="Show/hide pins"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Pins</button>
+      <button class="ct-btn" id="ui-move-pins" title="Move pins (owner)"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg> Move</button>
+      <button class="ct-btn ct-danger" id="ui-comments-clear" title="Clear all"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
     </div>
   </div>
 
   <!-- ═══ EXPORT PROGRESS OVERLAY ═══ -->
-  <div id="rfo-export-progress" hidden>
+  <div id="ui-export-progress" hidden>
     <div class="ep-inner">
       <div class="ep-spinner"></div>
       <span class="ep-text">Exporting...</span>
@@ -58,38 +59,53 @@
   </div>
 
   <!-- ═══ PANEL TOGGLE ═══ -->
-  <button id="rfo-panel-toggle" title="Control Panel (F2)">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-    </svg>
-  </button>
-  <div id="rfo-panel-arrow" hidden>
+  <div class="side-controls">
+    <button id="ui-panel-toggle" class="main-ui-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line>
+        <line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line>
+        <line x1="1" y1="14" x2="7" y2="14"></line>
+        <line x1="9" y1="8" x2="15" y2="8"></line>
+        <line x1="17" y1="16" x2="23" y2="16"></line>
+      </svg>
+      <span>Control Panel <kbd>F2</kbd></span>
+    </button>
+    <button id="ui-canvas-btn" class="main-ui-btn main-ui-btn-primary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20h9"></path>
+        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+      </svg>
+      <span>Canvas</span>
+    </button>
+  </div>
+  <div id="ui-panel-arrow" hidden>
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 19 12 12 5"></polyline></svg>
   </div>
 
   <!-- ═══ FLOATING AUTH BADGE (always visible, top-right) ═══ -->
-  <div id="rfo-auth-badge">
-    <button id="rfo-gh-login" class="gh-login-btn-float" title="Sign in with GitHub to leave comments">
+  <div id="ui-auth-badge">
+    <button id="ui-gh-login" class="gh-login-btn-float" title="Sign in with GitHub to leave comments">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
       Sign in
     </button>
-    <div id="rfo-gh-user" class="gh-user-float hidden">
-      <img id="rfo-gh-avatar" class="gh-avatar" alt="" width="22" height="22">
-      <span id="rfo-gh-username"></span>
-      <button id="rfo-gh-logout" class="gh-logout-btn" title="Sign out">✕</button>
+    <div id="ui-gh-user" class="gh-user-float hidden">
+      <img id="ui-gh-avatar" class="gh-avatar" alt="" width="22" height="22">
+      <span id="ui-gh-username"></span>
+      <button id="ui-gh-logout" class="gh-logout-btn" title="Sign out">✕</button>
     </div>
   </div>
 
   <!-- ═══ CONTROL PANEL ═══ -->
-  <aside id="rfo-control-panel" class="closed">
+  <aside id="ui-control-panel" class="closed">
     <div class="panel-header">
-      <h2><svg class="si" style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="var(--panel-accent)" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> RFO UI Emulator</h2>
+      <h2><svg class="si" style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="var(--panel-accent)" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> UI Emulator</h2>
       <div class="panel-header-actions">
         <a href="https://github.com/wyrtensi/ui_emulator" target="_blank" rel="noopener noreferrer" class="panel-header-link" title="View on GitHub">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
           <span style="font-size: 11px; font-weight: bold; white-space: nowrap;">Visit this project on Github</span>
         </a>
-        <button id="rfo-panel-close" title="Close (F2)">✕</button>
+        <button id="ui-panel-close" title="Close (F2)">✕</button>
       </div>
     </div>
 
@@ -113,21 +129,21 @@
       <!-- WINDOWS LIST -->
       <section class="panel-section">
         <h3><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> Windows</h3>
-        <div id="rfo-windows-list"></div>
+        <div id="ui-windows-list"></div>
         <div class="btn-row" style="margin-top:8px">
-          <button class="panel-btn panel-btn-sm" id="rfo-open-all">Open All</button>
-          <button class="panel-btn panel-btn-sm" id="rfo-close-all">Close All</button>
+          <button class="panel-btn panel-btn-sm" id="ui-open-all">Open All</button>
+          <button class="panel-btn panel-btn-sm" id="ui-close-all">Close All</button>
         </div>
         <div class="btn-row" style="margin-top:6px">
           <label class="panel-btn panel-btn-sm" title="Import a window from ZIP or files (config.js + template.html + style.css)">
             <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Import Window
-            <input type="file" id="rfo-import-file" accept=".zip,.js,.html,.css" multiple hidden>
+            <input type="file" id="ui-import-file" accept=".zip,.js,.html,.css" multiple hidden>
           </label>
-          <button id="rfo-guide-btn" class="panel-btn panel-btn-sm" title="How to create a window" style="width: auto; padding: 0 10px;">How to create a window?</button>
+          <button id="ui-guide-btn" class="panel-btn panel-btn-sm" title="How to create a window" style="width: auto; padding: 0 10px;">How to create a window?</button>
         </div>
         <div class="btn-row" style="margin-top:6px">
-          <input type="text" id="rfo-import-gh-url" placeholder="GitHub URL (branch/PR)..." class="panel-input" style="flex: 1; margin: 0;">
-          <button id="rfo-import-gh-btn" class="panel-btn panel-btn-sm" title="Import windows from GitHub branch" style="width: auto; padding: 0 10px;">
+          <input type="text" id="ui-import-gh-url" placeholder="GitHub URL (branch/PR)..." class="panel-input" style="flex: 1; margin: 0;">
+          <button id="ui-import-gh-btn" class="panel-btn panel-btn-sm" title="Import windows from GitHub branch" style="width: auto; padding: 0 10px;">
             <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Load
           </button>
         </div>
@@ -135,18 +151,31 @@
 
       <!-- SCALE -->
       <section class="panel-section">
-        <h3><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> UI Scale: <span id="rfo-scale-value">100%</span></h3>
+        <h3><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> UI Scale: <span id="ui-scale-value">100%</span></h3>
         <label class="toggle-row">
-          <input type="checkbox" id="rfo-auto-fit" checked>
+          <input type="checkbox" id="ui-auto-fit" checked>
           <span>Auto-fit to window</span>
         </label>
-        <input type="range" id="rfo-scale-slider" min="30" max="200" value="100" step="5">
+        <input type="range" id="ui-scale-slider" min="30" max="200" value="100" step="5">
         <div class="btn-row">
           <button class="panel-btn panel-btn-sm scale-preset" data-scale="50">50%</button>
           <button class="panel-btn panel-btn-sm scale-preset" data-scale="75">75%</button>
           <button class="panel-btn panel-btn-sm scale-preset" data-scale="100">100%</button>
           <button class="panel-btn panel-btn-sm scale-preset" data-scale="150">150%</button>
-          <button class="panel-btn panel-btn-sm" id="rfo-scale-fit">Fit</button>
+          <button class="panel-btn panel-btn-sm" id="ui-scale-fit">Fit</button>
+          <button class="panel-btn panel-btn-sm" id="ui-scale-default" title="Set as default for everyone (Owner only)" hidden>Set Default</button>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 16px;">
+          <h3><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg> Background Zoom</h3>
+          <span id="ui-bg-scale-val" class="panel-val">100%</span>
+        </div>
+        <input type="range" id="ui-bg-scale-slider" min="30" max="200" value="100" step="5">
+        <div class="btn-row">
+          <button class="panel-btn panel-btn-sm bg-scale-preset" data-scale="50">50%</button>
+          <button class="panel-btn panel-btn-sm bg-scale-preset" data-scale="100">100%</button>
+          <button class="panel-btn panel-btn-sm bg-scale-preset" data-scale="150">150%</button>
+          <button class="panel-btn panel-btn-sm" id="ui-bg-scale-default" title="Set as default for everyone (Owner only)" hidden>Set Default</button>
         </div>
       </section>
 
@@ -154,16 +183,16 @@
       <section class="panel-section">
         <h3><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg> Settings</h3>
         <label class="toggle-row">
-          <input type="checkbox" id="rfo-screen-bounds" checked>
+          <input type="checkbox" id="ui-screen-bounds" checked>
           <span>Constrain to viewport</span>
         </label>
         <label class="toggle-row">
-          <input type="checkbox" id="rfo-snap-grid">
+          <input type="checkbox" id="ui-snap-grid">
           <span>Snap to grid</span>
         </label>
-        <div class="inline-field" id="rfo-grid-size-row" style="display:none">
+        <div class="inline-field" id="ui-grid-size-row" style="display:none">
           <label>Grid:</label>
-          <input type="number" id="rfo-grid-size" value="10" min="1" max="100">
+          <input type="number" id="ui-grid-size" value="10" min="1" max="100">
           <span>px</span>
         </div>
       </section>
@@ -171,39 +200,45 @@
       <!-- BACKGROUND -->
       <section class="panel-section">
         <h3><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Background</h3>
-        <div id="rfo-bg-gallery" class="bg-gallery"></div>
+
+        <div class="inline-field" style="margin-bottom: 12px; justify-content: space-between;">
+          <label style="font-size: 12px; color: var(--panel-text-dim);">Solid Color:</label>
+          <input type="color" id="ui-bg-color" value="#0a0e18" style="width: 24px; height: 24px; padding: 0; border: 1px solid var(--panel-border); border-radius: 4px; cursor: pointer; background: transparent;">
+        </div>
+
+        <div id="ui-bg-gallery" class="bg-gallery"></div>
         <div class="btn-row">
           <label class="panel-btn panel-btn-sm">
             <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg> Upload
-            <input type="file" id="rfo-bg-file" accept="image/*,video/mp4,video/webm" hidden>
+            <input type="file" id="ui-bg-file" accept="image/*,video/mp4,video/webm" hidden>
           </label>
-          <button class="panel-btn panel-btn-sm" id="rfo-bg-clear">✕ Clear</button>
+          <button class="panel-btn panel-btn-sm" id="ui-bg-clear">✕ Clear</button>
         </div>
       </section>
 
       <!-- PRESETS -->
       <section class="panel-section">
         <h3><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Layout Presets</h3>
-        <input type="text" id="rfo-preset-name" placeholder="Preset name..." class="panel-input">
+        <input type="text" id="ui-preset-name" placeholder="Preset name..." class="panel-input">
         <div class="btn-row">
-          <button class="panel-btn" id="rfo-preset-save"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Save</button>
+          <button class="panel-btn" id="ui-preset-save"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Save</button>
           <label class="panel-btn">
             <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Load
-            <input type="file" id="rfo-preset-load" accept=".json,.rfo.json" hidden>
+            <input type="file" id="ui-preset-load" accept=".json,.ui.json" hidden>
           </label>
-          <button class="panel-btn" id="rfo-preset-share-url"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg> Share</button>
+          <button class="panel-btn" id="ui-preset-share-url"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg> Share</button>
         </div>
         <div class="btn-row">
-          <button class="panel-btn panel-btn-sm panel-btn-danger" id="rfo-preset-reset">↺ Reset All</button>
+          <button class="panel-btn panel-btn-sm panel-btn-danger" id="ui-preset-reset">↺ Reset All</button>
         </div>
       </section>
 
       <!-- EXPORT (visible in export mode) -->
-      <section class="panel-section" id="rfo-export-panel" hidden>
+      <section class="panel-section" id="ui-export-panel" hidden>
         <h3><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Export Elements</h3>
         <div class="export-controls">
           <label class="export-scale-label">Scale:
-            <select id="rfo-export-scale" class="panel-select">
+            <select id="ui-export-scale" class="panel-select">
               <option value="1">1x</option>
               <option value="2" selected>2x</option>
               <option value="3">3x</option>
@@ -211,21 +246,21 @@
             </select>
           </label>
           <label class="toggle-row">
-            <input type="checkbox" id="rfo-export-transparent" checked>
+            <input type="checkbox" id="ui-export-transparent" checked>
             <span>Transparent BG</span>
           </label>
         </div>
-        <div id="rfo-export-tree"></div>
+        <div id="ui-export-tree"></div>
         <div class="btn-row">
-          <button class="panel-btn" id="rfo-export-selected"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Export Selected</button>
-          <button class="panel-btn" id="rfo-export-all"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg> Export All (ZIP)</button>
+          <button class="panel-btn" id="ui-export-selected"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Export Selected</button>
+          <button class="panel-btn" id="ui-export-all"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg> Export All (ZIP)</button>
         </div>
       </section>
 
       <!-- COMMENTS LIST (visible in comment mode) -->
-      <section class="panel-section" id="rfo-comment-panel" hidden>
-        <h3><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Comments (<span id="rfo-pin-count">0</span>)</h3>
-        <div id="rfo-comments-list"></div>
+      <section class="panel-section" id="ui-comment-panel" hidden>
+        <h3><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Comments (<span id="ui-pin-count">0</span>)</h3>
+        <div id="ui-comments-list"></div>
       </section>
 
       <!-- HELP -->
@@ -246,36 +281,36 @@
   <!-- Comment cards are now built dynamically in comment-manager.js v3 -->
 
   <!-- ═══ DISCUSSION CHAT PANEL ═══ -->
-  <aside id="rfo-discussion-panel" class="rfo-discussion closed">
-    <div class="rfo-discussion-header">
+  <aside id="ui-discussion-panel" class="ui-discussion closed">
+    <div class="ui-discussion-header">
       <h3><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Discussion</h3>
-      <div class="rfo-discussion-status">
-        <span id="rfo-discussion-live" class="rfo-discussion-live" title="Auto-refreshing"></span>
+      <div class="ui-discussion-status">
+        <span id="ui-discussion-live" class="ui-discussion-live" title="Auto-refreshing"></span>
       </div>
-      <button id="rfo-discussion-close" class="rfo-guide-close">✕</button>
+      <button id="ui-discussion-close" class="ui-guide-close">✕</button>
     </div>
-    <div id="rfo-discussion-messages" class="rfo-discussion-messages">
-      <div class="rfo-discussion-loading">Loading discussion...</div>
+    <div id="ui-discussion-messages" class="ui-discussion-messages">
+      <div class="ui-discussion-loading">Loading discussion...</div>
     </div>
-    <div class="rfo-discussion-input-wrap">
-      <textarea id="rfo-discussion-input" class="rfo-discussion-input" rows="2" placeholder="Join the discussion... (sign in with GitHub)"></textarea>
-      <button id="rfo-discussion-send" class="rfo-discussion-send" title="Send">➤</button>
+    <div class="ui-discussion-input-wrap">
+      <textarea id="ui-discussion-input" class="ui-discussion-input" rows="2" placeholder="Join the discussion... (sign in with GitHub)"></textarea>
+      <button id="ui-discussion-send" class="ui-discussion-send" title="Send">➤</button>
     </div>
   </aside>
 
   <!-- ═══ GUIDE DIALOG ═══ -->
-  <div id="rfo-guide-overlay" class="rfo-guide-overlay" hidden>
-    <div class="rfo-guide-dialog">
-      <div class="rfo-guide-header">
+  <div id="ui-guide-overlay" class="ui-guide-overlay" hidden>
+    <div class="ui-guide-dialog">
+      <div class="ui-guide-header">
         <h3><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg> How to Create &amp; Import a Window</h3>
-        <div class="rfo-guide-header-actions">
-          <button id="rfo-guide-export-md" class="rfo-guide-export-btn" title="Download this guide as a .md file"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Export .md</button>
-          <button id="rfo-guide-close" class="rfo-guide-close">✕</button>
+        <div class="ui-guide-header-actions">
+          <button id="ui-guide-export-md" class="ui-guide-export-btn" title="Download this guide as a .md file"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Export .md</button>
+          <button id="ui-guide-close" class="ui-guide-close">✕</button>
         </div>
       </div>
-      <div class="rfo-guide-body">
+      <div class="ui-guide-body">
 
-        <section class="rfo-guide-section">
+        <section class="ui-guide-section">
           <h4>Window Structure</h4>
           <p>Each window is a folder with <strong>3 files</strong>:</p>
           <pre><code>my-window/
@@ -284,7 +319,7 @@
   style.css       ← styles (auto-scoped, no conflicts)</code></pre>
         </section>
 
-        <section class="rfo-guide-section">
+        <section class="ui-guide-section">
           <h4>Importing (100% Client-Side — No Server Needed)</h4>
           <ol>
             <li>Create the 3 files (or put them in a <strong>.zip</strong>)</li>
@@ -296,7 +331,7 @@
           <p style="margin-top:6px"><em>Note: <code>registry.json</code> is only for the built-in windows that ship with the project. Your imported windows are stored entirely in your browser.</em></p>
         </section>
 
-        <section class="rfo-guide-section">
+        <section class="ui-guide-section">
           <h4>config.js Template</h4>
           <pre><code>export default {
   id: 'my-window',          // unique ID (matches folder name)
@@ -319,7 +354,7 @@
 };</code></pre>
         </section>
 
-        <section class="rfo-guide-section">
+        <section class="ui-guide-section">
           <h4>template.html Template</h4>
           <pre><code>&lt;div class="my-container" data-export="my-full"&gt;
   &lt;div class="my-header"&gt;
@@ -332,20 +367,20 @@
 &lt;/div&gt;</code></pre>
         </section>
 
-        <section class="rfo-guide-section">
+        <section class="ui-guide-section">
           <h4>style.css Notes</h4>
           <p>Write <strong>plain CSS</strong> — selectors are automatically scoped to your window. No IDs needed, class names won't conflict with other windows. Animations (<code>@keyframes</code>) pass through unmodified.</p>
         </section>
 
-        <section class="rfo-guide-section">
+        <section class="ui-guide-section">
           <h4>Animated Elements</h4>
           <p>You can include any HTML/CSS animations in template.html. Use <code>@keyframes</code> in style.css and wire interactive logic in <code>config.init()</code>. Click handlers, state toggles, SVG animations — everything works.</p>
         </section>
 
-        <section class="rfo-guide-section">
+        <section class="ui-guide-section">
           <h4>AI Prompt for Creating Windows</h4>
           <p>Copy this prompt to Claude, ChatGPT, or any AI model:</p>
-          <pre class="rfo-guide-prompt"><code>I need you to create a window for the RFO UI Emulator.
+          <pre class="ui-guide-prompt"><code>I need you to create a window for the UI Emulator.
 The emulator uses plain HTML/CSS/JS (no frameworks).
 Each window = 3 files: config.js, template.html, style.css.
 
@@ -379,7 +414,7 @@ Create a window that: [DESCRIBE YOUR WINDOW HERE]
 Return only the 3 files, nothing else.</code></pre>
         </section>
 
-        <section class="rfo-guide-section">
+        <section class="ui-guide-section">
           <h4>Resources</h4>
           <p>
             <a href="https://github.com/wyrtensi/ui_emulator" target="_blank" rel="noopener noreferrer">GitHub Repository</a> —
@@ -392,10 +427,10 @@ Return only the 3 files, nothing else.</code></pre>
   </div>
 
   <!-- ═══ IMAGE ZOOM MODAL ═══ -->
-  <div id="rfo-image-modal" hidden>
-    <div class="rfo-image-modal-backdrop"></div>
-    <img id="rfo-image-modal-img" src="" alt="Zoomed image">
-    <button id="rfo-image-modal-close" title="Close">✕</button>
+  <div id="ui-image-modal" hidden>
+    <div class="ui-image-modal-backdrop"></div>
+    <img id="ui-image-modal-img" src="" alt="Zoomed image">
+    <button id="ui-image-modal-close" title="Close">✕</button>
   </div>
 
   <script type="module" src="js/app.js"></script>
