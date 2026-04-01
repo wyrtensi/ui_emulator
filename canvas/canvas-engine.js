@@ -230,12 +230,52 @@ function setupViewport() {
         }
     });
 
-    // Prevent context menu on right click inside viewport
+    // Right click context menu on background
+    const ctxMenu = container.querySelector('#canvas-context-menu');
+    let ctxMenuX = 0, ctxMenuY = 0;
+
     viewport.addEventListener('contextmenu', (e) => {
-        if (e.target === viewport) {
+        if (e.target === viewport || e.target.closest('.canvas-content') === content && !e.target.closest('.canvas-node')) {
             e.preventDefault();
+            if (!isOwner) return;
+            const rect = viewport.getBoundingClientRect();
+            ctxMenu.style.left = e.clientX + 'px';
+            ctxMenu.style.top = e.clientY + 'px';
+            ctxMenu.hidden = false;
+
+            // Calc logic canvas coords
+            ctxMenuX = (e.clientX - rect.left - translateX - (rect.width / 2)) / scale;
+            ctxMenuY = (e.clientY - rect.top - translateY - (rect.height / 2)) / scale;
         }
     });
+
+    document.addEventListener('click', (e) => {
+        if (ctxMenu && !ctxMenu.hidden) {
+            ctxMenu.hidden = true;
+        }
+    });
+
+    container.querySelector('#cm-add-text')?.addEventListener('click', () => {
+        const id = 'n_' + Date.now();
+        canvasData.nodes.push({ id, type: 'text', x: ctxMenuX, y: ctxMenuY, width: 250, height: 150, text: '' });
+        saveCanvasData(true);
+        renderCanvas();
+    });
+
+    container.querySelector('#cm-add-img')?.addEventListener('click', () => {
+        const id = 'n_' + Date.now();
+        canvasData.nodes.push({ id, type: 'file', file: '', x: ctxMenuX, y: ctxMenuY, width: 250, height: 250 });
+        saveCanvasData(true);
+        renderCanvas();
+    });
+
+    container.querySelector('#cm-add-group')?.addEventListener('click', () => {
+        const id = 'n_' + Date.now();
+        canvasData.nodes.push({ id, type: 'group', label: 'New Group', x: ctxMenuX, y: ctxMenuY, width: 400, height: 300 });
+        saveCanvasData(true);
+        renderCanvas();
+    });
+
 
     viewport.addEventListener('wheel', (e) => {
         if (e.ctrlKey || e.metaKey) {
@@ -1167,12 +1207,7 @@ function findRootOfBranch(nodeId) {
 
 function setupChat() {
     // We reuse the logic from discussion-manager.js but scoped to our sidebar
-    const toggleBtn = container.querySelector('#canvas-chat-toggle');
     const sidebar = container.querySelector('.canvas-chat-sidebar');
-
-    toggleBtn.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed');
-    });
 
     // Instead of completely reinventing chat here, since discussion-manager
     // is a singleton tied to #ui-discussion-panel, we will create a lightweight
@@ -1319,4 +1354,17 @@ async function sendComment(body) {
       headers: h,
       body: JSON.stringify({ query, variables: { discussionId: window.canvasDiscussionId, body } })
     });
+}
+
+// Group Node Creation
+function createGroupNode(x, y) {
+    return {
+        id: 'n_' + Date.now() + Math.floor(Math.random() * 1000),
+        type: 'group',
+        x: x,
+        y: y,
+        width: 300,
+        height: 200,
+        label: 'New Group'
+    };
 }

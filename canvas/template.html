@@ -118,7 +118,7 @@
       <div class="canvas-chat-sidebar">
         <div class="canvas-chat-header">
           <h3>Discussion</h3>
-          <button id="canvas-chat-toggle" title="Toggle Chat">✕</button>
+
         </div>
         <div id="canvas-discussion-messages" class="canvas-discussion-messages">
           <div class="canvas-discussion-loading">Loading chat...</div>
@@ -134,5 +134,14 @@
   <!-- Loading / Error Overlay -->
   <div class="canvas-overlay" id="canvas-overlay">
     <div class="canvas-overlay-content" id="canvas-overlay-text">Loading Canvas...</div>
+  </div>
+
+  <!-- Canvas Background Context Menu -->
+  <div id="canvas-context-menu" class="ui-context-menu" hidden style="position:absolute;z-index:9999;">
+    <ul>
+      <li id="cm-add-text">Add Text Node</li>
+      <li id="cm-add-img">Add Image Node</li>
+      <li id="cm-add-group">Add Group</li>
+    </ul>
   </div>
 </div>
