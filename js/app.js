@@ -887,8 +887,10 @@ function applyScale(scale) {
   const vh = 1080 * scale;
   const ww = window.innerWidth;
   const wh = window.innerHeight;
-  viewport.style.left = vw < ww ? ((ww - vw) / 2) + 'px' : '0';
-  viewport.style.top = vh < wh ? ((wh - vh) / 2) + 'px' : '0';
+
+  // Calculate top-left based on scaled dimensions
+  viewport.style.left = Math.max(0, (ww - vw) / 2) + 'px';
+  viewport.style.top = Math.max(0, (wh - vh) / 2) + 'px';
 }
 
 function applyBgScale(scale) {
