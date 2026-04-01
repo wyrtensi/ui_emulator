@@ -8,6 +8,9 @@ let translateX = 0;
 let translateY = 0;
 let isDraggingViewport = false;
 let startDragX, startDragY;
+let isMarqueeSelect = false;
+let marqueeStartX = 0, marqueeStartY = 0;
+let selectionBox = null;
 
 let selectedNode = null;
 let selectedEdge = null;
@@ -226,7 +229,24 @@ function setupViewport() {
         if (currentTool === 'select') viewport.style.cursor = 'grab';
 
         if (isDrawingEdge) {
-            // Drop edge nowhere
+            // Drop edge nowhere (or onto empty space)
+            // Show context menu here so they can create a node!
+            const targetNode = e.target.closest('.canvas-node');
+            if (!targetNode && isOwner) {
+                const rect = viewport.getBoundingClientRect();
+                ctxMenu.style.left = e.clientX + 'px';
+                ctxMenu.style.top = e.clientY + 'px';
+                ctxMenu.hidden = false;
+
+                ctxMenuX = (e.clientX - rect.left - translateX - (rect.width / 2)) / scale;
+                ctxMenuY = (e.clientY - rect.top - translateY - (rect.height / 2)) / scale;
+
+                // Save context so we can auto-connect after creation
+                window._pendingEdgeConnect = {
+                    fromNode: drawEdgeStartNode,
+                    fromSide: drawEdgeStartSide
+                };
+            }
             isDrawingEdge = false;
             drawingEdge.setAttribute('d', '');
         }
@@ -291,6 +311,22 @@ function setupViewport() {
         }
     });
 
+    // Double click on viewport to create default node
+    viewport.addEventListener('dblclick', (e) => {
+        if (e.target === viewport || e.target.closest('.canvas-content') === content && !e.target.closest('.canvas-node')) {
+            if (!isOwner) return;
+            const rect = viewport.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left - translateX - (rect.width / 2)) / scale;
+            const mouseY = (e.clientY - rect.top - translateY - (rect.height / 2)) / scale;
+
+            pushHistory();
+            const id = 'n_' + Date.now();
+            canvasData.nodes.push({ id, type: 'text', x: mouseX, y: mouseY, width: 250, height: 150, text: '' });
+            saveCanvasData(true);
+            renderCanvas();
+        }
+    });
+
     // Right click context menu on background
     const ctxMenu = container.querySelector('#canvas-context-menu');
     let ctxMenuX = 0, ctxMenuY = 0;
@@ -335,7 +371,31 @@ function setupViewport() {
     container.querySelector('#cm-add-group')?.addEventListener('click', () => {
         pushHistory();
         const id = 'n_' + Date.now();
-        canvasData.nodes.push({ id, type: 'group', label: 'New Group', x: ctxMenuX, y: ctxMenuY, width: 400, height: 300 });
+
+        let minX = ctxMenuX, minY = ctxMenuY, maxX = ctxMenuX + 400, maxY = ctxMenuY + 300;
+
+        // If there are multiSelectedNodes, snap group box around them!
+        if (multiSelectedNodes && multiSelectedNodes.size > 0) {
+            let first = true;
+            canvasData.nodes.forEach(n => {
+                if (multiSelectedNodes.has(n.id)) {
+                    if (first) {
+                        minX = n.x; minY = n.y; maxX = n.x + n.width; maxY = n.y + n.height;
+                        first = false;
+                    } else {
+                        minX = Math.min(minX, n.x);
+                        minY = Math.min(minY, n.y);
+                        maxX = Math.max(maxX, n.x + n.width);
+                        maxY = Math.max(maxY, n.y + n.height);
+                    }
+                }
+            });
+            // Give some padding
+            minX -= 40; minY -= 60; maxX += 40; maxY += 40;
+        }
+
+        canvasData.nodes.push({ id, type: 'group', label: 'New Group', x: minX, y: minY, width: maxX - minX, height: maxY - minY });
+        checkPendingEdge(id);
         saveCanvasData(true);
         renderCanvas();
     });
@@ -546,8 +606,47 @@ function setupNodeInteractions(el, node) {
     });
 
     // Text editing
+    if (node.type === 'file' && isOwner) {
+        el.addEventListener('dblclick', (e) => {
+            if (currentTool !== 'select') return;
+            e.stopPropagation();
+            // Open the file dialog for this node
+            const input = container.querySelector('#canvas-upload-image');
+            // We need to pass the target node so the upload logic knows who to replace!
+            window._targetImageNode = node.id;
+            input.click();
+        });
+    }
+
     if (node.type === 'text' && isOwner) {
         const textContent = el.querySelector('.node-content-text');
+
+        // Handle checkbox toggling
+        textContent.addEventListener('change', (e) => {
+            if (e.target.type === 'checkbox') {
+                const isChecked = e.target.checked;
+                // We need to figure out WHICH checkbox this is. The easiest way is to count them
+                // and replace the nth match of [ ] or [x] in the raw markdown text.
+                const checkboxes = Array.from(textContent.querySelectorAll('input[type="checkbox"]'));
+                const index = checkboxes.indexOf(e.target);
+
+                if (index > -1) {
+                    let matchCount = 0;
+                    node.text = node.text.replace(/\[([ xX])\]/g, (match, p1) => {
+                        if (matchCount === index) {
+                            matchCount++;
+                            return isChecked ? '[x]' : '[ ]';
+                        }
+                        matchCount++;
+                        return match;
+                    });
+                    pushHistory();
+                    saveCanvasData(true);
+                    markUnsaved();
+                }
+            }
+        });
+
         el.addEventListener('dblclick', (e) => {
             if (currentTool !== 'select') return;
             e.stopPropagation();
@@ -818,10 +917,6 @@ function clearSelection() {
 
 function showNodeToolbar(node, el) {
     if (!isOwner) return;
-
-    // Position toolbar above the node
-    const rect = el.getBoundingClientRect();
-    const contentRect = content.getBoundingClientRect();
 
     // Calculate position relative to content layer
     const x = node.x + (node.width / 2);
@@ -1121,6 +1216,7 @@ function deleteSelected() {
     pushHistory();
 
     if (selectedNode) {
+        hideNodeToolbar();
         // Delete associated edges first
         canvasData.edges = canvasData.edges.filter(e => e.fromNode !== selectedNode.id && e.toNode !== selectedNode.id);
 
