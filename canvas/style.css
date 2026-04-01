@@ -269,6 +269,8 @@
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
+  width: auto;
+  max-width: 90%;
   height: 44px;
   background: var(--canvas-toolbar-bg);
   border: 1px solid var(--canvas-node-border);
@@ -685,4 +687,13 @@
 }
 .canvas-group:hover {
     border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Selection Box */
+.canvas-selection-box {
+    position: absolute;
+    border: 1px solid var(--canvas-selected);
+    background-color: rgba(107, 122, 250, 0.2);
+    pointer-events: none;
+    z-index: 1000;
 }

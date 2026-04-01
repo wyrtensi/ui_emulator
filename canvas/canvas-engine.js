@@ -18,6 +18,9 @@ let theme = 'dark';
 let isOwner = false;
 let canvasSha = null;
 
+let undoStack = [];
+let redoStack = [];
+
 let isDrawingEdge = false;
 let drawEdgeStartNode = null;
 let drawEdgeStartSide = null;
@@ -60,6 +63,7 @@ export async function initCanvas(winContainer, config) {
     drawingLayer = container.querySelector('#canvas-drawing-layer');
     drawingEdge = container.querySelector('#canvas-drawing-edge');
     zoomLabel = container.querySelector('#canvas-zoom-level');
+    selectionBox = container.querySelector('#canvas-selection-box');
     saveIndicator = container.querySelector('#canvas-saving-indicator');
     nodeToolbar = container.querySelector('#canvas-node-toolbar');
 
@@ -195,9 +199,25 @@ function setupViewport() {
 
         if (isDrawingEdge) {
             const rect = viewport.getBoundingClientRect();
-            const mouseX = (e.clientX - rect.left - translateX) / scale;
-            const mouseY = (e.clientY - rect.top - translateY) / scale;
+            const mouseX = (e.clientX - rect.left - translateX - (rect.width / 2)) / scale;
+            const mouseY = (e.clientY - rect.top - translateY - (rect.height / 2)) / scale;
             updateDrawingEdge(mouseX, mouseY);
+        }
+
+        if (isMarqueeSelect) {
+            const rect = viewport.getBoundingClientRect();
+            const currentX = e.clientX - rect.left;
+            const currentY = e.clientY - rect.top;
+
+            const left = Math.min(marqueeStartX, currentX);
+            const top = Math.min(marqueeStartY, currentY);
+            const width = Math.abs(currentX - marqueeStartX);
+            const height = Math.abs(currentY - marqueeStartY);
+
+            selectionBox.style.left = left + 'px';
+            selectionBox.style.top = top + 'px';
+            selectionBox.style.width = width + 'px';
+            selectionBox.style.height = height + 'px';
         }
     });
 
@@ -210,9 +230,50 @@ function setupViewport() {
             isDrawingEdge = false;
             drawingEdge.setAttribute('d', '');
         }
+
+        if (isMarqueeSelect) {
+            isMarqueeSelect = false;
+            selectionBox.hidden = true;
+
+            // Calculate intersect
+            const rect = viewport.getBoundingClientRect();
+
+            // Selection box coords in viewport space
+            const selLeft = parseFloat(selectionBox.style.left);
+            const selTop = parseFloat(selectionBox.style.top);
+            const selRight = selLeft + parseFloat(selectionBox.style.width);
+            const selBottom = selTop + parseFloat(selectionBox.style.height);
+
+            // Map logic coords to viewport space to check intersection
+            const vCenterX = rect.width / 2;
+            const vCenterY = rect.height / 2;
+
+            canvasData.nodes.forEach(n => {
+                const nx1 = vCenterX + translateX + (n.x * scale);
+                const ny1 = vCenterY + translateY + (n.y * scale);
+                const nx2 = nx1 + (n.width * scale);
+                const ny2 = ny1 + (n.height * scale);
+
+                // AABB intersection
+                if (nx1 < selRight && nx2 > selLeft && ny1 < selBottom && ny2 > selTop) {
+                    multiSelectedNodes.add(n.id);
+                }
+            });
+
+            if (multiSelectedNodes.size > 0) {
+                renderCanvas(); // Render to show selection states
+            }
+        }
     });
 
     window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+            e.preventDefault();
+            if (e.shiftKey) redo();
+            else undo();
+            return;
+        }
+
         if (e.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
             window.isSpacePressed = true;
             if (currentTool === 'select') {
@@ -256,6 +317,7 @@ function setupViewport() {
     });
 
     container.querySelector('#cm-add-text')?.addEventListener('click', () => {
+        pushHistory();
         const id = 'n_' + Date.now();
         canvasData.nodes.push({ id, type: 'text', x: ctxMenuX, y: ctxMenuY, width: 250, height: 150, text: '' });
         saveCanvasData(true);
@@ -263,6 +325,7 @@ function setupViewport() {
     });
 
     container.querySelector('#cm-add-img')?.addEventListener('click', () => {
+        pushHistory();
         const id = 'n_' + Date.now();
         canvasData.nodes.push({ id, type: 'file', file: '', x: ctxMenuX, y: ctxMenuY, width: 250, height: 250 });
         saveCanvasData(true);
@@ -270,6 +333,7 @@ function setupViewport() {
     });
 
     container.querySelector('#cm-add-group')?.addEventListener('click', () => {
+        pushHistory();
         const id = 'n_' + Date.now();
         canvasData.nodes.push({ id, type: 'group', label: 'New Group', x: ctxMenuX, y: ctxMenuY, width: 400, height: 300 });
         saveCanvasData(true);
@@ -412,12 +476,18 @@ function setupNodeInteractions(el, node) {
         if (e.button !== 0) return;
         e.stopPropagation(); // prevent viewport drag
 
+        // Push history if starting to drag or resize
+        if (e.target.classList.contains('node-resize-handle') || !e.target.classList.contains('node-edge-handle')) {
+            if (isOwner) pushHistory();
+        }
+
         // Handle edge creation handles
         if (e.target.classList.contains('node-edge-handle')) {
-            if (!isOwner || currentTool !== 'edge') return;
+            if (!isOwner) return;
             isDrawingEdge = true;
             drawEdgeStartNode = node.id;
             drawEdgeStartSide = e.target.dataset.side;
+            e.preventDefault();
             return;
         }
 
@@ -548,15 +618,15 @@ function setupNodeInteractions(el, node) {
             const dx = (e.clientX - startX) / scale;
             const dy = (e.clientY - startY) / scale;
 
-            if (resizeDir.includes('e')) node.width = Math.max(100, Math.round(origWidth + dx));
-            if (resizeDir.includes('s')) node.height = Math.max(40, Math.round(origHeight + dy));
+            if (resizeDir.includes('e')) node.width = Math.max(150, Math.round(origWidth + dx));
+            if (resizeDir.includes('s')) node.height = Math.max(80, Math.round(origHeight + dy));
             if (resizeDir.includes('w')) {
-                const nw = Math.max(100, Math.round(origWidth - dx));
+                const nw = Math.max(150, Math.round(origWidth - dx));
                 node.x = origLeft + (origWidth - nw);
                 node.width = nw;
             }
             if (resizeDir.includes('n')) {
-                const nh = Math.max(40, Math.round(origHeight - dy));
+                const nh = Math.max(80, Math.round(origHeight - dy));
                 node.y = origTop + (origHeight - nh);
                 node.height = nh;
             }
@@ -637,6 +707,7 @@ function updateEdgePath(edge, pathEl) {
     // Draw simple cubic bezier based on direction
     const d = getBezierPath(p1, p2, edge.fromSide, edge.toSide);
     pathEl.setAttribute('d', d);
+    pathEl.setAttribute('marker-end', 'url(#arrowhead)');
 }
 
 function updateEdgesForNode(nodeId) {
@@ -660,6 +731,7 @@ function updateDrawingEdge(mouseX, mouseY) {
 
 function createEdge(fromNodeId, fromSide, toNodeId, toSide) {
     // Avoid duplicates
+    pushHistory();
     if (canvasData.edges.some(e => e.fromNode === fromNodeId && e.toNode === toNodeId)) return;
 
     const edge = {
@@ -755,8 +827,18 @@ function showNodeToolbar(node, el) {
     const x = node.x + (node.width / 2);
     const y = node.y;
 
-    nodeToolbar.style.left = `${node.x * scale + translateX + (node.width * scale) / 2}px`;
-    nodeToolbar.style.top = `${node.y * scale + translateY}px`;
+    const rect = viewport.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    // Calculate the top-center position of the node in viewport coordinates
+    const vX = centerX + translateX + (node.x * scale) + (node.width * scale) / 2;
+    const vY = centerY + translateY + (node.y * scale);
+
+    // Shift up to sit above the node
+    nodeToolbar.style.left = `${vX}px`;
+    nodeToolbar.style.top = `${vY - 45}px`;
+    nodeToolbar.style.transform = 'translateX(-50%)';
     nodeToolbar.hidden = false;
 }
 
@@ -1004,7 +1086,8 @@ async function uploadAndAddImage(file, filename) {
                 const x = (-translateX + rect.width / 2) / scale;
                 const y = (-translateY + rect.height / 2) / scale;
 
-                createNode('file', x - 150, y - 100, 300, 200, repoPath);
+                const node = createNode('file', x - 150, y - 100, 300, 200, repoPath);
+                node._tempBase64 = reader.result; // For immediate preview
                 window.uiToast('Image uploaded and added', 'success');
             } catch (err) {
                 console.error("Upload failed", err);
@@ -1035,6 +1118,7 @@ function setTool(toolName) {
 
 function deleteSelected() {
     if (!isOwner) return;
+    pushHistory();
 
     if (selectedNode) {
         // Delete associated edges first
@@ -1367,4 +1451,31 @@ function createGroupNode(x, y) {
         height: 200,
         label: 'New Group'
     };
+}
+
+// -----------------------------------------------------------------
+// HISTORY (UNDO/REDO)
+// -----------------------------------------------------------------
+function pushHistory() {
+    undoStack.push(JSON.stringify(canvasData));
+    if (undoStack.length > 50) undoStack.shift();
+    redoStack = []; // Clear redo on new action
+}
+
+function undo() {
+    if (undoStack.length === 0) return;
+    redoStack.push(JSON.stringify(canvasData));
+    canvasData = JSON.parse(undoStack.pop());
+    clearSelection();
+    saveCanvasData(true);
+    renderCanvas();
+}
+
+function redo() {
+    if (redoStack.length === 0) return;
+    undoStack.push(JSON.stringify(canvasData));
+    canvasData = JSON.parse(redoStack.pop());
+    clearSelection();
+    saveCanvasData(true);
+    renderCanvas();
 }
