@@ -30,12 +30,27 @@
     {
       "id": "n_1775071366573",
       "type": "text",
-      "x": 771.7777099609375,
-      "y": -166.888916015625,
+      "x": 579,
+      "y": -189,
       "width": 250,
       "height": 150,
       "text": ""
     }
   ],
-  "edges": []
+  "edges": [
+    {
+      "id": "dmai9d92oz8",
+      "fromNode": "n_1775071366573",
+      "fromSide": "right",
+      "toNode": "bnciq8qqy96",
+      "toSide": "left"
+    },
+    {
+      "id": "xuoc5clxwyp",
+      "fromNode": "bnciq8qqy96",
+      "fromSide": "left",
+      "toNode": "n_1775071366573",
+      "toSide": "right"
+    }
+  ]
 }
