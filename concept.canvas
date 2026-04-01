@@ -12,8 +12,8 @@
     {
       "id": "p5lrnwg7xtf",
       "type": "text",
-      "x": 427,
-      "y": 463,
+      "x": 429,
+      "y": 462,
       "width": 200,
       "height": 100,
       "text": "test\n",
@@ -27,6 +27,15 @@
       "width": 632,
       "height": 655,
       "file": "canvas_uploads/pasted_image_1775055024319.png"
+    },
+    {
+      "id": "zzg1jmlmhy",
+      "type": "text",
+      "x": 1747,
+      "y": 951,
+      "width": 200,
+      "height": 100,
+      "text": "New node"
     }
   ],
   "edges": [
