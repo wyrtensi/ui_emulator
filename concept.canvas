@@ -29,5 +29,13 @@
       "file": "canvas_uploads/pasted_image_1775055024319.png"
     }
   ],
-  "edges": []
+  "edges": [
+    {
+      "id": "3wqufw5kxlw",
+      "fromNode": "p5lrnwg7xtf",
+      "fromSide": "right",
+      "toNode": "bnciq8qqy96",
+      "toSide": "left"
+    }
+  ]
 }
