@@ -1,6 +1,6 @@
-import { githubAuth } from '../../js/core/github-auth.js';
-import { githubApi } from '../../js/core/github-api.js';
-import config from '../../js/config.js';
+import { githubAuth } from '../js/core/github-auth.js';
+import { githubApi } from '../js/core/github-api.js';
+import config from '../js/config.js';
 
 let canvasData = { nodes: [], edges: [] };
 let scale = 1;
@@ -305,7 +305,7 @@ function renderNode(node) {
                 </div>
             `;
         } else {
-            contentHtml = `<div class="node-content-text">📄 ${node.file}</div>`;
+            contentHtml = `<div class="node-content-text"> ${node.file}</div>`;
         }
     }
 
@@ -1015,7 +1015,7 @@ function setupThemeToggle() {
     const closeBtn = container.querySelector('#canvas-close');
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
-            import('../../js/core/window-manager.js').then(m => {
+            import('../js/core/window-manager.js').then(m => {
                 m.windowManager.close('canvas');
             });
         });
@@ -1163,7 +1163,7 @@ function setupChat() {
     // For now, inform user chat is loading (simulated or real implementation required).
 
     // Dynamic import the discussion manager to see if we can instantiate another
-    import('../../js/core/image-upload.js').then(mod => {
+    import('../js/core/image-upload.js').then(mod => {
         mod.setupImagePaste(inputEl);
     });
 
@@ -1260,7 +1260,7 @@ async function fetchDiscussion(messagesEl) {
                     <img src="${msg.author.avatarUrl}" width="16" height="16" style="border-radius:50%">
                     <strong>${msg.author.login}</strong>
                 </div>
-                <div style="color:var(--canvas-text);word-break:break-word">${msg.body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;').replace(/\n/g, \'<br>\')}</div>
+                <div style="color:var(--canvas-text);word-break:break-word">${msg.body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;').replace(/\n/g, '<br>')}</div>
             `;
             messagesEl.appendChild(el);
         }

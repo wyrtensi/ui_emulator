@@ -174,9 +174,16 @@ function checkGlobalHash(hash) {
    WINDOW LOADER
    ═══════════════════════════════════════════════════════ */
 async function loadWindowById(windowId, windowsLayer) {
-  const folder = `windows/${windowId}`;
+  // If id is "canvas", force it to load from root /canvas folder instead of /windows
+  const folder = windowId === 'canvas' ? 'canvas' : `windows/${windowId}`;
 
-  const configModule = await import(`../${folder}/config.js`);
+  let configModule;
+try {
+  configModule = await import(`../${folder}/config.js`).catch(e => { console.log("CATCH CAUGHT ERROR:", e.message); throw e; });
+} catch(e) {
+  console.error("IMPORT ERROR:", e);
+  throw e;
+}
   const config = configModule.default;
 
   // Build wDef from config (per-window manifest)
