@@ -549,6 +549,7 @@ function wireControlPanel() {
   function buildWindowsList() {
     windowsList.innerHTML = '';
     for (const w of windowManager.getAll()) {
+      if (w.id === 'canvas') continue; // Hide canvas from windows list
       const item = document.createElement('div');
       item.className = 'window-list-item';
       const toggle = document.createElement('button');

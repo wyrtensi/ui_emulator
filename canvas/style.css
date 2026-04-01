@@ -212,8 +212,13 @@
   cursor: pointer;
   color: var(--canvas-text);
   user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+.format-item svg { width: 14px; height: 14px; opacity: 0.7; }
 .format-item:hover { background: var(--canvas-accent); color: #fff; }
+.format-item:hover svg { opacity: 1; }
 
 .format-sep {
   height: 1px;
