@@ -12,11 +12,11 @@
     {
       "id": "p5lrnwg7xtf",
       "type": "text",
-      "x": 399,
-      "y": 117,
+      "x": 269,
+      "y": 96,
       "width": 437,
       "height": 305,
-      "text": "test\n",
+      "text": "test\n\n- [ ] text",
       "color": "1"
     },
     {
