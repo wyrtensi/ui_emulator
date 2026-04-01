@@ -163,15 +163,16 @@ function markUnsaved() {
 
 function setupViewport() {
     viewport.addEventListener('mousedown', (e) => {
-        // Only trigger viewport drag if middle click OR (left click on background in select mode)
-        if (e.button === 1 || (e.button === 0 && e.target === viewport && currentTool === 'select')) {
+        // Obsidian style panning: Middle click OR (Spacebar + Left click) OR (Right click on background)
+        if (e.button === 1 || (e.button === 0 && window.isSpacePressed) || e.button === 2) {
             isDraggingViewport = true;
             startDragX = e.clientX - translateX;
             startDragY = e.clientY - translateY;
             viewport.style.cursor = 'grabbing';
+            if (e.button === 1) e.preventDefault(); // prevent auto-scroll ring
         }
 
-        if (e.button === 0 && e.target === viewport) {
+        if (e.button === 0 && e.target === viewport && !window.isSpacePressed) {
             clearSelection();
 
             // Text tool - click to create node
@@ -208,6 +209,31 @@ function setupViewport() {
             // Drop edge nowhere
             isDrawingEdge = false;
             drawingEdge.setAttribute('d', '');
+        }
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+            window.isSpacePressed = true;
+            if (currentTool === 'select') {
+                viewport.style.cursor = 'grab';
+            }
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+            window.isSpacePressed = false;
+            if (currentTool === 'select' && !isDraggingViewport) {
+                viewport.style.cursor = 'default';
+            }
+        }
+    });
+
+    // Prevent context menu on right click inside viewport
+    viewport.addEventListener('contextmenu', (e) => {
+        if (e.target === viewport) {
+            e.preventDefault();
         }
     });
 
