@@ -17,15 +17,6 @@
       "width": 200,
       "height": 100,
       "text": "New node"
-    },
-    {
-      "id": "1mwb4bmw0ds",
-      "type": "file",
-      "x": 1520,
-      "y": -285,
-      "width": 300,
-      "height": 200,
-      "file": "canvas_uploads/pasted_image_1775071756665.png"
     }
   ],
   "edges": []
