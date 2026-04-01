@@ -17,15 +17,15 @@ class ExportManager {
   }
 
   init() {
-    this._exportTreeEl = document.getElementById('rfo-export-tree');
-    this._exportScaleEl = document.getElementById('rfo-export-scale');
-    this._transparentEl = document.getElementById('rfo-export-transparent');
-    this._progressEl = document.getElementById('rfo-export-progress');
+    this._exportTreeEl = document.getElementById('ui-export-tree');
+    this._exportScaleEl = document.getElementById('ui-export-scale');
+    this._transparentEl = document.getElementById('ui-export-transparent');
+    this._progressEl = document.getElementById('ui-export-progress');
     this._progressText = this._progressEl?.querySelector('.ep-text');
     this._progressBar = this._progressEl?.querySelector('.ep-bar-fill');
 
-    document.getElementById('rfo-export-selected')?.addEventListener('click', () => this.exportSelected());
-    document.getElementById('rfo-export-all')?.addEventListener('click', () => this.exportAll());
+    document.getElementById('ui-export-selected')?.addEventListener('click', () => this.exportSelected());
+    document.getElementById('ui-export-all')?.addEventListener('click', () => this.exportAll());
 
     settings.on('mode', (val) => {
       if (val === 'export') {
@@ -38,7 +38,7 @@ class ExportManager {
   }
 
   _toast(msg, type = 'info') {
-    if (typeof window.rfoToast === 'function') window.rfoToast(msg, type);
+    if (typeof window.uiToast === 'function') window.uiToast(msg, type);
   }
 
   /* ── Progress overlay ──────────────────────────────── */
@@ -191,7 +191,7 @@ class ExportManager {
 
   /* ── Render to PNG via html2canvas ──────────────────── */
   async _renderToPNG(element, windowId, exportName, scale = 2) {
-    element.classList.remove('rfo-export-highlight');
+    element.classList.remove('ui-export-highlight');
 
     // Temporarily apply padding to prevent html2canvas from clipping box-shadows/glows
     const originalPadding = element.style.padding;
@@ -223,7 +223,7 @@ class ExportManager {
     const filename = `${windowId}_${exportName}_${scale}x.png`;
 
     if (settings.get('mode') === 'export') {
-      element.classList.add('rfo-export-highlight');
+      element.classList.add('ui-export-highlight');
     }
 
     return { blob, filename };
@@ -245,7 +245,7 @@ class ExportManager {
       zip.file(f.filename, f.blob);
     }
     const content = await zip.generateAsync({ type: 'blob' });
-    this._downloadBlob(content, `rfo-export-${Date.now()}.zip`);
+    this._downloadBlob(content, `ui-export-${Date.now()}.zip`);
   }
 
   /* ── Export mode UI ─────────────────────────────────── */
@@ -255,7 +255,7 @@ class ExportManager {
       for (const exp of w.config.exports) {
         const el = w.container.querySelector(exp.selector);
         if (el) {
-          el.classList.add('rfo-export-highlight');
+          el.classList.add('ui-export-highlight');
           el.addEventListener('click', this._onHighlightClick);
         }
       }
@@ -263,8 +263,8 @@ class ExportManager {
   }
 
   _disableHighlights() {
-    document.querySelectorAll('.rfo-export-highlight').forEach(el => {
-      el.classList.remove('rfo-export-highlight');
+    document.querySelectorAll('.ui-export-highlight').forEach(el => {
+      el.classList.remove('ui-export-highlight');
       el.removeEventListener('click', this._onHighlightClick);
     });
   }
@@ -272,7 +272,7 @@ class ExportManager {
   _onHighlightClick = async (e) => {
     if (settings.get('mode') !== 'export') return;
     const el = e.currentTarget;
-    const windowEl = el.closest('.rfo-window');
+    const windowEl = el.closest('.ui-window');
     if (!windowEl) return;
 
     const windowId = windowEl.dataset.windowId;

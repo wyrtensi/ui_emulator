@@ -33,8 +33,8 @@ export function setupImagePaste(textarea) {
     if (!file) return;
 
     if (!githubAuth.isLoggedIn) {
-      if (typeof window.rfoToast === 'function') {
-        window.rfoToast('Sign in with GitHub to paste images', 'info');
+      if (typeof window.uiToast === 'function') {
+        window.uiToast('Sign in with GitHub to paste images', 'info');
       }
       return;
     }
@@ -87,8 +87,8 @@ export function setupImagePaste(textarea) {
       if (startIdx !== -1) {
         textarea.setRangeText('[Image upload failed]', startIdx, startIdx + placeholder.length, 'end');
       }
-      if (typeof window.rfoToast === 'function') {
-        window.rfoToast('Image upload failed', 'error');
+      if (typeof window.uiToast === 'function') {
+        window.uiToast('Image upload failed', 'error');
       }
     }
   });

@@ -34,22 +34,22 @@ export async function initCanvas(winContainer, config) {
     container = winContainer;
 
     // Force fullscreen overlay by resetting the window wrapper
-    const rfoWindow = container.closest('.rfo-window');
-    if (rfoWindow) {
+    const uiWindow = container.closest('.ui-window');
+    if (uiWindow) {
         // Appending to body strips it out of the scaled viewport and ensures it is truly fullscreen
         // Keep it in DOM so windowManager can track it, but position it absolute/fixed
-        rfoWindow.style.position = 'fixed';
-        rfoWindow.style.top = '0';
-        rfoWindow.style.left = '0';
-        rfoWindow.style.width = '100vw';
-        rfoWindow.style.height = '100vh';
-        rfoWindow.style.zIndex = '9998';
-        rfoWindow.style.transform = 'none';
+        uiWindow.style.position = 'fixed';
+        uiWindow.style.top = '0';
+        uiWindow.style.left = '0';
+        uiWindow.style.width = '100vw';
+        uiWindow.style.height = '100vh';
+        uiWindow.style.zIndex = '9998';
+        uiWindow.style.transform = 'none';
 
-        // Remove from the scaled 'rfo-windows' layer and append directly to document.body
+        // Remove from the scaled 'ui-windows' layer and append directly to document.body
         // This fully bypasses the emulator scaling that shrinks it
-        if (rfoWindow.parentElement && rfoWindow.parentElement.id === 'rfo-windows') {
-             document.body.appendChild(rfoWindow);
+        if (uiWindow.parentElement && uiWindow.parentElement.id === 'ui-windows') {
+             document.body.appendChild(uiWindow);
         }
     }
 
@@ -689,8 +689,8 @@ function showNodeToolbar(node, el) {
     const x = node.x + (node.width / 2);
     const y = node.y;
 
-    nodeToolbar.style.left = `${x}px`;
-    nodeToolbar.style.top = `${y}px`;
+    nodeToolbar.style.left = `${node.x * scale + translateX + (node.width * scale) / 2}px`;
+    nodeToolbar.style.top = `${node.y * scale + translateY}px`;
     nodeToolbar.hidden = false;
 }
 
@@ -939,10 +939,10 @@ async function uploadAndAddImage(file, filename) {
                 const y = (-translateY + rect.height / 2) / scale;
 
                 createNode('file', x - 150, y - 100, 300, 200, repoPath);
-                window.rfoToast('Image uploaded and added', 'success');
+                window.uiToast('Image uploaded and added', 'success');
             } catch (err) {
                 console.error("Upload failed", err);
-                window.rfoToast('Failed to upload image to repo', 'error');
+                window.uiToast('Failed to upload image to repo', 'error');
             } finally {
                 hideOverlay();
                 resolve();
@@ -1149,7 +1149,7 @@ function setupChat() {
     });
 
     // Instead of completely reinventing chat here, since discussion-manager
-    // is a singleton tied to #rfo-discussion-panel, we will create a lightweight
+    // is a singleton tied to #ui-discussion-panel, we will create a lightweight
     // mirror implementation using the same GraphQL logic for our embedded chat.
 
     // Quick and dirty copy of init logic, but pointing to local DOM elements.
@@ -1173,7 +1173,7 @@ function setupChat() {
          const text = inputEl.value.trim();
          if (!text) return;
          if (!githubAuth.isLoggedIn) {
-             window.rfoToast('Sign in to chat', 'info');
+             window.uiToast('Sign in to chat', 'info');
              return;
          }
          sendBtn.disabled = true;
@@ -1260,7 +1260,7 @@ async function fetchDiscussion(messagesEl) {
                     <img src="${msg.author.avatarUrl}" width="16" height="16" style="border-radius:50%">
                     <strong>${msg.author.login}</strong>
                 </div>
-                <div style="color:var(--canvas-text);word-break:break-word">${msg.body.replace(/\n/g, '<br>')}</div>
+                <div style="color:var(--canvas-text);word-break:break-word">${msg.body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;').replace(/\n/g, \'<br>\')}</div>
             `;
             messagesEl.appendChild(el);
         }

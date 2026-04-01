@@ -26,15 +26,15 @@ class DiscussionManager {
   }
 
   init() {
-    this._panel = document.getElementById('rfo-discussion-panel');
-    this._messagesEl = document.getElementById('rfo-discussion-messages');
-    this._inputEl = document.getElementById('rfo-discussion-input');
-    this._sendBtn = document.getElementById('rfo-discussion-send');
+    this._panel = document.getElementById('ui-discussion-panel');
+    this._messagesEl = document.getElementById('ui-discussion-messages');
+    this._inputEl = document.getElementById('ui-discussion-input');
+    this._sendBtn = document.getElementById('ui-discussion-send');
 
     setupImagePaste(this._inputEl);
 
-    const toggleBtn = document.getElementById('rfo-discussion-toggle');
-    const closeBtn = document.getElementById('rfo-discussion-close');
+    const toggleBtn = document.getElementById('ui-discussion-toggle');
+    const closeBtn = document.getElementById('ui-discussion-close');
 
     if (toggleBtn) {
       toggleBtn.addEventListener('click', () => this.toggle());
@@ -148,12 +148,12 @@ class DiscussionManager {
   /* ── Load all messages ───────────────────────────── */
 
   async _loadDiscussion() {
-    this._messagesEl.innerHTML = '<div class="rfo-discussion-loading">Loading discussion...<br><small style="color:#aaa;">Messages may take ~30s to appear due to platform delays.</small></div>';
+    this._messagesEl.innerHTML = '<div class="ui-discussion-loading">Loading discussion...<br><small style="color:#aaa;">Messages may take ~30s to appear due to platform delays.</small></div>';
 
     try {
       const discussion = await this._fetchDiscussionData();
       if (!discussion) {
-        this._messagesEl.innerHTML = '<div class="rfo-discussion-loading">Discussion not found.</div>';
+        this._messagesEl.innerHTML = '<div class="ui-discussion-loading">Discussion not found.</div>';
         return;
       }
       this._discussionId = discussion.id;
@@ -163,9 +163,9 @@ class DiscussionManager {
     } catch (err) {
       console.error('[Discussion] Load failed:', err);
       if (err.message && err.message.includes('401') || err.message.includes('403')) {
-        this._messagesEl.innerHTML = '<div class="rfo-discussion-loading">Sign in to view and participate in the discussion.<br><small style="color:#aaa;">GitHub Discussions require authentication to view.</small></div>';
+        this._messagesEl.innerHTML = '<div class="ui-discussion-loading">Sign in to view and participate in the discussion.<br><small style="color:#aaa;">GitHub Discussions require authentication to view.</small></div>';
       } else {
-        this._messagesEl.innerHTML = '<div class="rfo-discussion-loading">Failed to load discussion</div>';
+        this._messagesEl.innerHTML = '<div class="ui-discussion-loading">Failed to load discussion</div>';
       }
     }
   }
@@ -220,7 +220,7 @@ class DiscussionManager {
 
   async _send() {
     if (!githubAuth.isLoggedIn) {
-      if (typeof window.rfoToast === 'function') window.rfoToast('Sign in with GitHub to chat', 'info');
+      if (typeof window.uiToast === 'function') window.uiToast('Sign in with GitHub to chat', 'info');
       return;
     }
 
@@ -265,7 +265,7 @@ class DiscussionManager {
       this._inputEl.value = '';
     } catch (err) {
       console.error('[Discussion] Send failed:', err);
-      if (typeof window.rfoToast === 'function') window.rfoToast('Failed to send message', 'error');
+      if (typeof window.uiToast === 'function') window.uiToast('Failed to send message', 'error');
     } finally {
       this._sendBtn.disabled = false;
       this._inputEl.disabled = false;
@@ -292,7 +292,7 @@ class DiscussionManager {
       this._renderMessages();
     } catch (err) {
       console.error('[Discussion] Delete failed:', err);
-      if (typeof window.rfoToast === 'function') window.rfoToast('Failed to delete message', 'error');
+      if (typeof window.uiToast === 'function') window.uiToast('Failed to delete message', 'error');
     }
   }
 
@@ -300,7 +300,7 @@ class DiscussionManager {
 
   async _toggleReaction(commentId, content) {
     if (!githubAuth.isLoggedIn) {
-      if (typeof window.rfoToast === 'function') window.rfoToast('Sign in to react', 'info');
+      if (typeof window.uiToast === 'function') window.uiToast('Sign in to react', 'info');
       return;
     }
 
@@ -354,7 +354,7 @@ class DiscussionManager {
 
     if (this._messages.length === 0) {
       const noMsg = document.createElement('div');
-      noMsg.className = 'rfo-discussion-loading';
+      noMsg.className = 'ui-discussion-loading';
       noMsg.innerText = 'No messages yet — be the first to chat!';
       this._messagesEl.appendChild(noMsg);
       return;
@@ -367,7 +367,7 @@ class DiscussionManager {
       const isOwn = githubAuth.user?.login === msg.author.login;
       // Author and Repo Owner can delete
       const canDelete = isOwn || (githubAuth.isLoggedIn && githubAuth.isOwner);
-      el.className = 'rfo-discussion-msg' + (isOwn ? ' rfo-discussion-msg-own' : '');
+      el.className = 'ui-discussion-msg' + (isOwn ? ' ui-discussion-msg-own' : '');
       el.dataset.id = msg.id;
 
       const time = new Date(msg.createdAt);
@@ -390,21 +390,21 @@ class DiscussionManager {
         const users = reactionCounts[rt] || [];
         if (users.length > 0) {
           const reactedByMe = githubAuth.user && users.includes(githubAuth.user.login);
-          reactionsHtml += `<span class="rfo-discussion-reaction ${reactedByMe ? 'active' : ''}" data-type="${rt}" data-id="${msg.id}" title="${users.join(', ')}">${emojis[rt]} ${users.length}</span>`;
+          reactionsHtml += `<span class="ui-discussion-reaction ${reactedByMe ? 'active' : ''}" data-type="${rt}" data-id="${msg.id}" title="${users.join(', ')}">${emojis[rt]} ${users.length}</span>`;
         }
       }
-      reactionsHtml += `<span class="rfo-discussion-reaction-add" data-id="${msg.id}">+👍</span>`;
+      reactionsHtml += `<span class="ui-discussion-reaction-add" data-id="${msg.id}">+👍</span>`;
 
       el.innerHTML = `
-        <img class="rfo-discussion-avatar" src="${this._escAttr(msg.author.avatarUrl)}" alt="" width="24" height="24">
-        <div class="rfo-discussion-msg-body">
-          <div class="rfo-discussion-msg-header">
-            <span class="rfo-discussion-author">${this._esc(msg.author.login)}</span>
-            <span class="rfo-discussion-time" title="${dateStr}">${timeStr}</span>
-            ${canDelete ? `<button class="rfo-discussion-msg-del" data-id="${msg.id}" title="Delete Message">&times;</button>` : ''}
+        <img class="ui-discussion-avatar" src="${this._escAttr(msg.author.avatarUrl)}" alt="" width="24" height="24">
+        <div class="ui-discussion-msg-body">
+          <div class="ui-discussion-msg-header">
+            <span class="ui-discussion-author">${this._esc(msg.author.login)}</span>
+            <span class="ui-discussion-time" title="${dateStr}">${timeStr}</span>
+            ${canDelete ? `<button class="ui-discussion-msg-del" data-id="${msg.id}" title="Delete Message">&times;</button>` : ''}
           </div>
-          <div class="rfo-discussion-text">${this._escAndLinkify(msg.body)}</div>
-          <div class="rfo-discussion-reactions">
+          <div class="ui-discussion-text">${this._escAndLinkify(msg.body)}</div>
+          <div class="ui-discussion-reactions">
             ${reactionsHtml}
           </div>
         </div>
@@ -412,7 +412,7 @@ class DiscussionManager {
       this._messagesEl.appendChild(el);
     }
 
-    const delBtns = this._messagesEl.querySelectorAll('.rfo-discussion-msg-del');
+    const delBtns = this._messagesEl.querySelectorAll('.ui-discussion-msg-del');
     delBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         if (confirm('Delete this message?')) {
@@ -421,7 +421,7 @@ class DiscussionManager {
       });
     });
 
-    const rxBtns = this._messagesEl.querySelectorAll('.rfo-discussion-reaction');
+    const rxBtns = this._messagesEl.querySelectorAll('.ui-discussion-reaction');
     rxBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
@@ -430,7 +430,7 @@ class DiscussionManager {
       });
     });
 
-    const addRxBtns = this._messagesEl.querySelectorAll('.rfo-discussion-reaction-add');
+    const addRxBtns = this._messagesEl.querySelectorAll('.ui-discussion-reaction-add');
     addRxBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');

@@ -4,7 +4,7 @@
  * Each pin = 1 GitHub Issue
  *   - Title: "[PIN] {windowId} | {x},{y}"
  *   - Body: JSON metadata in HTML comment + first message text
- *   - Labels: ["rfo-pin"]
+ *   - Labels: ["ui-pin"]
  *   - Issue comments = thread replies
  *
  * Unauthenticated users can read pins (public repo).
@@ -45,7 +45,7 @@ class PinStore {
         await fetch(`${API}/repos/${repo}/labels`, {
           method: 'POST',
           headers: { ...this._headers(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: pinLabel, color: 'ff4080', description: 'RFO UI Emulator pin' }),
+          body: JSON.stringify({ name: pinLabel, color: 'ff4080', description: 'UI Emulator pin' }),
         });
       }
     } catch { /* ignore — label may already exist */ }
@@ -108,7 +108,7 @@ class PinStore {
     await this._ensureLabel();
 
     const meta = { windowId, relativeX, relativeY, v: 1 };
-    const body = `<!-- RFO_PIN ${JSON.stringify(meta)} -->\n\n${text}`;
+    const body = `<!-- UI_PIN ${JSON.stringify(meta)} -->\n\n${text}`;
 
     const resp = await fetch(`${API}/repos/${repo}/issues`, {
       method: 'POST',
@@ -150,7 +150,7 @@ class PinStore {
 
   async updatePinBody(issueNumber, windowId, relX, relY, text) {
     const meta = { windowId, relativeX: relX, relativeY: relY, v: 1 };
-    const body = `<!-- RFO_PIN ${JSON.stringify(meta)} -->\n\n${text}`;
+    const body = `<!-- UI_PIN ${JSON.stringify(meta)} -->\n\n${text}`;
 
     const resp = await fetch(`${API}/repos/${repo}/issues/${issueNumber}`, {
       method: 'PATCH',
@@ -164,7 +164,7 @@ class PinStore {
 
   async movePin(issueNumber, windowId, relX, relY, existingText) {
     const meta = { windowId, relativeX: relX, relativeY: relY, v: 1 };
-    const body = `<!-- RFO_PIN ${JSON.stringify(meta)} -->\n\n${existingText || ''}`;
+    const body = `<!-- UI_PIN ${JSON.stringify(meta)} -->\n\n${existingText || ''}`;
     const title = `[PIN] ${windowId} | ${relX.toFixed(3)},${relY.toFixed(3)}`;
 
     const resp = await fetch(`${API}/repos/${repo}/issues/${issueNumber}`, {
@@ -220,13 +220,13 @@ class PinStore {
   /* ── Parse issue into pin object ─────────────────── */
 
   _parseIssue(issue) {
-    const match = issue.body?.match(/<!-- RFO_PIN (.+?) -->/);
+    const match = issue.body?.match(/<!-- UI_PIN (.+?) -->/);
     if (!match) return null;
 
     let meta;
     try { meta = JSON.parse(match[1]); } catch { return null; }
 
-    const textAfterMeta = issue.body.replace(/<!-- RFO_PIN .+? -->\n*/, '').trim();
+    const textAfterMeta = issue.body.replace(/<!-- UI_PIN .+? -->\n*/, '').trim();
 
     return {
       issueNumber: issue.number,

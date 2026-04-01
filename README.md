@@ -1,4 +1,4 @@
-# RFO UI Emulator
+# UI Emulator
 
 A modular, browser-based interface emulator for RF Online. Design, arrange, comment on, and export pixel-perfect recreations of the game's HUD using a drag-and-drop canvas at native 1920x1080 resolution.
 
@@ -46,7 +46,7 @@ No build step, no dependencies to install. Everything runs from vanilla JS + ES 
 ## Project Structure
 
 ```
-rfo_ui_emulator/
+ui_ui_emulator/
 ├── index.html              # Main page viewport, overlays, control panel
 ├── css/core.css            # Global styles, panel, toolbar, toast, auth UI
 ├── js/

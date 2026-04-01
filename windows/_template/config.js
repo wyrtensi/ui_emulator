@@ -59,7 +59,7 @@ export default {
    * Called once after the window HTML is injected into the DOM.
    * Use for wiring interactive elements (tabs, buttons, etc.)
    *
-   * @param {HTMLElement} container — the .rfo-window element
+   * @param {HTMLElement} container — the .ui-window element
    */
   init(container) {
     // Example: wire a close button

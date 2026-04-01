@@ -27,7 +27,7 @@
 }
 
 /* Fullscreen Override */
-:root .rfo-window[data-window-id="canvas"] {
+:root .ui-window[data-window-id="canvas"] {
   width: 100vw !important;
   height: 100vh !important;
   left: 0 !important;

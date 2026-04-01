@@ -6,7 +6,7 @@
 import { windowManager } from './window-manager.js';
 import { settings } from './settings.js';
 
-const AUTOSAVE_KEY = 'rfo-ui-autosave';
+const AUTOSAVE_KEY = 'ui-ui-autosave';
 const PRESET_VERSION = 1;
 
 class LayoutManager {
@@ -55,7 +55,7 @@ class LayoutManager {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${(name || 'preset').replace(/[^a-zA-Z0-9_-]/g, '_')}.rfo.json`;
+    a.download = `${(name || 'preset').replace(/[^a-zA-Z0-9_-]/g, '_')}.ui.json`;
     a.click();
     URL.revokeObjectURL(url);
   }

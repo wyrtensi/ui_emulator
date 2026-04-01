@@ -19,13 +19,13 @@ class ContextMenu {
   }
 
   init({ manifest, onOpenWindowRequest, onExportWindow }) {
-    this._el = document.getElementById('rfo-context-menu');
+    this._el = document.getElementById('ui-context-menu');
     this._ul = this._el.querySelector('ul');
     this._manifest = manifest;
     this._onOpenWindowRequest = onOpenWindowRequest;
     this._onExportWindow = onExportWindow;
 
-    const viewport = document.getElementById('rfo-viewport');
+    const viewport = document.getElementById('ui-viewport');
     viewport.addEventListener('contextmenu', (e) => this._onContext(e));
     document.addEventListener('contextmenu', (e) => {
       if (viewport.contains(e.target)) e.preventDefault();
@@ -37,7 +37,7 @@ class ContextMenu {
     e.stopPropagation();
 
     // Determine if click was on a window
-    const windowEl = e.target.closest('.rfo-window');
+    const windowEl = e.target.closest('.ui-window');
     const items = [];
 
     if (windowEl) {

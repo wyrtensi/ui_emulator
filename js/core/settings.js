@@ -3,7 +3,7 @@
  * Persists to localStorage, emits events on change.
  */
 
-const STORAGE_KEY = 'rfo-ui-settings';
+const STORAGE_KEY = 'ui-ui-settings';
 
 const defaults = {
   scale: 1.0,

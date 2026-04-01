@@ -2,7 +2,7 @@
 
 ## Overview
 
-Each window in the RFO UI Emulator is an independent module consisting of 3 files inside its own folder under `windows/`:
+Each window in the UI Emulator is an independent module consisting of 3 files inside its own folder under `windows/`:
 
 ```
 windows/
@@ -146,7 +146,7 @@ When multiple separate DOM elements should be captured as **one image**, wrap th
 
 ### Interactive Behavior
 - Use `config.init(container)` for event listeners, animations, etc.
-- `container` is the `.rfo-window` element containing your HTML
+- `container` is the `.ui-window` element containing your HTML
 - Query elements with `container.querySelector(...)` to stay within scope
 - For closing the window from inside:
   ```js
