@@ -4,20 +4,10 @@
       "id": "3cujn4wwv9n",
       "type": "text",
       "x": 137,
-      "y": 399,
+      "y": 397,
       "width": 200,
       "height": 100,
       "text": "test\n"
-    },
-    {
-      "id": "p5lrnwg7xtf",
-      "type": "text",
-      "x": 245,
-      "y": 103,
-      "width": 437,
-      "height": 305,
-      "text": "test\n\n- [ ] text\n## text",
-      "color": "1"
     },
     {
       "id": "bnciq8qqy96",
@@ -38,13 +28,5 @@
       "text": "New node"
     }
   ],
-  "edges": [
-    {
-      "id": "3wqufw5kxlw",
-      "fromNode": "p5lrnwg7xtf",
-      "fromSide": "right",
-      "toNode": "bnciq8qqy96",
-      "toSide": "left"
-    }
-  ]
+  "edges": []
 }
