@@ -7,12 +7,14 @@ const STORAGE_KEY = 'rfo-ui-settings';
 
 const defaults = {
   scale: 1.0,
+  bgScale: 1.0,
   autoFitScale: true,
   screenBounds: true,
   snapToGrid: false,
   gridSize: 10,
   background: '',        // URL or data-URI
   backgroundType: '',    // 'image' | 'video' | ''
+  backgroundColor: '#0a0e18',
   mode: 'design',        // 'design' | 'export' | 'comment'
   authorName: '',
 };

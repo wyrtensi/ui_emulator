@@ -1011,6 +1011,15 @@ function setupThemeToggle() {
         if (theme === 'light') win.classList.add('light-theme');
         else win.classList.remove('light-theme');
     });
+
+    const closeBtn = container.querySelector('#canvas-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            import('../../js/core/window-manager.js').then(m => {
+                m.windowManager.close('canvas');
+            });
+        });
+    }
 }
 
 function setupZoomControls() {

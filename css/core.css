@@ -6,6 +6,7 @@
 :root {
   /* Scale */
   --ui-scale: 1;
+  --bg-scale: 1;
   --viewport-w: 1920;
   --viewport-h: 1080;
 
@@ -19,23 +20,23 @@
   --z-toast: 40000;
   --z-export-progress: 50000;
 
-  /* Panel theme — dark sci-fi */
-  --panel-bg: rgba(8, 12, 20, 0.95);
-  --panel-border: rgba(0, 200, 255, 0.2);
-  --panel-accent: #00c8ff;
-  --panel-accent-dim: rgba(0, 200, 255, 0.4);
-  --panel-text: #c8d8e8;
-  --panel-text-dim: #607080;
-  --panel-input-bg: rgba(0, 20, 40, 0.6);
-  --panel-btn-bg: rgba(0, 80, 120, 0.3);
-  --panel-btn-hover: rgba(0, 120, 180, 0.4);
-  --panel-section-bg: rgba(0, 40, 60, 0.2);
+  /* Panel theme — Obsidian/Canvas style */
+  --panel-bg: #1e1e1e;
+  --panel-border: #444;
+  --panel-accent: #3a75c4;
+  --panel-accent-dim: #4a8deb;
+  --panel-text: #eee;
+  --panel-text-dim: #aaa;
+  --panel-input-bg: #2d2d2d;
+  --panel-btn-bg: #333;
+  --panel-btn-hover: #444;
+  --panel-section-bg: #252526;
   --panel-width: 300px;
 
   /* Context menu */
-  --ctx-bg: rgba(10, 16, 28, 0.96);
-  --ctx-hover: rgba(0, 200, 255, 0.15);
-  --ctx-border: rgba(0, 200, 255, 0.25);
+  --ctx-bg: #252526;
+  --ctx-hover: #444;
+  --ctx-border: #555;
 
   /* Comment pins */
   --pin-color: #ff4080;
@@ -101,6 +102,8 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transform: scale(var(--bg-scale));
+  transform-origin: center center;
 }
 
 #rfo-windows {
@@ -437,7 +440,6 @@ body[data-mode="comment"] #rfo-mode-indicator {
   font-family: 'Inter', -apple-system, sans-serif;
   font-size: 14px;
   font-weight: 600;
-  backdrop-filter: blur(12px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
@@ -446,11 +448,15 @@ body[data-mode="comment"] #rfo-mode-indicator {
   box-shadow: 0 0 16px var(--panel-accent-dim);
   transform: translateY(-2px);
   color: #fff;
-  background: var(--panel-hover);
+  background: var(--panel-section-bg);
 }
 
 #rfo-canvas-btn {
-  background: rgba(43, 117, 204, 0.2);
+  background: #2d5a99;
+  color: #fff;
+}
+#rfo-canvas-btn:hover {
+  background: var(--panel-accent);
 }
 #rfo-canvas-btn:hover {
   background: var(--panel-accent);
@@ -487,7 +493,6 @@ body[data-mode="comment"] #rfo-mode-indicator {
   z-index: var(--z-panel);
   background: var(--panel-bg);
   border-left: 1px solid var(--panel-border);
-  backdrop-filter: blur(16px);
   transform: translateX(0);
   transition: transform 0.3s ease;
   display: flex;
@@ -646,10 +651,10 @@ body[data-mode="comment"] #rfo-mode-indicator {
 .mode-btn .mb-icon { font-size: 13px; }
 
 .mode-btn.active {
-  color: var(--panel-accent);
+  color: var(--panel-text);
   border-color: var(--panel-accent);
-  background: rgba(0, 200, 255, 0.1);
-  box-shadow: 0 0 8px rgba(0, 200, 255, 0.15);
+  background: var(--panel-accent);
+  box-shadow: 0 0 8px rgba(58, 117, 196, 0.3);
 }
 
 .mode-btn:hover:not(.active) {
@@ -1016,7 +1021,7 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 50%;
   background: var(--panel-accent);
   cursor: pointer;
-  border: 2px solid rgba(0,0,0,0.3);
+  border: 2px solid #252526;
   box-shadow: 0 0 6px var(--panel-accent-dim);
 }
 
@@ -1047,19 +1052,18 @@ input[type="range"]::-webkit-slider-thumb {
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  background: rgba(20, 25, 35, 0.85);
-  border: 1px solid rgba(255,255,255,0.15);
+  background: #252526;
+  border: 1px solid #444;
   border-radius: 20px;
   color: #ccc;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  backdrop-filter: blur(10px);
   transition: all 0.2s;
 }
 
 .gh-login-btn-float:hover {
-  background: rgba(30, 40, 60, 0.95);
+  background: #333;
   border-color: var(--panel-accent);
   color: #fff;
 }
@@ -1071,12 +1075,11 @@ input[type="range"]::-webkit-slider-thumb {
   align-items: center;
   gap: 6px;
   padding: 4px 10px 4px 4px;
-  background: rgba(20, 25, 35, 0.85);
-  border: 1px solid rgba(0, 200, 255, 0.25);
+  background: #252526;
+  border: 1px solid var(--panel-accent);
   border-radius: 20px;
   font-size: 12px;
   color: var(--panel-text);
-  backdrop-filter: blur(10px);
 }
 
 .panel-header-actions {

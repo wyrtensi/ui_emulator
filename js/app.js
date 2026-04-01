@@ -12,10 +12,12 @@ import { layoutManager } from './core/layout-manager.js';
 import { commentManager } from './core/comment-manager.js';
 import { exportManager } from './core/export-manager.js';
 import { githubAuth } from './core/github-auth.js';
+import { githubApi } from './core/github-api.js';
 import { discussionManager } from './core/discussion-manager.js';
 
 let manifest = null;  // built dynamically from registry + per-window configs
 let backgroundsList = [];
+let remoteConfig = null;
 
 /* ── Global toast function ────────────────────────────── */
 window.rfoToast = function(message, type = 'info') {
@@ -63,6 +65,23 @@ async function boot() {
   githubAuth.onAuthChange(updateAuthUI);
   updateAuthUI(githubAuth.user);
 
+  // 3c. Load remote config if available
+  try {
+    const configResp = await fetch('config.json');
+    if (configResp.ok) {
+      remoteConfig = await configResp.json();
+      if (remoteConfig.scale !== undefined && !localStorage.getItem('rfo-ui-settings')) {
+        settings.set('scale', remoteConfig.scale);
+        settings.set('autoFitScale', false);
+      }
+      if (remoteConfig.bgScale !== undefined && !localStorage.getItem('rfo-ui-settings')) {
+        settings.set('bgScale', remoteConfig.bgScale);
+      }
+    }
+  } catch (err) {
+    // No remote config found, silently continue
+  }
+
   // 4. Load each window from registry
   for (const windowId of registry) {
     await loadWindowById(windowId, windowsLayer);
@@ -86,6 +105,7 @@ async function boot() {
     applyScale(settings.get('scale'));
   }
   applyBackground(settings.get('background'), settings.get('backgroundType'));
+  applyBackgroundColor(settings.get('backgroundColor'));
 
   // 7. Try to load from URL, then autosave, then default
   if (!layoutManager.loadFromURL()) {
@@ -635,6 +655,82 @@ function wireControlPanel() {
     applyAutoFit();
   });
 
+  // Set default button (Owner only)
+  document.getElementById('rfo-scale-default')?.addEventListener('click', async () => {
+    if (!githubAuth.isOwner) return;
+    const btn = document.getElementById('rfo-scale-default');
+    const oldText = btn.textContent;
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+
+    try {
+      remoteConfig = remoteConfig || {};
+      remoteConfig.scale = settings.get('scale');
+      await githubApi.saveFile('config.json', JSON.stringify(remoteConfig, null, 2), 'chore: Update default UI scale');
+      window.rfoToast('Saved default UI scale to repo', 'success');
+    } catch (err) {
+      window.rfoToast('Failed to save default UI scale', 'error');
+      console.error(err);
+    } finally {
+      btn.textContent = oldText;
+      btn.disabled = false;
+    }
+  });
+
+  // ── Background Zoom ──────────────────────────────
+  const bgScaleSlider = document.getElementById('rfo-bg-scale-slider');
+  const bgScaleValue = document.getElementById('rfo-bg-scale-val');
+
+  if (bgScaleSlider && bgScaleValue) {
+    const currentBgPct = Math.round((settings.get('bgScale') || 1.0) * 100);
+    bgScaleSlider.value = currentBgPct;
+    bgScaleValue.textContent = currentBgPct + '%';
+    applyBgScale(settings.get('bgScale') || 1.0);
+
+    function updateBgScaleUI(pct) {
+      bgScaleSlider.value = pct;
+      bgScaleValue.textContent = pct + '%';
+      const val = pct / 100;
+      settings.set('bgScale', val);
+      applyBgScale(val);
+
+      document.querySelectorAll('.bg-scale-preset').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.scale) === pct);
+      });
+    }
+
+    bgScaleSlider.addEventListener('input', () => {
+      updateBgScaleUI(parseInt(bgScaleSlider.value));
+    });
+
+    document.querySelectorAll('.bg-scale-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        updateBgScaleUI(parseInt(btn.dataset.scale));
+      });
+    });
+
+    document.getElementById('rfo-bg-scale-default')?.addEventListener('click', async () => {
+      if (!githubAuth.isOwner) return;
+      const btn = document.getElementById('rfo-bg-scale-default');
+      const oldText = btn.textContent;
+      btn.textContent = 'Saving...';
+      btn.disabled = true;
+
+      try {
+        remoteConfig = remoteConfig || {};
+        remoteConfig.bgScale = settings.get('bgScale');
+        await githubApi.saveFile('config.json', JSON.stringify(remoteConfig, null, 2), 'chore: Update default Background zoom');
+        window.rfoToast('Saved default Background zoom to repo', 'success');
+      } catch (err) {
+        window.rfoToast('Failed to save default Background zoom', 'error');
+        console.error(err);
+      } finally {
+        btn.textContent = oldText;
+        btn.disabled = false;
+      }
+    });
+  }
+
   // ── Screen bounds ─────────────────────────────────
   const boundsCheck = document.getElementById('rfo-screen-bounds');
   boundsCheck.checked = settings.get('screenBounds');
@@ -665,6 +761,16 @@ function wireControlPanel() {
 
   const bgFile = document.getElementById('rfo-bg-file');
   const bgClear = document.getElementById('rfo-bg-clear');
+  const bgColorInput = document.getElementById('rfo-bg-color');
+
+  if (bgColorInput) {
+    bgColorInput.value = settings.get('backgroundColor') || '#0a0e18';
+    bgColorInput.addEventListener('input', (e) => {
+      const color = e.target.value;
+      settings.set('backgroundColor', color);
+      applyBackgroundColor(color);
+    });
+  }
 
   bgFile.addEventListener('change', () => {
     const file = bgFile.files[0];
@@ -779,6 +885,10 @@ function applyScale(scale) {
   viewport.style.top = vh < wh ? ((wh - vh) / 2) + 'px' : '0';
 }
 
+function applyBgScale(scale) {
+  document.documentElement.style.setProperty('--bg-scale', scale);
+}
+
 function applyBackground(url, type) {
   const bgEl = document.getElementById('rfo-background');
   bgEl.innerHTML = '';
@@ -796,6 +906,13 @@ function applyBackground(url, type) {
     const img = document.createElement('img');
     img.src = url;
     bgEl.appendChild(img);
+  }
+}
+
+function applyBackgroundColor(color) {
+  const bgEl = document.getElementById('rfo-background');
+  if (bgEl && color) {
+    bgEl.style.backgroundColor = color;
   }
 }
 
@@ -849,6 +966,11 @@ function updateAuthUI(user) {
     if (avatarEl) avatarEl.src = user.avatar_url;
     if (nameEl) nameEl.textContent = user.login;
     if (hintEl) hintEl.innerHTML = '<svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Double-click on any window to add a comment pin';
+
+    if (githubAuth.isOwner) {
+      document.getElementById('rfo-scale-default')?.removeAttribute('hidden');
+      document.getElementById('rfo-bg-scale-default')?.removeAttribute('hidden');
+    }
   } else {
     if (loginBtn) loginBtn.classList.remove('hidden');
     if (userEl) userEl.classList.add('hidden');
