@@ -98,6 +98,13 @@
       "fromSide": "left",
       "toNode": "n_1775079368011",
       "toSide": "right"
+    },
+    {
+      "id": "2fiw8958eq",
+      "fromNode": "n_1775079423645",
+      "fromSide": "right",
+      "toNode": "n_1775079944511",
+      "toSide": "left"
     }
   ]
 }
