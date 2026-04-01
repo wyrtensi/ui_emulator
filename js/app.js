@@ -33,6 +33,28 @@ window.uiToast = function(message, type = 'info') {
 /* ═══════════════════════════════════════════════════════
    BOOTSTRAP
    ═══════════════════════════════════════════════════════ */
+async function updateLastEditTime() {
+  try {
+    const configResp = await fetch('./config.json');
+    if (!configResp.ok) return;
+    const localConfig = await configResp.json();
+    if (!localConfig.github || !localConfig.github.repo) return;
+
+    // We can fetch the latest commit on the repo
+    const res = await fetch(`https://api.github.com/repos/${localConfig.github.repo}/commits?per_page=1`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const date = new Date(data[0].commit.committer.date);
+        const el = document.getElementById('ui-last-edit-time');
+        if (el) el.textContent = date.toLocaleString();
+      }
+    }
+  } catch (err) {
+    console.error("Failed to fetch last edit time", err);
+  }
+}
+
 async function boot() {
   const viewport = document.getElementById('ui-viewport');
   const windowsLayer = document.getElementById('ui-windows');
@@ -152,6 +174,7 @@ async function boot() {
   windowManager.on('window:opened', (e) => {
     if (e.detail.id === 'canvas') {
       document.body.classList.add('canvas-mode-active');
+      if(window.setMode) window.setMode('design');
     }
   });
   windowManager.on('window:closed', (e) => {
@@ -159,6 +182,9 @@ async function boot() {
       document.body.classList.remove('canvas-mode-active');
     }
   });
+
+  // Fetch last edit
+  updateLastEditTime();
 
   // 12. Global hash listener for canvas links
   checkGlobalHash(window.location.hash);
@@ -542,7 +568,7 @@ function wireControlPanel() {
   const exportPanel = document.getElementById('ui-export-panel');
   const commentPanel = document.getElementById('ui-comment-panel');
 
-  function setMode(mode) {
+  window.setMode = function(mode) {
     settings.set('mode', mode);
     modeButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
     exportPanel.hidden = mode !== 'export';
@@ -552,9 +578,9 @@ function wireControlPanel() {
   }
 
   modeButtons.forEach(btn => {
-    btn.addEventListener('click', () => setMode(btn.dataset.mode));
+    btn.addEventListener('click', () => window.setMode(btn.dataset.mode));
   });
-  setMode(settings.get('mode'));
+  window.setMode(settings.get('mode'));
 
   // ── Windows list ──────────────────────────────────
   const windowsList = document.getElementById('ui-windows-list');
