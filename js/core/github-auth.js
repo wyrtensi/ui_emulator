@@ -34,6 +34,7 @@ class GitHubAuth {
   /** Is the current user the repo owner? */
   get isOwner() {
     if (!this._user) return false;
+    if(!config.github.repo) return false;
     const owner = config.github.repo.split('/')[0];
     return this._user.login.toLowerCase() === owner.toLowerCase();
   }

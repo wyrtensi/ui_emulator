@@ -148,6 +148,18 @@ async function boot() {
     }, 2000);
   }
 
+  // Global listener for canvas mode UI handling
+  windowManager.on('window:opened', (e) => {
+    if (e.detail.id === 'canvas') {
+      document.body.classList.add('canvas-mode-active');
+    }
+  });
+  windowManager.on('window:closed', (e) => {
+    if (e.detail.id === 'canvas') {
+      document.body.classList.remove('canvas-mode-active');
+    }
+  });
+
   // 12. Global hash listener for canvas links
   checkGlobalHash(window.location.hash);
   window.addEventListener('hashchange', () => checkGlobalHash(window.location.hash));

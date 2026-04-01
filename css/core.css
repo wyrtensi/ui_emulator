@@ -1956,3 +1956,20 @@ input[type="range"]::-webkit-slider-thumb:hover {
   border-color: #aaa;
   color: #ccc;
 }
+
+/* Canvas Mode - Hide emulator UI */
+body.canvas-mode-active #ui-control-panel,
+body.canvas-mode-active #ui-panel-toggle,
+body.canvas-mode-active #ui-windows-list,
+body.canvas-mode-active #ui-auth-badge,
+body.canvas-mode-active .side-controls,
+body.canvas-mode-active #ui-mode-indicator,
+body.canvas-mode-active #ui-discussion-panel,
+body.canvas-mode-active #ui-windows-container,
+body.canvas-mode-active #ui-header-bar {
+  display: none !important;
+}
+body.canvas-mode-active #ui-windows,
+body.canvas-mode-active #ui-overlays {
+  display: none !important;
+}

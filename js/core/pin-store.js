@@ -61,7 +61,7 @@ class PinStore {
     // Use search API to find all [PIN] issues regardless of label
     // (non-collaborators can't add labels, so label filter misses their pins)
     while (true) {
-      const q = encodeURIComponent(`repo:${repo} is:issue "[PIN]" in:title`);
+      const q = encodeURIComponent(`repo:${repo} is:issue is:open "[PIN]" in:title`);
       const resp = await fetch(
         `${API}/search/issues?q=${q}&per_page=100&page=${page}`,
         { headers: this._headers(false) }

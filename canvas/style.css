@@ -187,7 +187,7 @@
   cursor: pointer;
   transition: transform 0.1s;
 }
-.color-swatch:hover { transform: scale(1.2); }
+.color-swatch:hover { transform: scale(1.5); }
 
 .node-format-menu {
   position: absolute;
@@ -415,18 +415,18 @@
   pointer-events: auto;
 }
 
-.nrh-nw { top: -5px; left: -5px; cursor: nwse-resize; }
-.nrh-ne { top: -5px; right: -5px; cursor: nesw-resize; }
-.nrh-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
-.nrh-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.nrh-nw { top: -7px; left: -7px; cursor: nwse-resize; }
+.nrh-ne { top: -7px; right: -7px; cursor: nesw-resize; }
+.nrh-se { bottom: -7px; right: -7px; cursor: nwse-resize; }
+.nrh-sw { bottom: -7px; left: -7px; cursor: nesw-resize; }
 .nrh-e  { top: calc(50% - 5px); right: -5px; cursor: ew-resize; }
 .nrh-s  { bottom: -5px; left: calc(50% - 5px); cursor: ns-resize; }
 
 /* Edge connection handles */
 .node-edge-handle {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 24px;
+  height: 24px;
   background: #aaa;
   border-radius: 50%;
   opacity: 0;
@@ -443,7 +443,7 @@
 .node-edge-handle:hover {
   opacity: 1;
   background: var(--canvas-selected);
-  transform: scale(1.2);
+  transform: scale(1.5);
 }
 
 .neh-t { top: -6px; left: calc(50% - 6px); }
@@ -675,4 +675,14 @@
   font-size: 16px;
   color: var(--canvas-text);
   box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+/* Group Styles */
+.canvas-group {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    z-index: 1; /* ensure it stays behind other nodes */
+}
+.canvas-group:hover {
+    border-color: rgba(255, 255, 255, 0.4);
 }
