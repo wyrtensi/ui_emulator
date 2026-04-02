@@ -30,8 +30,8 @@
     {
       "id": "n_1775079373045",
       "type": "text",
-      "x": -74,
-      "y": 205,
+      "x": -283,
+      "y": 156,
       "width": 314,
       "height": 229,
       "text": "gdfgdfg\nbcbcvb\n",
@@ -63,7 +63,7 @@
       "x": 283,
       "y": 579,
       "width": 230,
-      "height": 387,
+      "height": 391,
       "text": "New node \n# text\n*text*\n- [ ] text\n- [ ] me\ntoday\n",
       "color": "4"
     },
@@ -98,8 +98,8 @@
     {
       "id": "n_1775152566496",
       "type": "text",
-      "x": 363.7777099609375,
-      "y": 154.611083984375,
+      "x": 376,
+      "y": 276,
       "width": 250,
       "height": 150,
       "text": ""
