@@ -7,6 +7,7 @@ export default {
   github: {
     clientId: 'Ov23liImBzxpyx4fQXG2',
     repo: 'wyrtensi/ui_emulator',
+    branch: 'main',
     workerUrl: 'https://ui-emulator-auth.wyrtensi.workers.dev',
     pinLabel: 'ui-emulator-pin',
     discussionNumber: 35,

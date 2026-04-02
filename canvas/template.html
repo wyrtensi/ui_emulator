@@ -102,28 +102,13 @@
         <div class="canvas-content" id="canvas-content">
           <!-- Nodes and SVG edges go here -->
           <svg class="canvas-edges" id="canvas-edges">
-            <defs>
-              <marker id="arrowhead" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto">
-                <polygon points="0 0, 12 4, 0 8" fill="var(--canvas-edge-color, #999)"></polygon>
-              </marker>
-              <marker id="arrowhead-selected" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto">
-                <polygon points="0 0, 12 4, 0 8" fill="#5599ff"></polygon>
-              </marker>
-            </defs>
-
-
           </svg>
           <div class="canvas-nodes" id="canvas-nodes"></div>
 
           <!-- Edge drawing preview -->
           <svg class="canvas-drawing-layer" id="canvas-drawing-layer">
-            <defs>
-              <marker id="arrowhead-draw" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                <polygon points="0 0, 10 3.5, 0 7" fill="#777"></polygon>
-              </marker>
-            </defs>
             <path id="canvas-drawing-edge" d="" fill="none" stroke="var(--canvas-edge-color)" stroke-width="2" stroke-dasharray="4"></path>
-
+            <polygon id="canvas-drawing-arrow" points="" fill="#777" class="canvas-drawing-arrow"></polygon>
           </svg>
 
           <!-- Snap alignment guides -->

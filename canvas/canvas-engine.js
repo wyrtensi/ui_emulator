@@ -29,6 +29,7 @@ let redoStack = [];
 let isDrawingEdge = false;
 let drawEdgeStartNode = null;
 let drawEdgeStartSide = null;
+let drawingArrow = null;
 
 const CANVAS_FILE = 'concept.canvas';
 let hasUnsavedChanges = false;
@@ -89,6 +90,7 @@ export async function initCanvas(winContainer, config) {
     edgesLayer = container.querySelector('#canvas-edges');
     drawingLayer = container.querySelector('#canvas-drawing-layer');
     drawingEdge = container.querySelector('#canvas-drawing-edge');
+    drawingArrow = container.querySelector('#canvas-drawing-arrow');
     zoomLabel = container.querySelector('#canvas-zoom-level');
     selectionBox = container.querySelector('#canvas-selection-box');
     saveIndicator = container.querySelector('#canvas-saving-indicator');
@@ -348,6 +350,7 @@ function setupViewport() {
             }
             isDrawingEdge = false;
             drawingEdge.setAttribute('d', '');
+            drawingArrow.setAttribute('points', '');
         }
 
         if (isMarqueeSelect) {
@@ -438,10 +441,25 @@ function setupViewport() {
         const nodeEl = e.target.closest('.canvas-node');
 
         if (nodeEl) {
-            // Right-click on a node: just prevent default browser menu, no custom menu
+            // Right-click on a node: show format menu at cursor position
             e.preventDefault();
             const nodeId = nodeEl.dataset.id || nodeEl.id.replace('node-', '');
             lastRightClickedNode = canvasData.nodes.find(n => n.id === nodeId);
+
+            if (isOwner && lastRightClickedNode && lastRightClickedNode.type === 'text') {
+                // Select the node if not already selected
+                if (selectedNode !== lastRightClickedNode) {
+                    selectNode(lastRightClickedNode);
+                }
+                // Position format menu at cursor
+                const formatMenu = container.querySelector('#node-format-menu');
+                if (formatMenu) {
+                    formatMenu.style.position = 'fixed';
+                    formatMenu.style.left = e.clientX + 'px';
+                    formatMenu.style.top = e.clientY + 'px';
+                    formatMenu.hidden = false;
+                }
+            }
 
         } else if (!e.target.closest('.canvas-node')) {
             e.preventDefault();
@@ -471,6 +489,12 @@ function setupViewport() {
         }
         if (palette && !palette.hidden && !palette.contains(e.target) && !e.target.closest('#nt-color')) {
             palette.hidden = true;
+        }
+
+        // Belt-and-suspenders: deselect node when clicking on empty viewport area
+        // This ensures toolbar always hides even if mousedown handler didn't catch it
+        if (selectedNode && e.target.closest && !e.target.closest('.canvas-node') && !e.target.closest('.canvas-node-toolbar') && !e.target.closest('.node-format-menu') && !e.target.closest('.node-color-palette') && !e.target.closest('.canvas-context-menu') && !e.target.closest('.ui-context-menu') && e.target.closest('.canvas-viewport')) {
+            clearSelection();
         }
     });
 
@@ -599,11 +623,7 @@ function renderCanvas() {
     nodeCleanupFns = [];
 
     nodesLayer.innerHTML = '';
-
-    // Preserve SVG defs (arrowhead markers) - clear only paths
-    const defs = edgesLayer.querySelector('defs');
     edgesLayer.innerHTML = '';
-    if (defs) edgesLayer.appendChild(defs);
 
     // Render edges
     canvasData.edges.forEach(edge => {
@@ -860,6 +880,7 @@ function setupNodeInteractions(el, node) {
             createEdge(drawEdgeStartNode, drawEdgeStartSide, node.id, dropSide);
             isDrawingEdge = false;
             drawingEdge.setAttribute('d', '');
+            drawingArrow.setAttribute('points', '');
         }
     });
 
@@ -1091,37 +1112,53 @@ function createNode(type, x, y, width, height, textOrFile) {
 // EDGES
 // -----------------------------------------------------------------
 
-// Build absolute marker URL to avoid SVG fragment reference issues on GitHub Pages
-function markerUrl(id) {
-    return `url(${location.href.split('#')[0]}#${id})`;
+// Compute arrowhead triangle points at the end of a bezier curve
+function getArrowhead(endPoint, controlPoint, size = 10) {
+    const dx = endPoint.x - controlPoint.x;
+    const dy = endPoint.y - controlPoint.y;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    const nx = dx / len, ny = dy / len;
+    const px = -ny, py = nx;
+    return [
+        { x: endPoint.x, y: endPoint.y },
+        { x: endPoint.x - nx * size + px * size * 0.45, y: endPoint.y - ny * size + py * size * 0.45 },
+        { x: endPoint.x - nx * size - px * size * 0.45, y: endPoint.y - ny * size - py * size * 0.45 }
+    ];
 }
 
 function renderEdge(edge) {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.dataset.id = edge.id;
+    g.setAttribute('class', 'canvas-edge-group');
+
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('class', 'canvas-edge');
-    path.dataset.id = edge.id;
-
     if (edge.color) path.style.stroke = edge.color;
-    path.setAttribute('marker-end', markerUrl('arrowhead'));
 
-    path.addEventListener('mousedown', (e) => {
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    arrow.setAttribute('class', 'canvas-edge-arrow');
+    if (edge.color) arrow.style.fill = edge.color;
+
+    g.appendChild(path);
+    g.appendChild(arrow);
+
+    g.addEventListener('mousedown', (e) => {
         e.stopPropagation();
         selectEdge(edge);
     });
 
-    edgesLayer.appendChild(path);
-    updateEdgePath(edge, path);
+    edgesLayer.appendChild(g);
+    updateEdgePath(edge, g);
 
     if (edge.id === selectedEdge?.id) {
-        path.classList.add('selected');
-        path.setAttribute('marker-end', markerUrl('arrowhead-selected'));
+        g.classList.add('selected');
     }
 }
 
-function updateEdgePath(edge, pathEl) {
-    if (!pathEl) {
-        pathEl = edgesLayer.querySelector(`path[data-id="${edge.id}"]`);
-        if (!pathEl) return;
+function updateEdgePath(edge, groupEl) {
+    if (!groupEl) {
+        groupEl = edgesLayer.querySelector(`g[data-id="${edge.id}"]`);
+        if (!groupEl) return;
     }
 
     const fromNode = canvasData.nodes.find(n => n.id === edge.fromNode);
@@ -1131,10 +1168,16 @@ function updateEdgePath(edge, pathEl) {
     const p1 = getPortPoint(fromNode, edge.fromSide);
     const p2 = getPortPoint(toNode, edge.toSide);
 
-    // Draw simple cubic bezier based on direction
-    const d = getBezierPath(p1, p2, edge.fromSide, edge.toSide);
-    pathEl.setAttribute('d', d);
-    pathEl.setAttribute('marker-end', markerUrl('arrowhead'));
+    const pathEl = groupEl.querySelector('path');
+    const arrowEl = groupEl.querySelector('polygon');
+
+    // Draw cubic bezier
+    const result = getBezierPath(p1, p2, edge.fromSide, edge.toSide);
+    pathEl.setAttribute('d', result.d);
+
+    // Draw arrowhead triangle at endpoint
+    const tri = getArrowhead(p2, result.cp2);
+    arrowEl.setAttribute('points', tri.map(p => `${p.x},${p.y}`).join(' '));
 }
 
 function updateEdgesForNode(nodeId) {
@@ -1152,9 +1195,12 @@ function updateDrawingEdge(mouseX, mouseY) {
     const p1 = getPortPoint(fromNode, drawEdgeStartSide);
     const p2 = { x: mouseX, y: mouseY };
 
-    const d = getBezierPath(p1, p2, drawEdgeStartSide, 'left'); // fake dest side for curve
-    drawingEdge.setAttribute('d', d);
-    drawingEdge.setAttribute('marker-end', markerUrl('arrowhead-draw'));
+    const result = getBezierPath(p1, p2, drawEdgeStartSide, 'left');
+    drawingEdge.setAttribute('d', result.d);
+
+    // Update drawing arrowhead
+    const tri = getArrowhead(p2, result.cp2, 8);
+    drawingArrow.setAttribute('points', tri.map(p => `${p.x},${p.y}`).join(' '));
 }
 
 function createEdge(fromNodeId, fromSide, toNodeId, toSide) {
@@ -1190,7 +1236,8 @@ function getPortPoint(node, side) {
 function getBezierPath(p1, p2, side1, side2) {
     const dx = Math.abs(p2.x - p1.x);
     const dy = Math.abs(p2.y - p1.y);
-    const weight = Math.max(dx, dy) * 0.5;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const weight = Math.min(Math.max(dist * 0.5, 60), 300);
 
     let cp1 = { ...p1 }, cp2 = { ...p2 };
 
@@ -1204,7 +1251,10 @@ function getBezierPath(p1, p2, side1, side2) {
     if (side2 === 'bottom') cp2.y += weight;
     if (side2 === 'top') cp2.y -= weight;
 
-    return `M ${p1.x} ${p1.y} C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${p2.x} ${p2.y}`;
+    return {
+        d: `M ${p1.x} ${p1.y} C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${p2.x} ${p2.y}`,
+        cp2: cp2
+    };
 }
 
 // -----------------------------------------------------------------
@@ -1224,7 +1274,13 @@ function selectNode(node) {
     // Auto-show format menu for text nodes so formatting is immediately accessible
     if (node.type === 'text') {
         const formatMenu = container.querySelector('#node-format-menu');
-        if (formatMenu) formatMenu.hidden = false;
+        if (formatMenu && nodeToolbar) {
+            // Position format menu below the toolbar, right-aligned
+            const tbRect = nodeToolbar.getBoundingClientRect();
+            formatMenu.style.left = (tbRect.right - 140) + 'px';
+            formatMenu.style.top = (tbRect.bottom + 4) + 'px';
+            formatMenu.hidden = false;
+        }
     }
 }
 
@@ -1285,6 +1341,8 @@ function hideNodeToolbar() {
     if (nodeToolbar) {
         nodeToolbar.hidden = true;
         nodeToolbar.querySelector('#node-color-palette').hidden = true;
+        const formatMenu = container.querySelector('#node-format-menu');
+        if (formatMenu) formatMenu.hidden = true;
     }
 }
 
@@ -1315,12 +1373,25 @@ function setupNodeToolbar() {
     });
 
     nodeToolbar.querySelector('#nt-edit').addEventListener('click', () => {
-        if (selectedNode && selectedNode.type === 'text') {
+        if (!selectedNode) return;
+        if (selectedNode.type === 'text') {
             const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
             const textContent = el.querySelector('.node-content-text');
             if (textContent) {
                 // Simulate a double click to trigger the existing edit logic
                 textContent.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+            }
+        } else if (selectedNode.type === 'file') {
+            // Rename image file
+            const currentName = selectedNode.file ? selectedNode.file.split('/').pop() : '';
+            const newName = prompt('Rename image:', currentName);
+            if (newName && newName !== currentName) {
+                const dir = selectedNode.file ? selectedNode.file.substring(0, selectedNode.file.lastIndexOf('/') + 1) : 'canvas_uploads/';
+                selectedNode.file = dir + newName;
+                markUnsaved();
+                renderCanvas();
+                // Re-select the node to update toolbar
+                selectNode(selectedNode);
             }
         }
     });

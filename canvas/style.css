@@ -190,9 +190,8 @@
 .color-swatch:hover { transform: scale(1.5); }
 
 .node-format-menu {
-  position: absolute;
-  top: 100%; left: 100%;
-  margin-top: 8px;
+  position: fixed;
+  z-index: 10000;
   background: var(--canvas-toolbar-bg);
   border: 1px solid var(--canvas-node-border);
   border-radius: 6px;
@@ -593,14 +592,29 @@ body:not(.is-owner) .canvas-owner-only {
   transition: stroke 0.2s, stroke-width 0.2s;
 }
 
-.canvas-edge:hover {
+.canvas-edge-arrow {
+  fill: var(--canvas-edge-color);
+  pointer-events: fill;
+  cursor: pointer;
+  transition: fill 0.2s;
+}
+
+.canvas-edge-group:hover .canvas-edge {
   stroke: #bbb;
   stroke-width: 3.5px;
 }
 
-.canvas-edge.selected {
+.canvas-edge-group:hover .canvas-edge-arrow {
+  fill: #bbb;
+}
+
+.canvas-edge-group.selected .canvas-edge {
   stroke: var(--canvas-selected);
   stroke-width: 3.5px;
+}
+
+.canvas-edge-group.selected .canvas-edge-arrow {
+  fill: var(--canvas-selected);
 }
 
 /* Live drawing layer */

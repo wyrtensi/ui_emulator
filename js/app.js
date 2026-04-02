@@ -36,13 +36,10 @@ window.uiToast = function(message, type = 'info') {
    ═══════════════════════════════════════════════════════ */
 async function updateLastEditTime() {
   try {
-    const configResp = await fetch('./config.json');
-    if (!configResp.ok) return;
-    const localConfig = await configResp.json();
-    if (!localConfig.github || !localConfig.github.repo) return;
+    if (!config.github || !config.github.repo) return;
 
-    // We can fetch the latest commit on the repo
-    const res = await fetch(`https://api.github.com/repos/${localConfig.github.repo}/commits?per_page=1`);
+    // Fetch the latest commit on the repo (unauthenticated, public API)
+    const res = await fetch(`https://api.github.com/repos/${config.github.repo}/commits?per_page=1`);
     if (res.ok) {
       const data = await res.json();
       if (data && data.length > 0) {
