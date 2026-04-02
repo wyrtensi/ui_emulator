@@ -6,7 +6,7 @@
       "x": 1747,
       "y": 951,
       "width": 200,
-      "height": 108,
+      "height": 110,
       "text": "New node"
     },
     {
@@ -15,7 +15,7 @@
       "x": 1740,
       "y": 36,
       "width": 200,
-      "height": 108,
+      "height": 110,
       "text": "New node"
     },
     {
@@ -24,7 +24,7 @@
       "x": -375,
       "y": -73,
       "width": 250,
-      "height": 158,
+      "height": 160,
       "text": "jhjhjkhjl\n"
     },
     {
@@ -33,7 +33,7 @@
       "x": -74,
       "y": 205,
       "width": 314,
-      "height": 217,
+      "height": 219,
       "text": "gdfgdfg\nbcbcvb\n",
       "color": "3"
     },
@@ -63,7 +63,7 @@
       "x": 557.5555419921875,
       "y": 326,
       "width": 200,
-      "height": 110,
+      "height": 112,
       "text": "New node"
     },
     {
@@ -81,7 +81,7 @@
       "x": 646,
       "y": -75,
       "width": 250,
-      "height": 158,
+      "height": 160,
       "text": "fsdfsdf\n"
     },
     {
@@ -120,6 +120,15 @@
       "width": 250,
       "height": 150,
       "text": ""
+    },
+    {
+      "id": "n_1775152870134",
+      "type": "file",
+      "file": "",
+      "x": 848.2623825283167,
+      "y": -394.9594023786409,
+      "width": 250,
+      "height": 250
     }
   ],
   "edges": [
