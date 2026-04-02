@@ -6,7 +6,7 @@
       "x": 1747,
       "y": 951,
       "width": 200,
-      "height": 100,
+      "height": 102,
       "text": "New node"
     },
     {
@@ -15,7 +15,7 @@
       "x": 1740,
       "y": 36,
       "width": 200,
-      "height": 100,
+      "height": 102,
       "text": "New node"
     },
     {
@@ -24,27 +24,27 @@
       "x": -375,
       "y": -73,
       "width": 250,
-      "height": 150,
+      "height": 152,
       "text": "jhjhjkhjl\n"
     },
     {
       "id": "n_1775079373045",
       "type": "text",
-      "x": 176,
-      "y": -67,
+      "x": -992,
+      "y": -711,
       "width": 314,
-      "height": 209,
+      "height": 211,
       "text": "gdfgdfg\nbcbcvb\n",
       "color": "3"
     },
     {
       "id": "n_1775079423645",
       "type": "text",
-      "x": -74,
-      "y": -379,
+      "x": -436,
+      "y": -629,
       "width": 250,
-      "height": 150,
-      "text": "",
+      "height": 168,
+      "text": "gdfgfdg\n## text",
       "color": "3"
     },
     {
@@ -63,7 +63,7 @@
       "x": 263,
       "y": 236,
       "width": 200,
-      "height": 100,
+      "height": 102,
       "text": "New node"
     },
     {
@@ -81,7 +81,7 @@
       "x": 646,
       "y": -75,
       "width": 250,
-      "height": 150,
+      "height": 152,
       "text": "fsdfsdf\n"
     },
     {
@@ -120,6 +120,13 @@
     {
       "id": "jhxsxuep5f",
       "fromNode": "vv1hjmt3jl",
+      "fromSide": "right",
+      "toNode": "n_1775079423645",
+      "toSide": "left"
+    },
+    {
+      "id": "t09ptqpvntp",
+      "fromNode": "v3t7x8cvoqi",
       "fromSide": "right",
       "toNode": "n_1775079423645",
       "toSide": "left"
