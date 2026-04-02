@@ -6,7 +6,7 @@
       "x": 1747,
       "y": 951,
       "width": 200,
-      "height": 118,
+      "height": 120,
       "text": "New node"
     },
     {
@@ -15,7 +15,7 @@
       "x": 1740,
       "y": 36,
       "width": 200,
-      "height": 118,
+      "height": 120,
       "text": "New node"
     },
     {
@@ -24,7 +24,7 @@
       "x": -375,
       "y": -73,
       "width": 250,
-      "height": 168,
+      "height": 170,
       "text": "jhjhjkhjl\n"
     },
     {
@@ -33,7 +33,7 @@
       "x": -74,
       "y": 205,
       "width": 314,
-      "height": 227,
+      "height": 229,
       "text": "gdfgdfg\nbcbcvb\n",
       "color": "3"
     },
@@ -60,11 +60,11 @@
     {
       "id": "o8y43rabdi",
       "type": "text",
-      "x": 271,
-      "y": 567,
-      "width": 200,
-      "height": 126,
-      "text": "New node \n# text\n*text*",
+      "x": 283,
+      "y": 579,
+      "width": 230,
+      "height": 387,
+      "text": "New node \n# text\n*text*\n- [ ] text\n- [ ] me\ntoday\n",
       "color": "4"
     },
     {
@@ -82,7 +82,7 @@
       "x": 646,
       "y": -75,
       "width": 250,
-      "height": 168,
+      "height": 170,
       "text": "fsdfsdf\n"
     },
     {
