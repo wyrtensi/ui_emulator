@@ -14,6 +14,7 @@ import { exportManager } from './core/export-manager.js';
 import { githubAuth } from './core/github-auth.js';
 import { githubApi } from './core/github-api.js';
 import { discussionManager } from './core/discussion-manager.js';
+import config from './config.js';
 
 let manifest = null;  // built dynamically from registry + per-window configs
 let backgroundsList = [];
