@@ -6,7 +6,7 @@
       "x": 1747,
       "y": 951,
       "width": 200,
-      "height": 102,
+      "height": 104,
       "text": "New node"
     },
     {
@@ -15,7 +15,7 @@
       "x": 1740,
       "y": 36,
       "width": 200,
-      "height": 102,
+      "height": 104,
       "text": "New node"
     },
     {
@@ -24,16 +24,16 @@
       "x": -375,
       "y": -73,
       "width": 250,
-      "height": 152,
+      "height": 154,
       "text": "jhjhjkhjl\n"
     },
     {
       "id": "n_1775079373045",
       "type": "text",
-      "x": 176,
-      "y": -67,
+      "x": -194,
+      "y": 154.611083984375,
       "width": 314,
-      "height": 211,
+      "height": 213,
       "text": "gdfgdfg\nbcbcvb\n",
       "color": "3"
     },
@@ -63,7 +63,7 @@
       "x": 557.5555419921875,
       "y": 326,
       "width": 200,
-      "height": 104,
+      "height": 106,
       "text": "New node"
     },
     {
@@ -81,7 +81,7 @@
       "x": 646,
       "y": -75,
       "width": 250,
-      "height": 152,
+      "height": 154,
       "text": "fsdfsdf\n"
     },
     {
@@ -152,6 +152,13 @@
       "fromNode": "n_1775079373045",
       "fromSide": "right",
       "toNode": "n_1775145509143",
+      "toSide": "left"
+    },
+    {
+      "id": "89cge1wpqgj",
+      "fromNode": "n_1775079373045",
+      "fromSide": "bottom",
+      "toNode": "n_1775152566496",
       "toSide": "left"
     }
   ]
