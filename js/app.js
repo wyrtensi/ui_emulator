@@ -47,7 +47,7 @@ async function updateLastEditTime() {
       const data = await res.json();
       if (data && data.length > 0) {
         const date = new Date(data[0].commit.committer.date);
-        const el = document.getElementById('ui-last-edit-time');
+        const el = document.getElementById('ui-info-time');
         if (el) el.textContent = date.toLocaleString();
       }
     }

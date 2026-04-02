@@ -240,6 +240,8 @@ function setupViewport() {
             startDragY = e.clientY - translateY;
             viewport.style.cursor = 'grabbing';
             if (e.button === 1) e.preventDefault(); // prevent auto-scroll ring
+            // Hide toolbar during panning to prevent ghost toolbar
+            hideNodeToolbar();
         }
 
         // Allow marquee/tool on empty canvas area (not just viewport element itself)
@@ -303,6 +305,12 @@ function setupViewport() {
     window.addEventListener('mouseup', (e) => {
         isDraggingViewport = false;
         if (currentTool === 'select') viewport.style.cursor = 'grab';
+
+        // Restore toolbar position after panning if a node is still selected
+        if (selectedNode) {
+            const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
+            if (el) showNodeToolbar(selectedNode, el);
+        }
 
         if (isDrawingEdge) {
             // Drop edge nowhere (or onto empty space)
@@ -427,6 +435,10 @@ function setupViewport() {
             if (addImg) addImg.style.display = 'none';
             if (addGroup) addGroup.style.display = 'none';
 
+            // Show rename option only for image nodes
+            const renameImg = container.querySelector('#cm-rename-img');
+            if (renameImg) renameImg.style.display = (lastRightClickedNode && lastRightClickedNode.type === 'file' && lastRightClickedNode.file) ? 'block' : 'none';
+
             ctxMenu.style.left = e.clientX + 'px';
             ctxMenu.style.top = e.clientY + 'px';
             ctxMenu.hidden = false;
@@ -452,6 +464,9 @@ function setupViewport() {
             if (addText) addText.style.display = 'block';
             if (addImg) addImg.style.display = 'block';
             if (addGroup) addGroup.style.display = 'block';
+
+            const renameImg = container.querySelector('#cm-rename-img');
+            if (renameImg) renameImg.style.display = 'none';
 
             const rect = viewport.getBoundingClientRect();
             ctxMenu.style.left = e.clientX + 'px';
@@ -515,11 +530,36 @@ function setupViewport() {
         }
         saveCanvasData(true);
         renderCanvas();
+
+        // Immediately open file picker for the new image node
+        const input = container.querySelector('#canvas-upload-image');
+        window._targetImageNode = id;
+        input.click();
     });
 
     container.querySelector('#cm-make-link')?.addEventListener('click', () => {
         if (!lastRightClickedNode) return;
         generateAndInsertNodeLink(lastRightClickedNode);
+    });
+
+    container.querySelector('#cm-rename-img')?.addEventListener('click', () => {
+        if (!lastRightClickedNode || lastRightClickedNode.type !== 'file' || !lastRightClickedNode.file) return;
+        const oldPath = lastRightClickedNode.file;
+        const oldName = oldPath.split('/').pop();
+        const newName = prompt('Enter new image name:', oldName);
+        if (!newName || newName === oldName) return;
+
+        const newPath = oldPath.replace(oldName, newName);
+        // Check for conflicts
+        if (canvasData.nodes.some(n => n.type === 'file' && n.file === newPath && n.id !== lastRightClickedNode.id)) {
+            window.uiToast(`File "${newName}" already exists. Choose a different name.`, 'error');
+            return;
+        }
+        pushHistory();
+        lastRightClickedNode.file = newPath;
+        markUnsaved();
+        renderCanvas();
+        window.uiToast(`Image renamed to ${newName}`, 'success');
     });
 
     container.querySelector('#cm-add-group')?.addEventListener('click', () => {
@@ -669,6 +709,7 @@ function renderNode(node) {
         contentHtml = `<div class="node-title" style="font-weight:bold; font-size:18px; padding:8px; opacity:0.8;">${node.label || 'Group'}</div>`;
     } else if (node.type === 'text') {
         let renderedHtml = node.text || '';
+        const isEmpty = !node.text || !node.text.trim();
         try {
             if (typeof marked !== 'undefined') {
                 renderedHtml = marked.parse(renderedHtml);
@@ -677,6 +718,11 @@ function renderNode(node) {
             }
         } catch(e) {
             renderedHtml = renderedHtml.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+        }
+        // Enable checkbox interaction
+        renderedHtml = renderedHtml.replace(/disabled=""/g, '').replace(/disabled/g, '');
+        if (isEmpty) {
+            renderedHtml = '<span class="node-placeholder">Double-click to edit</span>';
         }
         contentHtml = `<div class="node-content-text" data-id="${node.id}">${renderedHtml}</div>`;
     } else if (node.type === 'file') {
@@ -911,6 +957,8 @@ function setupNodeInteractions(el, node) {
                     } catch(err) {
                         textContent.innerHTML = node.text;
                     }
+                    // Enable checkbox interaction
+                    textContent.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.removeAttribute('disabled'));
                 }
             }
         });
@@ -956,6 +1004,8 @@ function setupNodeInteractions(el, node) {
                     } catch(err) {
                         textContent.innerHTML = node.text;
                     }
+                    // Enable checkbox interaction
+                    textContent.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.removeAttribute('disabled'));
                 }
                 textContent.style.display = '';
 
@@ -1086,13 +1136,18 @@ function createNode(type, x, y, width, height, textOrFile) {
 // EDGES
 // -----------------------------------------------------------------
 
+// Build absolute marker URL to avoid SVG fragment reference issues on GitHub Pages
+function markerUrl(id) {
+    return `url(${location.href.split('#')[0]}#${id})`;
+}
+
 function renderEdge(edge) {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('class', 'canvas-edge');
     path.dataset.id = edge.id;
 
     if (edge.color) path.style.stroke = edge.color;
-    path.setAttribute('marker-end', 'url(#arrowhead)');
+    path.setAttribute('marker-end', markerUrl('arrowhead'));
 
     path.addEventListener('mousedown', (e) => {
         e.stopPropagation();
@@ -1104,7 +1159,7 @@ function renderEdge(edge) {
 
     if (edge.id === selectedEdge?.id) {
         path.classList.add('selected');
-        path.setAttribute('marker-end', 'url(#arrowhead-selected)');
+        path.setAttribute('marker-end', markerUrl('arrowhead-selected'));
     }
 }
 
@@ -1124,7 +1179,7 @@ function updateEdgePath(edge, pathEl) {
     // Draw simple cubic bezier based on direction
     const d = getBezierPath(p1, p2, edge.fromSide, edge.toSide);
     pathEl.setAttribute('d', d);
-    pathEl.setAttribute('marker-end', 'url(#arrowhead)');
+    pathEl.setAttribute('marker-end', markerUrl('arrowhead'));
 }
 
 function updateEdgesForNode(nodeId) {
@@ -1308,6 +1363,14 @@ function setupNodeToolbar() {
         }
     });
 
+    // Import image button — open file picker for selected node
+    nodeToolbar.querySelector('#nt-image')?.addEventListener('click', () => {
+        if (!selectedNode) return;
+        const input = container.querySelector('#canvas-upload-image');
+        window._targetImageNode = selectedNode.id;
+        input.click();
+    });
+
     // Link button — generate a canvas link for this node and copy to chat input
     nodeToolbar.querySelector('#nt-link')?.addEventListener('click', () => {
         if (!selectedNode) return;
@@ -1392,27 +1455,25 @@ function setupNodeToolbar() {
                     textarea.focus();
                     textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
                 } else {
-                    const selection = window.getSelection();
-                    const selectedText = selection.toString() || 'text';
-
-                    if (selection.rangeCount > 0 && selectedText !== 'text' && textContent.contains(selection.anchorNode)) {
-                         // A simplistic way to wrap selection, but usually text formatting
-                         // requires editing mode (textarea). We will switch to textarea mode first.
-                         textContent.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-                         setTimeout(() => {
-                             const newTextarea = el.querySelector('.node-content-textarea');
-                             if (newTextarea) {
-                                 // Simple append since selection boundaries in HTML->Markdown are complex
-                                 newTextarea.value = newTextarea.value + `\n${prefix}${selectedText}${suffix}`;
-                                 newTextarea.focus();
-                             }
-                         }, 50);
-                    } else {
-                        // Append to raw text and re-render
-                        selectedNode.text = `${selectedNode.text || ''}\n${prefix}text${suffix}`;
-                        renderCanvas();
-                        selectNode(selectedNode);
-                    }
+                    // Enter edit mode first, then apply formatting
+                    textContent.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+                    setTimeout(() => {
+                        const newTextarea = el.querySelector('.node-content-textarea');
+                        if (newTextarea) {
+                            const text = newTextarea.value;
+                            // For line-level formats (headings, lists, quotes), apply to last line or append
+                            if (['h1','h2','h3','ul','ol','task','quote'].includes(fmt)) {
+                                newTextarea.value = text + (text ? '\n' : '') + prefix + 'text' + suffix;
+                            } else {
+                                // For inline formats (bold, italic, code, link), wrap 'text' placeholder
+                                newTextarea.value = text + (text ? '\n' : '') + prefix + 'text' + suffix;
+                            }
+                            newTextarea.focus();
+                            // Select the placeholder 'text' so user can immediately type
+                            const insertedAt = newTextarea.value.length - suffix.length - 4; // 4 = 'text'.length
+                            newTextarea.setSelectionRange(insertedAt, insertedAt + 4);
+                        }
+                    }, 50);
                 }
 
                 if (formatMenu) formatMenu.hidden = true;

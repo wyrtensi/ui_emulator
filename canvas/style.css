@@ -5,7 +5,7 @@
   --canvas-node-bg: #2d2d2d;
   --canvas-node-border: #444;
   --canvas-text: #eee;
-  --canvas-edge-color: #777;
+  --canvas-edge-color: #999;
   --canvas-accent: #3a75c4;
   --canvas-accent-hover: #4a8deb;
   --canvas-selected: #5599ff;
@@ -45,7 +45,7 @@
   --canvas-node-bg: #ffffff;
   --canvas-node-border: #ccc;
   --canvas-text: #222;
-  --canvas-edge-color: #888;
+  --canvas-edge-color: #666;
   --canvas-toolbar-bg: #eaeaea;
   --canvas-btn-bg: #ddd;
   --canvas-btn-hover: #ccc;
@@ -531,6 +531,15 @@ body:not(.is-owner) .canvas-owner-only {
   pointer-events: none;
 }
 
+/* Empty node placeholder */
+.node-placeholder {
+  color: var(--canvas-text-secondary, #888);
+  opacity: 0.5;
+  font-style: italic;
+  pointer-events: none;
+  user-select: none;
+}
+
 /* Node title / metadata (optional, shows on hover or selected) */
 .node-title {
   position: absolute;
@@ -563,20 +572,20 @@ body:not(.is-owner) .canvas-owner-only {
 .canvas-edge {
   fill: none;
   stroke: var(--canvas-edge-color);
-  stroke-width: 2px;
+  stroke-width: 2.5px;
   pointer-events: stroke; /* Allow clicking the line */
   cursor: pointer;
   transition: stroke 0.2s, stroke-width 0.2s;
 }
 
 .canvas-edge:hover {
-  stroke: #aaa;
-  stroke-width: 3px;
+  stroke: #bbb;
+  stroke-width: 3.5px;
 }
 
 .canvas-edge.selected {
   stroke: var(--canvas-selected);
-  stroke-width: 3px;
+  stroke-width: 3.5px;
 }
 
 /* Live drawing layer */
