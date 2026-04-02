@@ -490,6 +490,20 @@ body:not(.is-owner) .canvas-owner-only {
   user-select: text;
 }
 
+.node-content-text ol,
+.node-content-text ul {
+  margin: 0.25em 0;
+  padding-left: 0 !important;
+  padding-inline-start: 0 !important;
+  margin-left: 0;
+  list-style-position: inside !important;
+}
+
+.node-content-text li {
+  margin: 0.15em 0;
+  padding-left: 0.1em;
+}
+
 .node-content-text a {
   color: var(--canvas-accent);
   cursor: pointer;
@@ -605,6 +619,14 @@ body:not(.is-owner) .canvas-owner-only {
   pointer-events: stroke; /* Allow clicking the line */
   cursor: pointer;
   transition: stroke 0.2s, stroke-width 0.2s;
+}
+
+.canvas-edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14px;
+  pointer-events: stroke;
+  cursor: pointer;
 }
 
 .canvas-edge-arrow {

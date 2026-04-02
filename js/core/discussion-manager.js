@@ -471,17 +471,38 @@ class DiscussionManager {
 
     let escaped = this._esc(textWithPlaceholders);
 
+    const mdLinks = [];
+    const addMdLink = (html) => {
+      mdLinks.push(html);
+      return `__MDLINK_${mdLinks.length - 1}__`;
+    };
+
+    // Markdown links: [label](#canvas:slug or #canvasid:nodeId)
+    escaped = escaped.replace(
+      /\[([^\]]+)\]\(\s*(#canvas(?:id)?:[^)\s]+)\s*\)/g,
+      (m, label, href) => addMdLink(`<a href="${href}" class="canvas-link" target="_self">${label}</a>`)
+    );
+
+    // Markdown links: [label](https://...)
+    escaped = escaped.replace(
+      /\[([^\]]+)\]\(\s*(https?:\/\/[^)\s]+)\s*\)/g,
+      (m, label, href) => addMdLink(`<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`)
+    );
+
     // Linkify URLs
     escaped = escaped.replace(
       /(https?:\/\/[^\s<]+)/g,
       '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
     );
 
-    // Linkify Canvas hashes (#canvas:Something)
+    // Linkify Canvas hashes (#canvas:Something / #canvasid:NodeId)
     escaped = escaped.replace(
-      /(#canvas:[a-zA-Z0-9_\-\.]+)/g,
+      /(#canvas(?:id)?:[a-zA-Z0-9_\-\.]+)/g,
       '<a href="$1" class="canvas-link" target="_self">$1</a>'
     );
+
+    // Re-inject markdown links after URL/hash linkification
+    escaped = escaped.replace(/__MDLINK_(\d+)__/g, (match, idx) => mdLinks[Number(idx)] || match);
 
     // Re-inject images safely
     escaped = escaped.replace(/__IMG_PLACEHOLDER_(\d+)__/g, (match, idx) => {

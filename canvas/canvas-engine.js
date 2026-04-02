@@ -153,6 +153,7 @@ export async function initCanvas(winContainer, config) {
     saveIndicator = container.querySelector('#canvas-saving-indicator');
     nodeToolbar = container.querySelector('#canvas-node-toolbar');
     guidesLayer = container.querySelector('#canvas-guides-layer');
+    hideForeignNodeToolbars();
 
     // Minimap elements
     minimapEl = container.querySelector('#canvas-minimap');
@@ -286,6 +287,7 @@ function markUnsaved() {
     hasUnsavedChanges = true;
     saveIndicator.hidden = false;
     saveIndicator.textContent = 'Unsaved changes';
+    refreshCanvasDiscussionLinkLabels();
 }
 
 // -----------------------------------------------------------------
@@ -304,7 +306,11 @@ function setupViewport() {
         }
 
         // Obsidian style panning: Middle click OR (Spacebar + Left click) OR (Right click on background)
-        if (e.button === 1 || (e.button === 0 && window.isSpacePressed) || e.button === 2) {
+        const panByRightClick = e.button === 2 && !clickedOnNode;
+        if (e.button === 1 || (e.button === 0 && window.isSpacePressed) || panByRightClick) {
+            if (selectedNode || selectedEdge) {
+                clearSelection();
+            }
             if (e.button === 1) isMiddleButtonDown = true;
             isDraggingViewport = true;
             startDragX = e.clientX - translateX;
@@ -525,6 +531,7 @@ function setupViewport() {
                     formatMenu.style.left = '100%';
                     formatMenu.style.top = '100%';
                     formatMenu.style.marginTop = '8px';
+                    formatMenu.style.display = 'flex';
                     formatMenu.hidden = false;
                 }
             } else if (formatMenu) {
@@ -548,6 +555,7 @@ function setupViewport() {
     });
 
     document.addEventListener('click', (e) => {
+        hideForeignNodeToolbars();
         if (ctxMenu && !ctxMenu.hidden && !ctxMenu.contains(e.target)) {
             ctxMenu.hidden = true;
         }
@@ -685,12 +693,16 @@ function setupViewport() {
 function updateTransform() {
     content.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
     zoomLabel.textContent = `${Math.round(scale * 100)}%`;
+    hideForeignNodeToolbars();
 
     // Keep toolbar anchored to selected node, and hard-hide any ghost toolbar
     if (selectedNode && nodeToolbar && !nodeToolbar.hidden) {
         const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
-        if (el) showNodeToolbar(selectedNode, el);
-        else hideNodeToolbar();
+        if (el && el.classList.contains('selected')) showNodeToolbar(selectedNode, el);
+        else {
+            selectedNode = null;
+            hideNodeToolbar();
+        }
     } else if (!selectedNode && nodeToolbar && !nodeToolbar.hidden) {
         hideNodeToolbar();
     }
@@ -1111,6 +1123,33 @@ function setupNodeInteractions(el, node) {
                 return;
             }
 
+            if (ke.key === 'Backspace') {
+                const sel = window.getSelection();
+                if (sel && sel.rangeCount > 0 && sel.isCollapsed) {
+                    const anchor = sel.anchorNode
+                        ? (sel.anchorNode.nodeType === Node.ELEMENT_NODE ? sel.anchorNode : sel.anchorNode.parentElement)
+                        : null;
+                    const currentLi = anchor ? anchor.closest('ol li, ul li') : null;
+                    if (currentLi) {
+                        const range = sel.getRangeAt(0).cloneRange();
+                        const probe = document.createRange();
+                        probe.selectNodeContents(currentLi);
+                        probe.setEnd(range.startContainer, range.startOffset);
+                        const atLineStart = probe.toString().length === 0;
+
+                        if (atLineStart) {
+                            ke.preventDefault();
+                            // Keep the text on the same line but remove list linkage
+                            document.execCommand('outdent', false, null);
+                            node.html = textContent.innerHTML;
+                            node.text = textContent.textContent || '';
+                            markUnsaved();
+                            return;
+                        }
+                    }
+                }
+            }
+
             // Smart Enter continuation for task lists in rich editor
             if (ke.key === 'Enter') {
                 const sel = window.getSelection();
@@ -1138,6 +1177,10 @@ function setupNodeInteractions(el, node) {
                         const span = nextLi.querySelector('.task-item-text');
                         setCaretAtStart(span);
                     }
+
+                    node.html = textContent.innerHTML;
+                    node.text = textContent.textContent || '';
+                    markUnsaved();
                 }
             }
         });
@@ -1275,6 +1318,12 @@ function renderEdge(edge) {
     g.dataset.id = edge.id;
     g.setAttribute('class', 'canvas-edge-group');
 
+    const hitPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    hitPath.setAttribute('class', 'canvas-edge-hit');
+    hitPath.setAttribute('fill', 'none');
+    hitPath.setAttribute('stroke', 'transparent');
+    hitPath.setAttribute('stroke-width', '14');
+
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('class', 'canvas-edge');
     path.setAttribute('fill', 'none');
@@ -1285,6 +1334,7 @@ function renderEdge(edge) {
     arrow.setAttribute('class', 'canvas-edge-arrow');
     arrow.setAttribute('fill', edge.color || '#8fa3c7');
 
+    g.appendChild(hitPath);
     g.appendChild(path);
     g.appendChild(arrow);
 
@@ -1314,11 +1364,13 @@ function updateEdgePath(edge, groupEl) {
     const p1 = getPortPoint(fromNode, edge.fromSide);
     const p2 = getPortPoint(toNode, edge.toSide);
 
-    const pathEl = groupEl.querySelector('path');
-    const arrowEl = groupEl.querySelector('polygon');
+    const hitEl = groupEl.querySelector('.canvas-edge-hit');
+    const pathEl = groupEl.querySelector('.canvas-edge');
+    const arrowEl = groupEl.querySelector('.canvas-edge-arrow');
 
     // Draw cubic bezier
     const result = getBezierPath(p1, p2, edge.fromSide, edge.toSide);
+    if (hitEl) hitEl.setAttribute('d', result.d);
     pathEl.setAttribute('d', result.d);
     if (edge.color) pathEl.setAttribute('stroke', edge.color);
 
@@ -1453,6 +1505,7 @@ function clearSelection() {
 
 function showNodeToolbar(node, el) {
     if (!isOwner || !nodeToolbar) return;
+    hideForeignNodeToolbars();
 
     // Calculate the top-center position of the node in viewport coordinates
     const vX = translateX + (node.x * scale) + (node.width * scale) / 2;
@@ -1462,16 +1515,34 @@ function showNodeToolbar(node, el) {
     nodeToolbar.style.left = `${vX}px`;
     nodeToolbar.style.top = `${vY - 45}px`;
     nodeToolbar.style.transform = 'translateX(-50%)';
+    nodeToolbar.style.display = 'flex';
     nodeToolbar.hidden = false;
 }
 
 function hideNodeToolbar() {
     if (nodeToolbar) {
+        hideForeignNodeToolbars();
         nodeToolbar.hidden = true;
+        nodeToolbar.style.display = 'none';
         nodeToolbar.querySelector('#node-color-palette').hidden = true;
         const formatMenu = container.querySelector('#node-format-menu');
         if (formatMenu) formatMenu.hidden = true;
     }
+}
+
+function hideForeignNodeToolbars() {
+    document.querySelectorAll('#canvas-node-toolbar').forEach(tb => {
+        if (tb !== nodeToolbar) {
+            tb.hidden = true;
+            tb.style.display = 'none';
+        }
+    });
+    document.querySelectorAll('#node-format-menu').forEach(menu => {
+        if (!nodeToolbar || !nodeToolbar.contains(menu)) {
+            menu.hidden = true;
+            menu.style.display = 'none';
+        }
+    });
 }
 
 function setupNodeToolbar() {
@@ -2042,6 +2113,40 @@ function getNodeLinkMeta(node) {
     return { label, slug };
 }
 
+function resolveNodeFromCanvasLink(href) {
+    if (!href) return null;
+
+    if (href.startsWith('#canvasid:')) {
+        const nodeId = decodeURIComponent(href.substring(10));
+        return canvasData.nodes.find(n => n.id === nodeId) || null;
+    }
+
+    if (href.startsWith('#canvas:')) {
+        const targetDesc = decodeURIComponent(href.substring(8)).toLowerCase();
+        for (const node of canvasData.nodes) {
+            const nodeName = getNodeLinkName(node);
+            if (nodeName === targetDesc || nodeName.includes(targetDesc) || targetDesc.includes(nodeName)) {
+                return node;
+            }
+        }
+    }
+
+    return null;
+}
+
+function refreshCanvasDiscussionLinkLabels() {
+    if (!container) return;
+    const messagesEl = container.querySelector('#canvas-discussion-messages');
+    if (!messagesEl) return;
+
+    messagesEl.querySelectorAll('a.canvas-link').forEach(a => {
+        const href = a.getAttribute('href') || '';
+        const node = resolveNodeFromCanvasLink(href);
+        if (!node) return;
+        a.textContent = getNodeLinkMeta(node).label;
+    });
+}
+
 function getNodeLinkName(node) {
     return getNodeLinkMeta(node).slug;
 }
@@ -2050,13 +2155,13 @@ function generateAndInsertNodeLink(node) {
     const meta = getNodeLinkMeta(node);
     const chatInput = document.getElementById('chat-input') || document.getElementById('canvas-discussion-input');
     if (chatInput) {
-        const linkText = `[${meta.label}](#canvas:${meta.slug})`;
+        const linkText = `[${meta.label}](#canvasid:${node.id})`;
         chatInput.value = chatInput.value + (chatInput.value ? ' ' : '') + linkText;
         chatInput.focus();
         window.uiToast('Link inserted into chat', 'success');
     } else {
         // Fallback: copy to clipboard
-        navigator.clipboard.writeText(`#canvas:${meta.slug}`).then(() => {
+        navigator.clipboard.writeText(`#canvasid:${node.id}`).then(() => {
             window.uiToast('Canvas link copied to clipboard', 'success');
         });
     }
@@ -2067,19 +2172,10 @@ function generateAndInsertNodeLink(node) {
 // -----------------------------------------------------------------
 
 function checkHashForDirectLink() {
-    // Format: #canvas:NodeName_firstWord or #canvas:NodeName_image.jpg
+    // Format: #canvas:slug or #canvasid:nodeId
     const hash = window.location.hash;
-    if (hash.startsWith('#canvas:')) {
-        const targetDesc = decodeURIComponent(hash.substring(8)).toLowerCase();
-
-        let targetNode = null;
-        for (const node of canvasData.nodes) {
-            const nodeName = getNodeLinkName(node);
-            if (nodeName === targetDesc || nodeName.includes(targetDesc) || targetDesc.includes(nodeName)) {
-                targetNode = node;
-                break;
-            }
-        }
+    if (hash.startsWith('#canvas:') || hash.startsWith('#canvasid:')) {
+        const targetNode = resolveNodeFromCanvasLink(hash);
 
         if (targetNode) {
             // Pan and zoom smoothly to target
@@ -2090,7 +2186,7 @@ function checkHashForDirectLink() {
             animateTo(targetScale, targetTX, targetTY);
             selectNode(targetNode);
         } else {
-            console.warn("Target canvas node not found for hash:", targetDesc);
+            console.warn("Target canvas node not found for hash:", hash);
         }
     }
 }
@@ -2223,6 +2319,19 @@ async function fetchDiscussion(messagesEl) {
             el.style.padding = '8px';
             el.style.borderBottom = '1px solid var(--canvas-node-border)';
 
+            const escapeLabel = (s) => (s || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+
+            const getLiveCanvasLabel = (href, fallbackLabel) => {
+                const node = resolveNodeFromCanvasLink(href);
+                if (!node) return fallbackLabel;
+                return getNodeLinkMeta(node).label;
+            };
+
             // Escape HTML then linkify markdown links, raw URLs and #canvas links
             let bodyHtml = msg.body
                 .replace(/&/g, '&amp;')
@@ -2231,17 +2340,34 @@ async function fetchDiscussion(messagesEl) {
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
 
-            // Markdown links: [text](#canvas:slug)
-            bodyHtml = bodyHtml.replace(/\[([^\]]+)\]\((#canvas:[^)\s]+)\)/g, '<a href="$2" class="canvas-link">$1</a>');
+            const mdLinks = [];
+            const addMdLink = (html) => {
+                mdLinks.push(html);
+                return `__MDLINK_${mdLinks.length - 1}__`;
+            };
+
+            // Markdown links: [text](#canvas:slug) and [text](#canvasid:nodeId)
+            bodyHtml = bodyHtml.replace(/\[([^\]]+)\]\((#canvas(?:id)?:[^)\s]+)\)/g, (m, label, href) => {
+                const liveLabel = getLiveCanvasLabel(href, label);
+                return addMdLink(`<a href="${href}" class="canvas-link">${escapeLabel(liveLabel)}</a>`);
+            });
 
             // Markdown links: [text](https://...)
-            bodyHtml = bodyHtml.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:var(--canvas-accent)">$1</a>');
+            bodyHtml = bodyHtml.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (m, label, href) => {
+                return addMdLink(`<a href="${href}" target="_blank" rel="noopener" style="color:var(--canvas-accent)">${label}</a>`);
+            });
 
             // Raw URLs (standalone)
             bodyHtml = bodyHtml.replace(/(^|\s)(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener" style="color:var(--canvas-accent)">$2</a>');
 
-            // Raw #canvas links (standalone)
-            bodyHtml = bodyHtml.replace(/(^|\s)(#canvas:[a-zA-Z0-9_.\-]+)/g, '$1<a href="$2" class="canvas-link">$2</a>');
+            // Raw #canvas/#canvasid links (standalone)
+            bodyHtml = bodyHtml.replace(/(^|\s)(#canvas(?:id)?:[a-zA-Z0-9_.\-]+)/g, (m, prefix, href) => {
+                const liveLabel = getLiveCanvasLabel(href, href);
+                return `${prefix}<a href="${href}" class="canvas-link">${escapeLabel(liveLabel)}</a>`;
+            });
+
+            // Re-inject markdown links after URL/hash linkification
+            bodyHtml = bodyHtml.replace(/__MDLINK_(\d+)__/g, (m, idx) => mdLinks[Number(idx)] || m);
 
             // Preserve line breaks
             bodyHtml = bodyHtml.replace(/\n/g, '<br>');

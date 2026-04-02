@@ -211,7 +211,7 @@ async function boot() {
 
 /** Global hash interceptor to ensure canvas window opens before its internal logic runs */
 function checkGlobalHash(hash) {
-  if (hash.startsWith('#canvas:')) {
+  if (hash.startsWith('#canvas:') || hash.startsWith('#canvasid:')) {
     const canvasBtn = document.getElementById('ui-canvas-btn');
     if (!windowManager.get('canvas') && canvasBtn) {
       // It's not loaded yet, simulate click to load it
