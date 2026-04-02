@@ -6,7 +6,7 @@
       "x": 1747,
       "y": 951,
       "width": 200,
-      "height": 114,
+      "height": 118,
       "text": "New node"
     },
     {
@@ -15,7 +15,7 @@
       "x": 1740,
       "y": 36,
       "width": 200,
-      "height": 114,
+      "height": 118,
       "text": "New node"
     },
     {
@@ -24,7 +24,7 @@
       "x": -375,
       "y": -73,
       "width": 250,
-      "height": 164,
+      "height": 168,
       "text": "jhjhjkhjl\n"
     },
     {
@@ -33,7 +33,7 @@
       "x": -74,
       "y": 205,
       "width": 314,
-      "height": 223,
+      "height": 227,
       "text": "gdfgdfg\nbcbcvb\n",
       "color": "3"
     },
@@ -60,11 +60,12 @@
     {
       "id": "o8y43rabdi",
       "type": "text",
-      "x": 557.5555419921875,
-      "y": 326,
+      "x": 271,
+      "y": 567,
       "width": 200,
-      "height": 116,
-      "text": "New node"
+      "height": 126,
+      "text": "New node \n# text\n*text*",
+      "color": "4"
     },
     {
       "id": "n_1775079944511",
@@ -81,7 +82,7 @@
       "x": 646,
       "y": -75,
       "width": 250,
-      "height": 164,
+      "height": 168,
       "text": "fsdfsdf\n"
     },
     {
