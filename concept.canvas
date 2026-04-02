@@ -6,7 +6,7 @@
       "x": 1747,
       "y": 951,
       "width": 200,
-      "height": 102,
+      "height": 106,
       "text": "New node"
     },
     {
@@ -15,7 +15,7 @@
       "x": 1740,
       "y": 36,
       "width": 200,
-      "height": 102,
+      "height": 106,
       "text": "New node"
     },
     {
@@ -24,7 +24,7 @@
       "x": -375,
       "y": -73,
       "width": 250,
-      "height": 152,
+      "height": 156,
       "text": "jhjhjkhjl\n"
     },
     {
@@ -33,7 +33,7 @@
       "x": 176,
       "y": -67,
       "width": 314,
-      "height": 211,
+      "height": 215,
       "text": "gdfgdfg\nbcbcvb\n",
       "color": "3"
     },
@@ -63,7 +63,7 @@
       "x": 263,
       "y": 236,
       "width": 200,
-      "height": 102,
+      "height": 106,
       "text": "New node"
     },
     {
@@ -82,7 +82,7 @@
       "x": 646,
       "y": -75,
       "width": 250,
-      "height": 152,
+      "height": 156,
       "text": "fsdfsdf\n"
     },
     {
@@ -100,6 +100,15 @@
       "type": "text",
       "x": 1378,
       "y": 154,
+      "width": 250,
+      "height": 150,
+      "text": ""
+    },
+    {
+      "id": "n_1775172175917",
+      "type": "text",
+      "x": 1088,
+      "y": -22,
       "width": 250,
       "height": 150,
       "text": ""
@@ -132,6 +141,13 @@
       "fromNode": "vv1hjmt3jl",
       "fromSide": "right",
       "toNode": "n_1775079423645",
+      "toSide": "left"
+    },
+    {
+      "id": "1s4jo4vinin",
+      "fromNode": "n_1775145509143",
+      "fromSide": "right",
+      "toNode": "n_1775172175917",
       "toSide": "left"
     }
   ]
