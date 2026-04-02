@@ -49,8 +49,8 @@
     {
       "id": "vv1hjmt3jl",
       "type": "file",
-      "x": -593,
-      "y": -465,
+      "x": -667,
+      "y": -44,
       "width": 300,
       "height": 200,
       "file": "canvas_uploads/pasted_image_1775079450416.png",
@@ -104,6 +104,13 @@
       "fromNode": "n_1775079423645",
       "fromSide": "right",
       "toNode": "n_1775079944511",
+      "toSide": "left"
+    },
+    {
+      "id": "jhxsxuep5f",
+      "fromNode": "vv1hjmt3jl",
+      "fromSide": "right",
+      "toNode": "n_1775079423645",
       "toSide": "left"
     }
   ]
