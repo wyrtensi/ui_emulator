@@ -63,7 +63,7 @@
       "x": 263,
       "y": 236,
       "width": 200,
-      "height": 104,
+      "height": 106,
       "text": "New node"
     },
     {
@@ -72,7 +72,7 @@
       "x": 404,
       "y": -361,
       "width": 250,
-      "height": 156,
+      "height": 158,
       "text": "**gdfgdf**"
     },
     {
@@ -160,6 +160,20 @@
       "fromSide": "left",
       "toNode": "n_1775079944511",
       "toSide": "right"
+    },
+    {
+      "id": "e4lp9nmabpe",
+      "fromNode": "o8y43rabdi",
+      "fromSide": "left",
+      "toNode": "n_1775079368011",
+      "toSide": "bottom"
+    },
+    {
+      "id": "528bp4xkafb",
+      "fromNode": "n_1775079368011",
+      "fromSide": "bottom",
+      "toNode": "n_1775079944511",
+      "toSide": "bottom"
     }
   ]
 }
