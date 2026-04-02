@@ -40,7 +40,7 @@ export const githubApi = {
   async getBranchCommit() {
     const response = await this.request(`/commits/${config.github.branch}`);
     return await response.json();
-  }
+  },
 
   async getFile(path) {
     const response = await this.request(`/contents/${path}`);
