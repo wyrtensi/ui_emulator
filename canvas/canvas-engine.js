@@ -31,6 +31,7 @@ let isDrawingEdge = false;
 let drawEdgeStartNode = null;
 let drawEdgeStartSide = null;
 let drawingArrow = null;
+let isMiddleButtonDown = false;
 
 const CANVAS_FILE = 'concept.canvas';
 let hasUnsavedChanges = false;
@@ -304,6 +305,7 @@ function setupViewport() {
 
         // Obsidian style panning: Middle click OR (Spacebar + Left click) OR (Right click on background)
         if (e.button === 1 || (e.button === 0 && window.isSpacePressed) || e.button === 2) {
+            if (e.button === 1) isMiddleButtonDown = true;
             isDraggingViewport = true;
             startDragX = e.clientX - translateX;
             startDragY = e.clientY - translateY;
@@ -384,6 +386,7 @@ function setupViewport() {
     });
 
     window.addEventListener('mouseup', (e) => {
+        if (e.button === 1) isMiddleButtonDown = false;
         isDraggingViewport = false;
         if (currentTool === 'select') viewport.style.cursor = 'grab';
 
@@ -516,11 +519,12 @@ function setupViewport() {
                 if (selectedNode !== lastRightClickedNode) {
                     selectNode(lastRightClickedNode);
                 }
-                // Position format menu at cursor
+                // Position format menu next to node toolbar (close to selected node)
                 if (formatMenu) {
-                    formatMenu.style.position = 'fixed';
-                    formatMenu.style.left = e.clientX + 'px';
-                    formatMenu.style.top = e.clientY + 'px';
+                    formatMenu.style.position = 'absolute';
+                    formatMenu.style.left = '100%';
+                    formatMenu.style.top = '100%';
+                    formatMenu.style.marginTop = '8px';
                     formatMenu.hidden = false;
                 }
             } else if (formatMenu) {
@@ -562,7 +566,7 @@ function setupViewport() {
 
         // Belt-and-suspenders: deselect node when clicking on empty viewport area
         // This ensures toolbar always hides even if mousedown handler didn't catch it
-        if (selectedNode && e.target.closest && !e.target.closest('.canvas-node') && !e.target.closest('.canvas-node-toolbar') && !e.target.closest('.node-format-menu') && !e.target.closest('.node-color-palette') && !e.target.closest('.canvas-context-menu') && !e.target.closest('.ui-context-menu') && e.target.closest('.canvas-viewport')) {
+        if (selectedNode && e.target.closest && !e.target.closest('.canvas-node') && !e.target.closest('.canvas-node-toolbar') && !e.target.closest('.node-format-menu') && !e.target.closest('.node-color-palette') && !e.target.closest('.canvas-context-menu') && !e.target.closest('.ui-context-menu')) {
             clearSelection();
         }
     });
@@ -648,8 +652,14 @@ function setupViewport() {
 
     viewport.addEventListener('wheel', (e) => {
         cancelAnimation();
-        if (e.ctrlKey || e.metaKey) {
-            // Zoom
+        const shouldZoom = e.ctrlKey || e.metaKey || isMiddleButtonDown || !e.shiftKey;
+
+        // Hide toolbar while user moves viewport (prevents "flying" toolbar effect)
+        if (selectedNode) {
+            hideNodeToolbar();
+        }
+
+        if (shouldZoom) {
             e.preventDefault();
             const delta = e.deltaY > 0 ? 0.9 : 1.1;
             const newScale = Math.min(Math.max(0.1, scale * delta), 5);
@@ -662,14 +672,13 @@ function setupViewport() {
             translateX = mx - (mx - translateX) * (newScale / scale);
             translateY = my - (my - translateY) * (newScale / scale);
             scale = newScale;
-
-            updateTransform();
         } else {
             // Pan
             translateX -= e.deltaX;
             translateY -= e.deltaY;
-            updateTransform();
         }
+
+        updateTransform();
     }, { passive: false });
 }
 
@@ -755,9 +764,10 @@ function renderNode(node) {
         el.style.zIndex = '0';
         contentHtml = `<div class="node-title" style="font-weight:bold; font-size:18px; padding:8px; opacity:0.8;">${node.label || 'Group'}</div>`;
     } else if (node.type === 'text') {
-        let renderedHtml = node.text || '';
-        const isEmpty = !node.text || !node.text.trim();
-        renderedHtml = renderMarkdown(renderedHtml);
+        const htmlText = (node.html || '').trim();
+        const rawText = (node.text || '').trim();
+        const isEmpty = !htmlText && !rawText;
+        let renderedHtml = htmlText || renderMarkdown(node.text || '');
         // Enable checkbox interaction
         renderedHtml = renderedHtml.replace(/disabled=""/g, '').replace(/disabled/g, '');
         if (isEmpty) {
@@ -882,9 +892,9 @@ function setupNodeInteractions(el, node) {
             return;
         }
 
-        // If an active textarea exists in this node, don't interfere with text selection
-        if (el.querySelector('.node-content-textarea')) {
-            return; // Let textarea handle its own mouse events for text selection
+        // If rich preview editor is active in this node, don't interfere with text selection
+        if (el.querySelector('.node-content-text.editing')) {
+            return; // Let rich editor handle its own mouse events for text selection
         }
 
         // Shift+Click multi-select
@@ -973,18 +983,88 @@ function setupNodeInteractions(el, node) {
     if (node.type === 'text' && isOwner) {
         const textContent = el.querySelector('.node-content-text');
 
-        // Handle checkbox toggling
+        function setCaretAtEnd(target) {
+            const range = document.createRange();
+            range.selectNodeContents(target);
+            range.collapse(false);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+
+        function setCaretAtStart(target) {
+            const range = document.createRange();
+            range.selectNodeContents(target);
+            range.collapse(true);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+
+        function startRichEdit() {
+            if (editingNodeId === node.id) return;
+
+            // Close any other active editor first
+            if (editingNodeId && editingNodeId !== node.id) {
+                const prev = nodesLayer.querySelector(`[data-id="${editingNodeId}"] .node-content-text.editing`);
+                if (prev) prev.blur();
+            }
+
+            if (textContent.querySelector('.node-placeholder')) {
+                textContent.innerHTML = '';
+            }
+
+            editingNodeId = node.id;
+            textContent.contentEditable = 'true';
+            textContent.classList.add('editing');
+            textContent.focus();
+            setCaretAtEnd(textContent);
+        }
+
+        function finishRichEdit() {
+            if (editingNodeId !== node.id) return;
+
+            const html = textContent.innerHTML.trim();
+            const plain = textContent.textContent || '';
+
+            editingNodeId = null;
+            textContent.contentEditable = 'false';
+            textContent.classList.remove('editing');
+
+            if (!plain.trim()) {
+                node.text = '';
+                node.html = '';
+                textContent.innerHTML = '<span class="node-placeholder">Double-click to edit</span>';
+            } else {
+                node.text = plain;
+                node.html = html;
+                textContent.innerHTML = node.html;
+                textContent.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.removeAttribute('disabled'));
+            }
+
+            markUnsaved();
+            autoResizeNode(node, el);
+        }
+
+        // Handle checkbox toggling in both markdown-rendered and rich-edit modes
         textContent.addEventListener('change', (e) => {
             if (e.target.type === 'checkbox') {
+                pushHistory();
+
+                if (node.html && node.html.trim()) {
+                    node.html = textContent.innerHTML;
+                    node.text = textContent.textContent || '';
+                    markUnsaved();
+                    return;
+                }
+
                 const isChecked = e.target.checked;
-                // We need to figure out WHICH checkbox this is. The easiest way is to count them
-                // and replace the nth match of [ ] or [x] in the raw markdown text.
                 const checkboxes = Array.from(textContent.querySelectorAll('input[type="checkbox"]'));
                 const index = checkboxes.indexOf(e.target);
 
                 if (index > -1) {
                     let matchCount = 0;
-                    node.text = node.text.replace(/\[([ xX])\]/g, (match, p1) => {
+                    node.text = (node.text || '').replace(/\[([ xX])\]/g, (match) => {
                         if (matchCount === index) {
                             matchCount++;
                             return isChecked ? '[x]' : '[ ]';
@@ -992,71 +1072,74 @@ function setupNodeInteractions(el, node) {
                         matchCount++;
                         return match;
                     });
-                    pushHistory();
-                    saveCanvasData(true);
                     markUnsaved();
-
-                    // re-render the node text
                     textContent.innerHTML = renderMarkdown(node.text);
-                    // Enable checkbox interaction
                     textContent.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.removeAttribute('disabled'));
                 }
             }
         });
 
+        // Double click enters preview-mode rich editor (not raw markdown editor)
         el.addEventListener('dblclick', (e) => {
             if (currentTool !== 'select') return;
             e.stopPropagation();
+            startRichEdit();
+        });
 
-            // Don't re-enter edit mode if already editing
-            if (editingNodeId === node.id) return;
-
-            // Swap HTML to Raw Textarea for Markdown editing
-            const textarea = document.createElement('textarea');
-            textarea.className = 'node-content-textarea';
-            textarea.value = node.text || '';
-
-            editingNodeId = node.id;
-            textContent.style.display = 'none';
-            el.insertBefore(textarea, textContent);
-
-            textarea.focus();
-
-            // Prevent node drag when interacting with textarea
-            textarea.addEventListener('mousedown', (me) => {
+        textContent.addEventListener('mousedown', (me) => {
+            if (editingNodeId === node.id) {
                 me.stopPropagation();
-            });
+            }
+        });
 
-            textarea.addEventListener('blur', () => {
-                if (preserveTextareaForFormat) {
-                    return;
+        textContent.addEventListener('blur', () => {
+            if (preserveTextareaForFormat) {
+                // Keep editor alive while interacting with format menu
+                textContent.focus();
+                return;
+            }
+            finishRichEdit();
+        });
+
+        textContent.addEventListener('keydown', (ke) => {
+            ke.stopPropagation();
+            if (editingNodeId !== node.id) return;
+
+            if (ke.key === 'Escape') {
+                ke.preventDefault();
+                finishRichEdit();
+                return;
+            }
+
+            // Smart Enter continuation for task lists in rich editor
+            if (ke.key === 'Enter') {
+                const sel = window.getSelection();
+                const anchor = sel && sel.anchorNode
+                    ? (sel.anchorNode.nodeType === Node.ELEMENT_NODE ? sel.anchorNode : sel.anchorNode.parentElement)
+                    : null;
+                const currentLi = anchor ? anchor.closest('ul.task-list li') : null;
+                if (currentLi) {
+                    ke.preventDefault();
+                    const currentText = currentLi.querySelector('.task-item-text');
+                    const emptyCurrent = !currentText || !currentText.textContent.trim();
+
+                    if (emptyCurrent) {
+                        const list = currentLi.closest('ul.task-list');
+                        const breakLine = document.createElement('div');
+                        breakLine.innerHTML = '<br>';
+                        list.parentNode.insertBefore(breakLine, list.nextSibling);
+                        currentLi.remove();
+                        if (!list.querySelector('li')) list.remove();
+                        setCaretAtStart(breakLine);
+                    } else {
+                        const nextLi = document.createElement('li');
+                        nextLi.innerHTML = '<input type="checkbox"> <span class="task-item-text"></span>';
+                        currentLi.parentNode.insertBefore(nextLi, currentLi.nextSibling);
+                        const span = nextLi.querySelector('.task-item-text');
+                        setCaretAtStart(span);
+                    }
                 }
-
-                const newText = textarea.value;
-                textarea.remove();
-                editingNodeId = null;
-
-                if (newText !== node.text) {
-                    node.text = newText;
-                    markUnsaved();
-                    // Re-render just this node's content
-                    textContent.innerHTML = renderMarkdown(node.text);
-                    // Enable checkbox interaction
-                    textContent.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.removeAttribute('disabled'));
-                }
-                textContent.style.display = '';
-
-                // Auto-resize to fit content
-                autoResizeNode(node, el);
-            });
-
-            textarea.addEventListener('keydown', (ke) => {
-                // Ignore emulator hotkeys when editing
-                ke.stopPropagation();
-            });
-            textarea.addEventListener('keyup', (ke) => {
-                ke.stopPropagation();
-            });
+            }
         });
     }
 
@@ -1455,6 +1538,12 @@ function setupNodeToolbar() {
         generateAndInsertNodeLink(selectedNode);
     });
 
+    // Disconnect button — remove all edges connected to selected node
+    nodeToolbar.querySelector('#nt-disconnect')?.addEventListener('click', () => {
+        if (!selectedNode) return;
+        disconnectSelectedNodeEdges();
+    });
+
     // Setup color swatches
     nodeToolbar.querySelectorAll('.color-swatch').forEach(swatch => {
         swatch.addEventListener('click', (e) => {
@@ -1495,79 +1584,87 @@ function setupNodeToolbar() {
         }
     });
 
-    function applyFormatToTextarea(textarea, fmt) {
-        const text = textarea.value;
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const hasSelection = end > start;
+    function escapeHtml(text) {
+        return (text || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function ensureActiveRichEditor() {
+        if (!selectedNode || selectedNode.type !== 'text') return null;
+        const nodeEl = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
+        if (!nodeEl) return null;
+        const editor = nodeEl.querySelector('.node-content-text');
+        if (!editor) return null;
+
+        if (editingNodeId !== selectedNode.id) {
+            editor.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+        }
+
+        editor.focus();
+        return editor;
+    }
+
+    function applyFormatToRichEditor(editor, fmt) {
+        const sel = window.getSelection();
+        const selectedText = sel ? sel.toString() : '';
 
         if (fmt === 'clear') {
-            if (hasSelection) {
-                const selected = text.substring(start, end);
-                const cleaned = stripMarkdownFormatting(selected);
-                textarea.value = text.substring(0, start) + cleaned + text.substring(end);
-                textarea.focus();
-                textarea.setSelectionRange(start, start + cleaned.length);
+            if (sel && !sel.isCollapsed) {
+                document.execCommand('removeFormat', false, null);
             } else {
-                const cleanedAll = stripMarkdownFormatting(text);
-                textarea.value = cleanedAll;
-                textarea.focus();
-                textarea.setSelectionRange(0, cleanedAll.length);
+                editor.innerText = editor.innerText;
             }
             return;
         }
 
-        const linePrefixFormats = new Set(['h1', 'h2', 'h3', 'quote', 'ul', 'ol', 'task']);
-        if (linePrefixFormats.has(fmt)) {
-            const rangeStart = text.lastIndexOf('\n', start - 1) + 1;
-            const rangeEndIdx = text.indexOf('\n', hasSelection ? end : start);
-            const rangeEnd = rangeEndIdx === -1 ? text.length : rangeEndIdx;
-            const segment = text.substring(rangeStart, rangeEnd);
-            const lines = segment.split('\n');
-            const normalized = lines.map((line, idx) => {
-                const clean = line
-                    .replace(/^#{1,6}\s+/, '')
-                    .replace(/^>\s+/, '')
-                    .replace(/^\s*[-*]\s+\[[ xX]\]\s+/, '')
-                    .replace(/^\s*[-*]\s+/, '')
-                    .replace(/^\s*\d+\.\s+/, '');
-
-                if (fmt === 'h1') return `# ${clean}`;
-                if (fmt === 'h2') return `## ${clean}`;
-                if (fmt === 'h3') return `### ${clean}`;
-                if (fmt === 'quote') return `> ${clean}`;
-                if (fmt === 'ul') return `- ${clean}`;
-                if (fmt === 'task') return `- [ ] ${clean}`;
-                if (fmt === 'ol') return `${idx + 1}. ${clean}`;
-                return line;
-            }).join('\n');
-
-            textarea.value = text.substring(0, rangeStart) + normalized + text.substring(rangeEnd);
-            textarea.focus();
-            textarea.setSelectionRange(rangeStart, rangeStart + normalized.length);
+        if (fmt === 'bold') {
+            document.execCommand('bold', false, null);
             return;
         }
-
-        let prefix = '';
-        let suffix = '';
-
-        switch (fmt) {
-            case 'bold': prefix = '**'; suffix = '**'; break;
-            case 'italic': prefix = '*'; suffix = '*'; break;
-            case 'code': prefix = '`'; suffix = '`'; break;
-            case 'link': prefix = '['; suffix = '](url)'; break;
-            default: return;
+        if (fmt === 'italic') {
+            document.execCommand('italic', false, null);
+            return;
         }
-
-        if (hasSelection) {
-            const selected = text.substring(start, end);
-            textarea.value = text.substring(0, start) + prefix + selected + suffix + text.substring(end);
-            textarea.focus();
-            textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
-        } else {
-            textarea.value = text.substring(0, start) + prefix + suffix + text.substring(start);
-            textarea.focus();
-            textarea.setSelectionRange(start + prefix.length, start + prefix.length);
+        if (fmt === 'ul') {
+            document.execCommand('insertUnorderedList', false, null);
+            return;
+        }
+        if (fmt === 'ol') {
+            document.execCommand('insertOrderedList', false, null);
+            return;
+        }
+        if (fmt === 'h1' || fmt === 'h2' || fmt === 'h3' || fmt === 'quote') {
+            const tag = fmt === 'h1' ? 'H1' : fmt === 'h2' ? 'H2' : fmt === 'h3' ? 'H3' : 'BLOCKQUOTE';
+            document.execCommand('formatBlock', false, tag);
+            return;
+        }
+        if (fmt === 'code') {
+            const codeText = selectedText || '';
+            document.execCommand('insertHTML', false, `<code>${escapeHtml(codeText)}</code>`);
+            return;
+        }
+        if (fmt === 'link') {
+            const url = prompt('Enter URL:', 'https://');
+            if (!url) return;
+            if (selectedText) {
+                document.execCommand('createLink', false, url);
+            } else {
+                const safeUrl = escapeHtml(url);
+                document.execCommand('insertHTML', false, `<a href="${safeUrl}" target="_blank" rel="noopener">${safeUrl}</a>`);
+            }
+            return;
+        }
+        if (fmt === 'task') {
+            const lines = (selectedText || '').split(/\n+/).map(s => s.trim()).filter(Boolean);
+            const items = (lines.length ? lines : ['']).map(line => {
+                return `<li><input type="checkbox"> <span class="task-item-text">${escapeHtml(line)}</span></li>`;
+            }).join('');
+            document.execCommand('insertHTML', false, `<ul class="task-list">${items}</ul>`);
+            return;
         }
     }
 
@@ -1586,32 +1683,20 @@ function setupNodeToolbar() {
                     return;
                 }
 
-                const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
-                const textContent = el.querySelector('.node-content-text');
-                const textarea = el.querySelector('.node-content-textarea');
-
-                if (!textarea) {
-                    if (fmt === 'clear') {
-                        selectedNode.text = stripMarkdownFormatting(selectedNode.text || '');
-                        markUnsaved();
-                        renderCanvas();
-                        const refreshed = canvasData.nodes.find(n => n.id === selectedNode.id);
-                        if (refreshed) selectNode(refreshed);
-                        preserveTextareaForFormat = false;
-                        if (formatMenu) formatMenu.hidden = true;
-                        return;
-                    }
-
-                    // Open editor, but don't inject placeholder text
-                    if (textContent) {
-                        textContent.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-                    }
+                const editor = ensureActiveRichEditor();
+                if (!editor) {
                     preserveTextareaForFormat = false;
                     if (formatMenu) formatMenu.hidden = true;
                     return;
                 }
 
-                applyFormatToTextarea(textarea, fmt);
+                applyFormatToRichEditor(editor, fmt);
+
+                selectedNode.html = editor.innerHTML;
+                selectedNode.text = editor.textContent || '';
+
+                const nodeEl = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
+                if (nodeEl) autoResizeNode(selectedNode, nodeEl);
 
                 preserveTextareaForFormat = false;
                 if (formatMenu) formatMenu.hidden = true;
@@ -1824,6 +1909,25 @@ function deleteSelected() {
     }
 }
 
+function disconnectSelectedNodeEdges() {
+    if (!isOwner || !selectedNode) return;
+
+    const nodeId = selectedNode.id;
+    const before = canvasData.edges.length;
+    if (before === 0) return;
+
+    pushHistory();
+    canvasData.edges = canvasData.edges.filter(e => e.fromNode !== nodeId && e.toNode !== nodeId);
+
+    if (canvasData.edges.length !== before) {
+        markUnsaved();
+        renderCanvas();
+        const refreshed = canvasData.nodes.find(n => n.id === nodeId);
+        if (refreshed) selectNode(refreshed);
+        window.uiToast('Node connections removed', 'success');
+    }
+}
+
 function updateDeleteBtn() {
     const btn = container.querySelector('#canvas-delete-selected');
     if (btn) btn.disabled = (!selectedNode && !selectedEdge);
@@ -1909,37 +2013,50 @@ function hideOverlay() {
 // HELPERS FOR NODE LINKS
 // -----------------------------------------------------------------
 
-function getNodeLinkName(node) {
-    let rootName = '';
+function getFirstWordForLink(node) {
+    if (!node) return 'Node';
+    if (node.type === 'file') {
+        const filename = (node.file || '').split('/').pop() || 'Node';
+        const stem = filename.includes('.') ? filename.substring(0, filename.lastIndexOf('.')) : filename;
+        return (stem.split(/\s+|_|-/)[0] || 'Node').replace(/[^A-Za-z0-9]/g, '') || 'Node';
+    }
+    if (node.type === 'text') {
+        const source = (node.text || node.html || '').replace(/<[^>]*>/g, ' ');
+        return (source.trim().split(/\s+/)[0] || 'Node').replace(/[^A-Za-z0-9]/g, '') || 'Node';
+    }
+    return 'Node';
+}
+
+function getNodeLinkMeta(node) {
+    let branchWord = 'Branch';
     try {
         const root = findRootOfBranch(node.id);
-        rootName = root.type === 'text' ? root.text.split('\n')[0].trim() : '';
-    } catch (e) { /* no root */ }
-
-    let nodeName = '';
-    if (node.type === 'file') {
-        const filename = node.file.split('/').pop();
-        nodeName = rootName ? `${rootName}_${filename}`.toLowerCase() : filename.toLowerCase();
-    } else if (node.type === 'text') {
-        const firstWord = node.text.trim().split(/\s+/)[0] || 'node';
-        nodeName = rootName ? `${rootName}_${firstWord}`.toLowerCase() : firstWord.toLowerCase();
-    } else {
-        nodeName = node.id;
+        branchWord = getFirstWordForLink(root) || 'Branch';
+    } catch (e) {
+        branchWord = 'Branch';
     }
-    return nodeName.replace(/[^a-z0-9_.-]/g, '');
+
+    const nodeWord = getFirstWordForLink(node) || 'Node';
+    const label = `Canvas:${branchWord}_${nodeWord}`;
+    const slug = `${branchWord}_${nodeWord}`.toLowerCase().replace(/[^a-z0-9_.-]/g, '');
+    return { label, slug };
+}
+
+function getNodeLinkName(node) {
+    return getNodeLinkMeta(node).slug;
 }
 
 function generateAndInsertNodeLink(node) {
-    const nodeName = getNodeLinkName(node);
+    const meta = getNodeLinkMeta(node);
     const chatInput = document.getElementById('chat-input') || document.getElementById('canvas-discussion-input');
     if (chatInput) {
-        const linkText = `[Open ${nodeName}](#canvas:${nodeName})`;
+        const linkText = `[${meta.label}](#canvas:${meta.slug})`;
         chatInput.value = chatInput.value + (chatInput.value ? ' ' : '') + linkText;
         chatInput.focus();
         window.uiToast('Link inserted into chat', 'success');
     } else {
         // Fallback: copy to clipboard
-        navigator.clipboard.writeText(`#canvas:${nodeName}`).then(() => {
+        navigator.clipboard.writeText(`#canvas:${meta.slug}`).then(() => {
             window.uiToast('Canvas link copied to clipboard', 'success');
         });
     }

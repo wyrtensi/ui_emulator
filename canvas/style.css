@@ -190,8 +190,11 @@
 .color-swatch:hover { transform: scale(1.5); }
 
 .node-format-menu {
-  position: fixed;
-  z-index: 10000;
+  position: absolute;
+  top: 100%;
+  left: 100%;
+  margin-top: 8px;
+  z-index: 120;
   background: var(--canvas-toolbar-bg);
   border: 1px solid var(--canvas-node-border);
   border-radius: 6px;
@@ -502,6 +505,18 @@ body:not(.is-owner) .canvas-owner-only {
   outline: none;
   cursor: text;
   user-select: text;
+}
+
+.node-content-text ul.task-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.25em 0;
+}
+
+.node-content-text ul.task-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
 }
 
 /* Textarea for editing nodes — matches preview layout exactly */
