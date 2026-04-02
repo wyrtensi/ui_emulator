@@ -104,6 +104,24 @@ async function boot() {
     // No remote config found, silently continue
   }
 
+  // Update info zone (now safe, config.github should be populated)
+  try {
+    if (config.github && config.github.repo) {
+        const commitData = await githubApi.getBranchCommit();
+        if (commitData && commitData.commit && commitData.commit.author) {
+          const date = new Date(commitData.commit.author.date);
+          const timeStr = date.toLocaleString();
+          document.getElementById('ui-info-time').textContent = timeStr;
+          document.getElementById('ui-info-repo').textContent = config.github.repo;
+        }
+    }
+  } catch (err) {
+    document.getElementById('ui-info-time').textContent = 'Unknown';
+    if (config.github) {
+        document.getElementById('ui-info-repo').textContent = config.github.repo;
+    }
+  }
+
   // 4. Load each window from registry
   for (const windowId of registry) {
     await loadWindowById(windowId, windowsLayer);
