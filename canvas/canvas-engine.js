@@ -1504,7 +1504,13 @@ function clearSelection() {
 }
 
 function showNodeToolbar(node, el) {
-    if (!isOwner || !nodeToolbar) return;
+    if (!nodeToolbar) return;
+
+    // Viewers should still see non-edit actions (e.g., link), while owner actions stay hidden.
+    const hasVisibleAction = Array.from(nodeToolbar.querySelectorAll('.node-toolbar-btn'))
+        .some(btn => !btn.hidden && window.getComputedStyle(btn).display !== 'none');
+    if (!hasVisibleAction) return;
+
     hideForeignNodeToolbars();
 
     // Calculate the top-center position of the node in viewport coordinates
@@ -1552,6 +1558,7 @@ function setupNodeToolbar() {
 
     const palette = nodeToolbar.querySelector('#node-color-palette');
     nodeToolbar.querySelector('#nt-color').addEventListener('click', () => {
+        if (!isOwner) return;
         palette.hidden = !palette.hidden;
     });
 
@@ -1572,6 +1579,7 @@ function setupNodeToolbar() {
     });
 
     nodeToolbar.querySelector('#nt-edit').addEventListener('click', () => {
+        if (!isOwner) return;
         if (!selectedNode) return;
         if (selectedNode.type === 'text') {
             const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
@@ -1597,6 +1605,7 @@ function setupNodeToolbar() {
 
     // Import image button — open file picker for selected node
     nodeToolbar.querySelector('#nt-image')?.addEventListener('click', () => {
+        if (!isOwner) return;
         if (!selectedNode) return;
         const input = container.querySelector('#canvas-upload-image');
         window._targetImageNode = selectedNode.id;
@@ -1611,6 +1620,7 @@ function setupNodeToolbar() {
 
     // Disconnect button — remove all edges connected to selected node
     nodeToolbar.querySelector('#nt-disconnect')?.addEventListener('click', () => {
+        if (!isOwner) return;
         if (!selectedNode) return;
         disconnectSelectedNodeEdges();
     });
@@ -1618,6 +1628,7 @@ function setupNodeToolbar() {
     // Setup color swatches
     nodeToolbar.querySelectorAll('.color-swatch').forEach(swatch => {
         swatch.addEventListener('click', (e) => {
+            if (!isOwner) return;
             if (!selectedNode) return;
             const colorCode = e.target.dataset.color;
 
@@ -1743,6 +1754,10 @@ function setupNodeToolbar() {
     if (formatMenu) {
         formatMenu.querySelectorAll('.format-item').forEach(item => {
             item.addEventListener('click', (e) => {
+                if (!isOwner) {
+                    preserveTextareaForFormat = false;
+                    return;
+                }
                 if (!selectedNode || selectedNode.type !== 'text') {
                     preserveTextareaForFormat = false;
                     return;

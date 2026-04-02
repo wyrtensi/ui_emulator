@@ -82,19 +82,23 @@ body {
 /* ── Viewport ──────────────────────────────────────── */
 #ui-viewport {
   position: absolute;
+  top: 0;
+  left: 0;
   width: calc(var(--viewport-w) * 1px);
   height: calc(var(--viewport-h) * 1px);
+  z-index: var(--z-windows);
   transform-origin: top left;
   transform: scale(var(--ui-scale));
   overflow: hidden;
 }
 
 #ui-background {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: var(--z-background);
   background: #0a0e18;
   overflow: hidden;
+  pointer-events: none;
 }
 
 #ui-background img,
