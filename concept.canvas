@@ -6,7 +6,7 @@
       "x": 1747,
       "y": 951,
       "width": 200,
-      "height": 112,
+      "height": 114,
       "text": "New node"
     },
     {
@@ -15,7 +15,7 @@
       "x": 1682,
       "y": 83,
       "width": 382,
-      "height": 198,
+      "height": 200,
       "text": "New node\n",
       "html": "<h2><ol><li>New node</li></ol><div><br></div></h2>"
     },
@@ -25,7 +25,7 @@
       "x": -375,
       "y": -73,
       "width": 250,
-      "height": 162,
+      "height": 164,
       "text": "jhjhjkhjl\n"
     },
     {
@@ -34,7 +34,7 @@
       "x": 176,
       "y": -67,
       "width": 314,
-      "height": 225,
+      "height": 227,
       "text": "gdfgdfg\nbcbcvbgfdggfdgfdgfdg\n",
       "color": "3",
       "html": "<p><ol><li>gdfgdfg\nbcbcvbgfdg</li><li>gfdgfd</li><li>gfdg</li></ol></p>"
@@ -65,7 +65,7 @@
       "x": 263,
       "y": 236,
       "width": 200,
-      "height": 112,
+      "height": 114,
       "text": "New node"
     },
     {
@@ -84,7 +84,7 @@
       "x": 646,
       "y": -75,
       "width": 250,
-      "height": 162,
+      "height": 164,
       "text": "fsdfsdf\n"
     },
     {
@@ -103,8 +103,9 @@
       "x": 1378,
       "y": 154,
       "width": 250,
-      "height": 150,
-      "text": ""
+      "height": 152,
+      "text": "",
+      "html": ""
     },
     {
       "id": "n_1775172175917",
