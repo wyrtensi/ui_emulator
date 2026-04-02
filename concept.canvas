@@ -12,8 +12,8 @@
     {
       "id": "16q95i0ymqp",
       "type": "text",
-      "x": 1740,
-      "y": 36,
+      "x": 716,
+      "y": 280,
       "width": 200,
       "height": 104,
       "text": "New node"
@@ -100,8 +100,8 @@
       "x": 811,
       "y": -371,
       "width": 250,
-      "height": 152,
-      "text": ""
+      "height": 156,
+      "text": "# gdfg"
     }
   ],
   "edges": [
