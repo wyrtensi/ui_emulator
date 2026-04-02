@@ -1969,7 +1969,3 @@ body.canvas-mode-active #ui-windows-container,
 body.canvas-mode-active #ui-header-bar {
   display: none !important;
 }
-body.canvas-mode-active #ui-windows,
-body.canvas-mode-active #ui-overlays {
-  display: none !important;
-}

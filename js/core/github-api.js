@@ -37,6 +37,11 @@ export const githubApi = {
   /**
    * Get file content and SHA (needed for updates/deletes)
    */
+  async getBranchCommit() {
+    const response = await this.request(`/commits/${config.github.branch}`);
+    return await response.json();
+  }
+
   async getFile(path) {
     const response = await this.request(`/contents/${path}`);
     if (response.status === 404) return null;

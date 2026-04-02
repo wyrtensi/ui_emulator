@@ -15,6 +15,7 @@ let selectionBox = null;
 let selectedNode = null;
 let selectedEdge = null;
 let isDraggingNode = false;
+let multiSelectedNodes = new Set();
 
 let currentTool = 'select';
 let theme = 'dark';
@@ -71,11 +72,16 @@ export async function initCanvas(winContainer, config) {
     nodeToolbar = container.querySelector('#canvas-node-toolbar');
 
     isOwner = githubAuth.isOwner;
+    if (isOwner) {
+        document.body.classList.add('is-owner');
+    } else {
+        document.body.classList.remove('is-owner');
+    }
+
     setupNodeToolbar();
 
     // Toggle owner UI
     if (isOwner) {
-        container.querySelector('#canvas-toolbar').hidden = false;
         setupOwnerTools();
     }
 
@@ -112,6 +118,17 @@ export async function initCanvas(winContainer, config) {
 
         // Global Paste Listener
         container.addEventListener('paste', handleGlobalPaste);
+    }
+
+    const closeBtnTop = container.querySelector('#canvas-close-top-right');
+    if (closeBtnTop) {
+        closeBtnTop.addEventListener('click', () => {
+            if (window.windowManager && window.windowManager.close) {
+                window.windowManager.close('canvas');
+            } else if (window.location.hash.startsWith('#canvas')) {
+                window.location.hash = '';
+            }
+        });
     }
 }
 
@@ -189,6 +206,17 @@ function setupViewport() {
                 const y = (e.clientY - rect.top - translateY) / scale;
                 createNode('text', x, y, 200, 100, "New node");
                 setTool('select');
+            } else if (currentTool === 'select' && !e.shiftKey) {
+                isMarqueeSelect = true;
+                const rect = viewport.getBoundingClientRect();
+                marqueeStartX = e.clientX - rect.left;
+                marqueeStartY = e.clientY - rect.top;
+
+                selectionBox.style.left = marqueeStartX + 'px';
+                selectionBox.style.top = marqueeStartY + 'px';
+                selectionBox.style.width = '0px';
+                selectionBox.style.height = '0px';
+                selectionBox.hidden = false;
             }
         }
     });
@@ -328,13 +356,55 @@ function setupViewport() {
     });
 
     // Right click context menu on background
+    let lastRightClickedNode = null;
     const ctxMenu = container.querySelector('#canvas-context-menu');
     let ctxMenuX = 0, ctxMenuY = 0;
 
     viewport.addEventListener('contextmenu', (e) => {
-        if (e.target === viewport || e.target.closest('.canvas-content') === content && !e.target.closest('.canvas-node')) {
+        const nodeEl = e.target.closest('.canvas-node');
+        const linkBtn = container.querySelector('#cm-make-link');
+
+        if (nodeEl) {
             e.preventDefault();
-            if (!isOwner) return;
+            const nodeId = nodeEl.dataset.id || nodeEl.id.replace('node-', '');
+            lastRightClickedNode = canvasData.nodes.find(n => n.id === nodeId);
+
+            if (linkBtn) linkBtn.style.display = 'block';
+
+            // Hide edit options for non-owners, only show link
+            const addText = container.querySelector('#cm-add-text');
+            const addImg = container.querySelector('#cm-add-img');
+            const addGroup = container.querySelector('#cm-add-group');
+            if (addText) addText.style.display = isOwner ? 'block' : 'none';
+            if (addImg) addImg.style.display = isOwner ? 'block' : 'none';
+            if (addGroup) addGroup.style.display = isOwner ? 'block' : 'none';
+
+            ctxMenu.style.left = e.clientX + 'px';
+            ctxMenu.style.top = e.clientY + 'px';
+            ctxMenu.hidden = false;
+
+            // If it's a text node, also show format menu
+            if (isOwner && lastRightClickedNode && lastRightClickedNode.type === 'text') {
+                const formatMenu = container.querySelector('#node-format-menu');
+                const palette = container.querySelector('#node-color-palette');
+                selectNode(lastRightClickedNode);
+                if (palette) palette.hidden = true;
+                if (formatMenu) formatMenu.hidden = false;
+            }
+
+        } else if (e.target === viewport || e.target.closest('.canvas-content') === content) {
+            e.preventDefault();
+            if (!isOwner) return; // Only owners can interact with background right-click
+            lastRightClickedNode = null;
+            if (linkBtn) linkBtn.style.display = 'none';
+
+            const addText = container.querySelector('#cm-add-text');
+            const addImg = container.querySelector('#cm-add-img');
+            const addGroup = container.querySelector('#cm-add-group');
+            if (addText) addText.style.display = 'block';
+            if (addImg) addImg.style.display = 'block';
+            if (addGroup) addGroup.style.display = 'block';
+
             const rect = viewport.getBoundingClientRect();
             ctxMenu.style.left = e.clientX + 'px';
             ctxMenu.style.top = e.clientY + 'px';
@@ -356,6 +426,11 @@ function setupViewport() {
         pushHistory();
         const id = 'n_' + Date.now();
         canvasData.nodes.push({ id, type: 'text', x: ctxMenuX, y: ctxMenuY, width: 250, height: 150, text: '' });
+
+        if (window._pendingEdgeConnect) {
+             createEdge(window._pendingEdgeConnect.fromNode, window._pendingEdgeConnect.fromSide, id, 'left');
+             window._pendingEdgeConnect = null;
+        }
         saveCanvasData(true);
         renderCanvas();
     });
@@ -364,8 +439,48 @@ function setupViewport() {
         pushHistory();
         const id = 'n_' + Date.now();
         canvasData.nodes.push({ id, type: 'file', file: '', x: ctxMenuX, y: ctxMenuY, width: 250, height: 250 });
+
+        if (window._pendingEdgeConnect) {
+             createEdge(window._pendingEdgeConnect.fromNode, window._pendingEdgeConnect.fromSide, id, 'left');
+             window._pendingEdgeConnect = null;
+        }
         saveCanvasData(true);
         renderCanvas();
+    });
+
+    container.querySelector('#cm-make-link')?.addEventListener('click', () => {
+        if (!lastRightClickedNode) return;
+
+        let rootName = '';
+        try {
+            const root = findRootOfBranch(lastRightClickedNode.id);
+            rootName = root.type === 'text' ? root.text.split('\n')[0].trim() : '';
+        } catch (e) {
+            // If no root, just use the node itself
+        }
+
+        let nodeName = '';
+
+        if (lastRightClickedNode.type === 'file') {
+            const filename = lastRightClickedNode.file.split('/').pop();
+            nodeName = rootName ? `${rootName}_${filename}`.toLowerCase() : filename.toLowerCase();
+        } else if (lastRightClickedNode.type === 'text') {
+            const firstWord = lastRightClickedNode.text.trim().split(/\s+/)[0] || 'node';
+            nodeName = rootName ? `${rootName}_${firstWord}`.toLowerCase() : firstWord.toLowerCase();
+        } else {
+             nodeName = lastRightClickedNode.id;
+        }
+
+        // Clean up nodeName for markdown link safety
+        nodeName = nodeName.replace(/[^a-z0-9_.-]/g, '');
+
+        const chatInput = document.getElementById('chat-input') || document.getElementById('canvas-discussion-input');
+        if (chatInput) {
+            const linkText = `[Link to Node](#canvas:${nodeName})`;
+            chatInput.value = chatInput.value + (chatInput.value ? ' ' : '') + linkText;
+            chatInput.focus();
+            window.uiToast('Link inserted into chat', 'success');
+        }
     });
 
     container.querySelector('#cm-add-group')?.addEventListener('click', () => {
@@ -395,7 +510,10 @@ function setupViewport() {
         }
 
         canvasData.nodes.push({ id, type: 'group', label: 'New Group', x: minX, y: minY, width: maxX - minX, height: maxY - minY });
-        checkPendingEdge(id);
+        if (window._pendingEdgeConnect) {
+             createEdge(window._pendingEdgeConnect.fromNode, window._pendingEdgeConnect.fromSide, id, 'left');
+             window._pendingEdgeConnect = null;
+        }
         saveCanvasData(true);
         renderCanvas();
     });
@@ -469,7 +587,12 @@ function renderNode(node) {
     }
 
     let contentHtml = '';
-    if (node.type === 'text') {
+    if (node.type === 'group') {
+        el.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+        el.style.border = '2px dashed var(--canvas-node-border)';
+        el.style.zIndex = '0';
+        contentHtml = `<div class="node-title" style="font-weight:bold; font-size:18px; padding:8px; opacity:0.8;">${node.label || 'Group'}</div>`;
+    } else if (node.type === 'text') {
         let renderedHtml = node.text || '';
         try {
             if (typeof marked !== 'undefined') {
@@ -486,7 +609,13 @@ function renderNode(node) {
         const fileExt = node.file.split('.').pop().toLowerCase();
         if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileExt)) {
             // Reference repo root path
-            let imgSrc = `./${node.file}`;
+            let imgSrc;
+            if (node._tempBase64) {
+                imgSrc = node._tempBase64;
+            } else {
+                imgSrc = `./${node.file}`;
+            }
+
             // If we are on GitHub pages, we can just use the path relative to root
             contentHtml = `
                 <div class="node-title">${node.file.split('/').pop()}</div>
@@ -643,6 +772,17 @@ function setupNodeInteractions(el, node) {
                     pushHistory();
                     saveCanvasData(true);
                     markUnsaved();
+
+                    // re-render the node text
+                    try {
+                        if (typeof marked !== 'undefined') {
+                            textContent.innerHTML = marked.parse(node.text);
+                        } else {
+                            textContent.innerHTML = node.text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                        }
+                    } catch(err) {
+                        textContent.innerHTML = node.text;
+                    }
                 }
             }
         });
@@ -775,7 +915,7 @@ function renderEdge(edge) {
     path.dataset.id = edge.id;
 
     if (edge.color) path.style.stroke = edge.color;
-    if (edge.toSide) path.setAttribute('marker-end', 'url(#arrowhead)');
+    path.setAttribute('marker-end', 'url(#arrowhead)');
 
     path.addEventListener('mousedown', (e) => {
         e.stopPropagation();
@@ -911,8 +1051,18 @@ function clearSelection() {
         if (el) el.classList.remove('selected');
         selectedEdge = null;
     }
+    multiSelectedNodes.forEach(id => {
+        const el = nodesLayer.querySelector(`[data-id="${id}"]`);
+        if (el) el.classList.remove('selected');
+    });
+    multiSelectedNodes.clear();
     hideNodeToolbar();
     updateDeleteBtn();
+
+    const formatMenu = container.querySelector('#node-format-menu');
+    const palette = container.querySelector('#node-color-palette');
+    if (formatMenu) formatMenu.hidden = true;
+    if (palette) palette.hidden = true;
 }
 
 function showNodeToolbar(node, el) {
@@ -1009,22 +1159,6 @@ function setupNodeToolbar() {
     const formatMenu = nodeToolbar.querySelector('#node-format-menu');
 
     // Add right click context menu to nodes
-    viewport.addEventListener('contextmenu', (e) => {
-        const nodeEl = e.target.closest('.canvas-node');
-        if (nodeEl && isOwner) {
-            e.preventDefault();
-            const id = nodeEl.dataset.id;
-            const node = canvasData.nodes.find(n => n.id === id);
-            if (node && node.type === 'text') {
-                selectNode(node); // show toolbar
-                palette.hidden = true;
-                formatMenu.hidden = false;
-            }
-        } else {
-            if (formatMenu) formatMenu.hidden = true;
-            if (palette) palette.hidden = true;
-        }
-    });
 
     // Close menus when clicking elsewhere
     viewport.addEventListener('mousedown', (e) => {
@@ -1074,13 +1208,30 @@ function setupNodeToolbar() {
                     textarea.focus();
                     textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
                 } else {
-                    // Append to raw text and re-render
-                    selectedNode.text = `${selectedNode.text || ''}\n${prefix}text${suffix}`;
-                    renderCanvas();
-                    selectNode(selectedNode);
+                    const selection = window.getSelection();
+                    const selectedText = selection.toString() || 'text';
+
+                    if (selection.rangeCount > 0 && selectedText !== 'text' && textContent.contains(selection.anchorNode)) {
+                         // A simplistic way to wrap selection, but usually text formatting
+                         // requires editing mode (textarea). We will switch to textarea mode first.
+                         textContent.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+                         setTimeout(() => {
+                             const newTextarea = el.querySelector('.node-content-textarea');
+                             if (newTextarea) {
+                                 // Simple append since selection boundaries in HTML->Markdown are complex
+                                 newTextarea.value = newTextarea.value + `\n${prefix}${selectedText}${suffix}`;
+                                 newTextarea.focus();
+                             }
+                         }, 50);
+                    } else {
+                        // Append to raw text and re-render
+                        selectedNode.text = `${selectedNode.text || ''}\n${prefix}text${suffix}`;
+                        renderCanvas();
+                        selectNode(selectedNode);
+                    }
                 }
 
-                formatMenu.hidden = true;
+                if (formatMenu) formatMenu.hidden = true;
                 markUnsaved();
             });
         });
@@ -1176,13 +1327,36 @@ async function uploadAndAddImage(file, filename) {
                 const repoPath = `canvas_uploads/${filename}`;
                 await githubApi.saveFile(repoPath, base64Data, `Upload ${filename} to canvas`, true);
 
-                // Add to canvas at center of viewport
-                const rect = viewport.getBoundingClientRect();
-                const x = (-translateX + rect.width / 2) / scale;
-                const y = (-translateY + rect.height / 2) / scale;
+                let node;
+                if (window._targetImageNode) {
+                    node = canvasData.nodes.find(n => n.id === window._targetImageNode);
+                    if (node) {
+                        pushHistory();
+                        node.file = repoPath;
+                        markUnsaved();
+                        renderCanvas(); // Render to ensure the container is ready
+                    }
+                    window._targetImageNode = null;
+                } else {
+                    // Add to canvas at center of viewport
+                    const rect = viewport.getBoundingClientRect();
+                    const x = (rect.width / 2 - translateX) / scale;
+                    const y = (rect.height / 2 - translateY) / scale;
+                    node = createNode('file', x - 150, y - 100, 300, 200, repoPath);
+                }
 
-                const node = createNode('file', x - 150, y - 100, 300, 200, repoPath);
-                node._tempBase64 = reader.result; // For immediate preview
+                if (node) {
+                    node._tempBase64 = reader.result; // For immediate preview
+                    // Re-render node with base64 embedded
+                    const el = container.querySelector(`.canvas-node[data-id="${node.id}"]`);
+                    if (el) {
+                        const contentDiv = el.querySelector('.canvas-node-content');
+                        if (contentDiv) {
+                            contentDiv.innerHTML = `<img src="${node._tempBase64}" alt="Uploaded Image" style="max-width:100%; max-height:100%; display:block; margin:auto; pointer-events:none;" />`;
+                        }
+                    }
+                }
+
                 window.uiToast('Image uploaded and added', 'success');
             } catch (err) {
                 console.error("Upload failed", err);

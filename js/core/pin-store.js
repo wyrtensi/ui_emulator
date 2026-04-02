@@ -72,6 +72,7 @@ class PinStore {
       if (issues.length === 0) break;
 
       for (const issue of issues) {
+      if (issue.state === 'closed') continue;
         const pin = this._parseIssue(issue);
         if (pin) pins.push(pin);
       }

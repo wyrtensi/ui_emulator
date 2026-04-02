@@ -283,6 +283,11 @@
   box-shadow: 0 8px 24px rgba(0,0,0,0.4);
 }
 
+/* View permissions */
+body:not(.is-owner) .canvas-owner-only {
+  display: none !important;
+}
+
 .canvas-tool-btn {
   background: var(--canvas-btn-bg);
   border: 1px solid transparent;
@@ -402,14 +407,15 @@
 /* Resize handles */
 .node-resize-handle {
   position: absolute;
-  width: 10px;
-  height: 10px;
+  width: 16px;
+  height: 16px;
   background: var(--canvas-selected);
   border: 1px solid #fff;
   border-radius: 50%;
   opacity: 0;
   pointer-events: none;
   z-index: 2;
+  box-shadow: 0 0 5px rgba(0,0,0,0.5);
 }
 
 .canvas-node.selected .node-resize-handle {
@@ -417,12 +423,12 @@
   pointer-events: auto;
 }
 
-.nrh-nw { top: -7px; left: -7px; cursor: nwse-resize; }
-.nrh-ne { top: -7px; right: -7px; cursor: nesw-resize; }
-.nrh-se { bottom: -7px; right: -7px; cursor: nwse-resize; }
-.nrh-sw { bottom: -7px; left: -7px; cursor: nesw-resize; }
-.nrh-e  { top: calc(50% - 5px); right: -5px; cursor: ew-resize; }
-.nrh-s  { bottom: -5px; left: calc(50% - 5px); cursor: ns-resize; }
+.nrh-nw { top: -8px; left: -8px; cursor: nwse-resize; }
+.nrh-ne { top: -8px; right: -8px; cursor: nesw-resize; }
+.nrh-se { bottom: -8px; right: -8px; cursor: nwse-resize; }
+.nrh-sw { bottom: -8px; left: -8px; cursor: nesw-resize; }
+.nrh-e  { top: calc(50% - 8px); right: -8px; cursor: ew-resize; }
+.nrh-s  { bottom: -8px; left: calc(50% - 8px); cursor: ns-resize; }
 
 /* Edge connection handles */
 .node-edge-handle {
@@ -696,4 +702,10 @@
     background-color: rgba(107, 122, 250, 0.2);
     pointer-events: none;
     z-index: 1000;
+}
+
+
+/* Ensure path stroke applies to marker */
+.canvas-edge, #canvas-drawing-edge {
+  marker-end: url(#arrowhead);
 }
