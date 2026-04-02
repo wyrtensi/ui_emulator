@@ -98,10 +98,10 @@
       "id": "n_1775169102053",
       "type": "text",
       "x": 811,
-      "y": -371,
+      "y": -370,
       "width": 250,
-      "height": 156,
-      "text": "# gdfg"
+      "height": 158,
+      "text": "- [x] gdfg"
     }
   ],
   "edges": [
