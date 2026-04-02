@@ -46,7 +46,7 @@ No build step, no dependencies to install. Everything runs from vanilla JS + ES 
 ## Project Structure
 
 ```
-ui_ui_emulator/
+ui_emulator/
 ├── index.html              # Main page viewport, overlays, control panel
 ├── css/core.css            # Global styles, panel, toolbar, toast, auth UI
 ├── js/

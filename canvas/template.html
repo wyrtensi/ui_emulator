@@ -1,7 +1,7 @@
 <div class="canvas-window" data-export="canvas-full">
   <div class="canvas-header"></div>
 
-  <button class="canvas-tool-btn canvas-danger" id="canvas-close-top-right" title="Close Canvas" style="position: absolute; top: 16px; right: 16px; z-index: 1000; width: 32px; height: 32px; border-radius: 6px; font-size: 16px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5);">✕</button>
+  <button class="canvas-tool-btn canvas-danger" id="canvas-close-top-right" title="Close Canvas" style="position: absolute; top: 16px; right: 16px; z-index: 1000; width: 32px; height: 32px; border-radius: 6px; font-size: 16px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
 
   <div class="canvas-body">
 
@@ -17,11 +17,11 @@
         </svg>
         Concept Canvas
       </div>
-      <button class="canvas-tool-btn" id="canvas-theme-toggle" title="Toggle Theme (Dark/Light)">🌓</button>
+      <button class="canvas-tool-btn" id="canvas-theme-toggle" title="Toggle Theme (Dark/Light)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></button>
       <button class="canvas-tool-btn" id="canvas-zoom-out" title="Zoom Out">−</button>
       <span class="canvas-zoom-level" id="canvas-zoom-level" style="user-select:none; margin: 0 8px; font-size: 12px; font-weight: bold; width: 40px; text-align: center;">100%</span>
       <button class="canvas-tool-btn" id="canvas-zoom-in" title="Zoom In">+</button>
-      <button class="canvas-tool-btn" id="canvas-fit" title="Fit to Screen">⛶</button>
+      <button class="canvas-tool-btn" id="canvas-fit" title="Fit to Screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg></button>
       <div class="canvas-toolbar-separator canvas-owner-only"></div>
       <button class="canvas-tool-btn canvas-owner-only" data-tool="select" title="Select / Pan (V)" aria-pressed="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="M13 13l6 6"></path></svg>
@@ -37,7 +37,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
         Save
       </button>
-      <button class="canvas-tool-btn canvas-danger" id="canvas-close" title="Close Canvas">✕</button>
+      <button class="canvas-tool-btn canvas-danger" id="canvas-close" title="Close Canvas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
     </div>
 
     <div class="canvas-workspace">
@@ -56,6 +56,9 @@
         </button>
         <button class="node-toolbar-btn" id="nt-edit" title="Edit">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+        </button>
+        <button class="node-toolbar-btn" id="nt-link" title="Copy link to this node">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
         </button>
 
         <!-- Color Palette Dropdown -->
@@ -83,6 +86,8 @@
           <div class="format-item" data-format="italic"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg> Italic</div>
           <div class="format-item" data-format="quote"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 11h-4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6c0 2.5-2 4.5-4 4.5"></path><path d="M19 11h-4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6c0 2.5-2 4.5-4 4.5"></path></svg> Quote</div>
           <div class="format-item" data-format="code"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg> Code</div>
+          <div class="format-sep"></div>
+          <div class="format-item" data-format="link"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg> Insert Link</div>
         </div>
       </div>
 
@@ -94,7 +99,10 @@
           <svg class="canvas-edges" id="canvas-edges">
             <defs>
               <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                <polygon points="0 0, 10 3.5, 0 7" fill="context-stroke"></polygon>
+                <polygon points="0 0, 10 3.5, 0 7" fill="#777"></polygon>
+              </marker>
+              <marker id="arrowhead-selected" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#5599ff"></polygon>
               </marker>
             </defs>
 
@@ -104,24 +112,51 @@
 
           <!-- Edge drawing preview -->
           <svg class="canvas-drawing-layer" id="canvas-drawing-layer">
-            <path id="canvas-drawing-edge" d="" fill="none" stroke="var(--canvas-edge-color)" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrowhead)"></path>
+            <defs>
+              <marker id="arrowhead-draw" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#777"></polygon>
+              </marker>
+            </defs>
+            <path id="canvas-drawing-edge" d="" fill="none" stroke="var(--canvas-edge-color)" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrowhead-draw)"></path>
 
           </svg>
+
+          <!-- Snap alignment guides -->
+          <svg class="canvas-guides-layer" id="canvas-guides-layer"></svg>
         </div>
       </div>
 
+      <!-- Minimap -->
+      <div class="canvas-minimap" id="canvas-minimap">
+        <canvas id="canvas-minimap-canvas" width="180" height="120"></canvas>
+        <div class="canvas-minimap-viewport" id="canvas-minimap-viewport"></div>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="canvas-search-bar" id="canvas-search-bar" hidden>
+        <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;opacity:0.5;flex-shrink:0;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input id="canvas-search-input" placeholder="Search nodes..." autocomplete="off">
+        <span id="canvas-search-count" class="canvas-search-count"></span>
+        <button class="canvas-search-btn" id="canvas-search-prev" title="Previous (Shift+Enter)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><polyline points="18 15 12 9 6 15"></polyline></svg></button>
+        <button class="canvas-search-btn" id="canvas-search-next" title="Next (Enter)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
+        <button class="canvas-search-btn" id="canvas-search-close" title="Close (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      </div>
+
+      <!-- Chat reopen tab (visible when sidebar collapsed) -->
+      <button class="canvas-chat-reopen" id="canvas-chat-reopen" hidden title="Open discussion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></button>
+
       <!-- Integrated Discussion Chat -->
-      <div class="canvas-chat-sidebar">
+      <div class="canvas-chat-sidebar" id="canvas-chat-sidebar">
         <div class="canvas-chat-header">
           <h3>Discussion</h3>
-
+          <button class="canvas-chat-collapse-btn" id="canvas-chat-toggle" title="Collapse chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
         </div>
         <div id="canvas-discussion-messages" class="canvas-discussion-messages">
           <div class="canvas-discussion-loading">Loading chat...</div>
         </div>
         <div class="canvas-discussion-input-wrap">
           <textarea id="canvas-discussion-input" class="canvas-discussion-input" rows="2" placeholder="Join discussion..."></textarea>
-          <button id="canvas-discussion-send" class="canvas-discussion-send" title="Send">➤</button>
+          <button id="canvas-discussion-send" class="canvas-discussion-send" title="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button>
         </div>
       </div>
     </div>

@@ -369,8 +369,8 @@ body:not(.is-owner) .canvas-owner-only {
 
 .canvas-content {
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: 0;
+  left: 0;
   width: 0;
   height: 0;
   overflow: visible;
@@ -454,10 +454,10 @@ body:not(.is-owner) .canvas-owner-only {
   transform: scale(1.5);
 }
 
-.neh-t { top: -6px; left: calc(50% - 6px); }
-.neh-r { top: calc(50% - 6px); right: -6px; }
-.neh-b { bottom: -6px; left: calc(50% - 6px); }
-.neh-l { top: calc(50% - 6px); left: -6px; }
+.neh-t { top: -12px; left: calc(50% - 12px); }
+.neh-r { top: calc(50% - 12px); right: -12px; }
+.neh-b { bottom: -12px; left: calc(50% - 12px); }
+.neh-l { top: calc(50% - 12px); left: -12px; }
 
 /* Text Node Content */
 .node-content-text {
@@ -470,12 +470,47 @@ body:not(.is-owner) .canvas-owner-only {
   line-height: 1.5;
   color: var(--canvas-text);
   word-break: break-word;
+  user-select: text;
+}
+
+.node-content-text a {
+  color: var(--canvas-accent);
+  cursor: pointer;
+  pointer-events: auto;
+  text-decoration: underline;
+}
+
+.node-content-text a:hover {
+  color: var(--canvas-accent-hover);
 }
 
 .node-content-text.editing {
   outline: none;
   cursor: text;
   user-select: text;
+}
+
+/* Textarea for editing nodes — matches preview layout exactly */
+.node-content-textarea {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+  resize: none;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-y: auto;
+  z-index: 5;
 }
 
 /* Image Node Content */
@@ -557,20 +592,6 @@ body:not(.is-owner) .canvas-owner-only {
 }
 
 /* ══ CHAT SIDEBAR ══ */
-.canvas-chat-sidebar {
-  width: 300px;
-  background: var(--canvas-toolbar-bg);
-  border-left: 1px solid var(--canvas-node-border);
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.3s ease, margin-right 0.3s ease;
-  flex-shrink: 0;
-}
-
-.canvas-chat-sidebar.collapsed {
-  transform: translateX(300px);
-  margin-right: -300px;
-}
 
 .canvas-chat-header {
   height: 40px;
@@ -704,8 +725,172 @@ body:not(.is-owner) .canvas-owner-only {
     z-index: 1000;
 }
 
-
-/* Ensure path stroke applies to marker */
-.canvas-edge, #canvas-drawing-edge {
-  marker-end: url(#arrowhead);
+/* ══ MINIMAP ══ */
+.canvas-minimap {
+  position: absolute;
+  bottom: 60px;
+  left: 12px;
+  width: 180px;
+  height: 120px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid var(--canvas-node-border);
+  border-radius: 6px;
+  z-index: 100;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
+
+.canvas-minimap canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.canvas-minimap-viewport {
+  position: absolute;
+  border: 1.5px solid var(--canvas-selected);
+  background: rgba(85, 153, 255, 0.12);
+  pointer-events: none;
+  border-radius: 1px;
+}
+
+/* ══ SEARCH BAR ══ */
+.canvas-search-bar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  background: var(--canvas-toolbar-bg);
+  border: 1px solid var(--canvas-node-border);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  padding: 4px 12px;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  min-width: 280px;
+}
+.canvas-search-bar[hidden] { display: none !important; }
+
+.canvas-search-bar input {
+  background: transparent;
+  border: none;
+  color: var(--canvas-text);
+  font-size: 13px;
+  outline: none;
+  flex-grow: 1;
+  min-width: 0;
+}
+.canvas-search-bar input::placeholder { color: #888; }
+
+.canvas-search-count {
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.canvas-search-btn {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.canvas-search-btn:hover { background: var(--canvas-btn-hover); color: var(--canvas-text); }
+
+/* Search highlight on nodes */
+.canvas-node.search-match {
+  box-shadow: 0 0 0 2px #ff9800, 0 0 12px rgba(255, 152, 0, 0.3);
+}
+.canvas-node.search-current {
+  box-shadow: 0 0 0 3px #ff5722, 0 0 16px rgba(255, 87, 34, 0.5);
+}
+
+/* ══ SNAP GUIDES ══ */
+.canvas-guides-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 49;
+}
+
+.canvas-guide-line {
+  stroke: #00bcd4;
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  opacity: 0.7;
+}
+
+/* ══ COLLAPSIBLE CHAT ══ */
+.canvas-chat-sidebar {
+  width: 300px;
+  background: var(--canvas-toolbar-bg);
+  border-left: 1px solid var(--canvas-node-border);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.25s ease, min-width 0.25s ease, opacity 0.25s ease;
+  flex-shrink: 0;
+  min-width: 300px;
+  overflow: hidden;
+}
+
+.canvas-chat-sidebar.collapsed {
+  width: 0;
+  min-width: 0;
+  border-left: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.canvas-chat-collapse-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 12px;
+  line-height: 1;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.canvas-chat-collapse-btn:hover { color: #fff; background: var(--canvas-btn-hover); }
+
+.canvas-chat-reopen {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 101;
+  width: 32px;
+  height: 48px;
+  background: var(--canvas-toolbar-bg);
+  border: 1px solid var(--canvas-node-border);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  color: var(--canvas-text);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
+}
+.canvas-chat-reopen[hidden] { display: none !important; }
+.canvas-chat-reopen:hover { background: var(--canvas-btn-hover); }
+

@@ -16,6 +16,7 @@ let selectedNode = null;
 let selectedEdge = null;
 let isDraggingNode = false;
 let multiSelectedNodes = new Set();
+let editingNodeId = null; // Track which node is currently being edited
 
 let currentTool = 'select';
 let theme = 'dark';
@@ -32,6 +33,28 @@ let drawEdgeStartSide = null;
 const CANVAS_FILE = 'concept.canvas';
 let hasUnsavedChanges = false;
 let autoSaveInterval = null;
+let isSaving = false;
+
+// Search state
+let searchResults = [];
+let searchIndex = -1;
+
+// Snap guides
+let guidesLayer = null;
+
+// Minimap
+let minimapCanvas = null, minimapCtx = null, minimapEl = null, minimapViewportEl = null;
+let minimapBounds = null; // cached { minX, minY, maxX, maxY }
+
+// Smooth animation
+let animationFrameId = null;
+
+// Nudge history debounce
+let nudgeHistoryPushed = false;
+let nudgeTimeout = null;
+
+// Cleanup functions for window-level event listeners (prevents memory leaks)
+let nodeCleanupFns = [];
 
 // DOM Elements
 let container, viewport, content, nodesLayer, edgesLayer, drawingLayer, drawingEdge;
@@ -70,6 +93,18 @@ export async function initCanvas(winContainer, config) {
     selectionBox = container.querySelector('#canvas-selection-box');
     saveIndicator = container.querySelector('#canvas-saving-indicator');
     nodeToolbar = container.querySelector('#canvas-node-toolbar');
+    guidesLayer = container.querySelector('#canvas-guides-layer');
+
+    // Minimap elements
+    minimapEl = container.querySelector('#canvas-minimap');
+    minimapCanvas = container.querySelector('#canvas-minimap-canvas');
+    minimapCtx = minimapCanvas ? minimapCanvas.getContext('2d') : null;
+    minimapViewportEl = container.querySelector('#canvas-minimap-viewport');
+
+    // Initialize translate so (0,0) starts at center of viewport
+    // This replaces the CSS left:50%;top:50% approach for consistent coordinate mapping
+    translateX = viewport.clientWidth / 2;
+    translateY = viewport.clientHeight / 2;
 
     isOwner = githubAuth.isOwner;
     if (isOwner) {
@@ -87,6 +122,11 @@ export async function initCanvas(winContainer, config) {
 
     // Setup Chat
     setupChat();
+
+    // Setup new features
+    setupMinimap();
+    setupSearch();
+    setupChatToggle();
 
     // Setup viewport interactions
     setupViewport();
@@ -123,11 +163,13 @@ export async function initCanvas(winContainer, config) {
     const closeBtnTop = container.querySelector('#canvas-close-top-right');
     if (closeBtnTop) {
         closeBtnTop.addEventListener('click', () => {
-            if (window.windowManager && window.windowManager.close) {
-                window.windowManager.close('canvas');
-            } else if (window.location.hash.startsWith('#canvas')) {
-                window.location.hash = '';
-            }
+            import('../js/core/window-manager.js').then(m => {
+                m.windowManager.close('canvas');
+            }).catch(() => {
+                if (window.location.hash.startsWith('#canvas')) {
+                    window.location.hash = '';
+                }
+            });
         });
     }
 }
@@ -152,8 +194,9 @@ async function loadCanvasData() {
 }
 
 async function saveCanvasData(isAuto = false) {
-    if (!isOwner) return;
+    if (!isOwner || isSaving) return;
 
+    isSaving = true;
     saveIndicator.hidden = false;
     saveIndicator.textContent = isAuto ? 'Auto-saving...' : 'Saving...';
 
@@ -172,6 +215,8 @@ async function saveCanvasData(isAuto = false) {
         console.error("Save failed", err);
         saveIndicator.textContent = 'Save Failed!';
         setTimeout(() => saveIndicator.hidden = true, 3000);
+    } finally {
+        isSaving = false;
     }
 }
 
@@ -187,6 +232,7 @@ function markUnsaved() {
 
 function setupViewport() {
     viewport.addEventListener('mousedown', (e) => {
+        cancelAnimation();
         // Obsidian style panning: Middle click OR (Spacebar + Left click) OR (Right click on background)
         if (e.button === 1 || (e.button === 0 && window.isSpacePressed) || e.button === 2) {
             isDraggingViewport = true;
@@ -196,8 +242,10 @@ function setupViewport() {
             if (e.button === 1) e.preventDefault(); // prevent auto-scroll ring
         }
 
-        if (e.button === 0 && e.target === viewport && !window.isSpacePressed) {
-            clearSelection();
+        // Allow marquee/tool on empty canvas area (not just viewport element itself)
+        const clickedOnNode = e.target.closest('.canvas-node');
+        if (e.button === 0 && !clickedOnNode && !window.isSpacePressed) {
+            if (!e.shiftKey) clearSelection();
 
             // Text tool - click to create node
             if (currentTool === 'text' && isOwner) {
@@ -230,8 +278,8 @@ function setupViewport() {
 
         if (isDrawingEdge) {
             const rect = viewport.getBoundingClientRect();
-            const mouseX = (e.clientX - rect.left - translateX - (rect.width / 2)) / scale;
-            const mouseY = (e.clientY - rect.top - translateY - (rect.height / 2)) / scale;
+            const mouseX = (e.clientX - rect.left - translateX) / scale;
+            const mouseY = (e.clientY - rect.top - translateY) / scale;
             updateDrawingEdge(mouseX, mouseY);
         }
 
@@ -266,8 +314,8 @@ function setupViewport() {
                 ctxMenu.style.top = e.clientY + 'px';
                 ctxMenu.hidden = false;
 
-                ctxMenuX = (e.clientX - rect.left - translateX - (rect.width / 2)) / scale;
-                ctxMenuY = (e.clientY - rect.top - translateY - (rect.height / 2)) / scale;
+                ctxMenuX = (e.clientX - rect.left - translateX) / scale;
+                ctxMenuY = (e.clientY - rect.top - translateY) / scale;
 
                 // Save context so we can auto-connect after creation
                 window._pendingEdgeConnect = {
@@ -281,24 +329,24 @@ function setupViewport() {
 
         if (isMarqueeSelect) {
             isMarqueeSelect = false;
-            selectionBox.hidden = true;
 
-            // Calculate intersect
-            const rect = viewport.getBoundingClientRect();
-
-            // Selection box coords in viewport space
+            // Capture selection box dimensions BEFORE hiding it
             const selLeft = parseFloat(selectionBox.style.left);
             const selTop = parseFloat(selectionBox.style.top);
             const selRight = selLeft + parseFloat(selectionBox.style.width);
             const selBottom = selTop + parseFloat(selectionBox.style.height);
 
-            // Map logic coords to viewport space to check intersection
-            const vCenterX = rect.width / 2;
-            const vCenterY = rect.height / 2;
+            selectionBox.hidden = true;
+
+            // Only process if the selection box has meaningful size
+            if (selRight - selLeft < 5 && selBottom - selTop < 5) return;
+
+            // Calculate intersect
+            const rect = viewport.getBoundingClientRect();
 
             canvasData.nodes.forEach(n => {
-                const nx1 = vCenterX + translateX + (n.x * scale);
-                const ny1 = vCenterY + translateY + (n.y * scale);
+                const nx1 = translateX + (n.x * scale);
+                const ny1 = translateY + (n.y * scale);
                 const nx2 = nx1 + (n.width * scale);
                 const ny2 = ny1 + (n.height * scale);
 
@@ -344,8 +392,8 @@ function setupViewport() {
         if (e.target === viewport || e.target.closest('.canvas-content') === content && !e.target.closest('.canvas-node')) {
             if (!isOwner) return;
             const rect = viewport.getBoundingClientRect();
-            const mouseX = (e.clientX - rect.left - translateX - (rect.width / 2)) / scale;
-            const mouseY = (e.clientY - rect.top - translateY - (rect.height / 2)) / scale;
+            const mouseX = (e.clientX - rect.left - translateX) / scale;
+            const mouseY = (e.clientY - rect.top - translateY) / scale;
 
             pushHistory();
             const id = 'n_' + Date.now();
@@ -371,13 +419,13 @@ function setupViewport() {
 
             if (linkBtn) linkBtn.style.display = 'block';
 
-            // Hide edit options for non-owners, only show link
+            // When right-clicking a node, HIDE add-node items — only show format/link
             const addText = container.querySelector('#cm-add-text');
             const addImg = container.querySelector('#cm-add-img');
             const addGroup = container.querySelector('#cm-add-group');
-            if (addText) addText.style.display = isOwner ? 'block' : 'none';
-            if (addImg) addImg.style.display = isOwner ? 'block' : 'none';
-            if (addGroup) addGroup.style.display = isOwner ? 'block' : 'none';
+            if (addText) addText.style.display = 'none';
+            if (addImg) addImg.style.display = 'none';
+            if (addGroup) addGroup.style.display = 'none';
 
             ctxMenu.style.left = e.clientX + 'px';
             ctxMenu.style.top = e.clientY + 'px';
@@ -392,7 +440,7 @@ function setupViewport() {
                 if (formatMenu) formatMenu.hidden = false;
             }
 
-        } else if (e.target === viewport || e.target.closest('.canvas-content') === content) {
+        } else if (!e.target.closest('.canvas-node')) {
             e.preventDefault();
             if (!isOwner) return; // Only owners can interact with background right-click
             lastRightClickedNode = null;
@@ -411,14 +459,35 @@ function setupViewport() {
             ctxMenu.hidden = false;
 
             // Calc logic canvas coords
-            ctxMenuX = (e.clientX - rect.left - translateX - (rect.width / 2)) / scale;
-            ctxMenuY = (e.clientY - rect.top - translateY - (rect.height / 2)) / scale;
+            ctxMenuX = (e.clientX - rect.left - translateX) / scale;
+            ctxMenuY = (e.clientY - rect.top - translateY) / scale;
         }
     });
 
     document.addEventListener('click', (e) => {
-        if (ctxMenu && !ctxMenu.hidden) {
+        if (ctxMenu && !ctxMenu.hidden && !ctxMenu.contains(e.target)) {
             ctxMenu.hidden = true;
+        }
+        // Also close format menu and palette when clicking outside them
+        const formatMenu = container.querySelector('#node-format-menu');
+        const palette = container.querySelector('#node-color-palette');
+        if (formatMenu && !formatMenu.hidden && !formatMenu.contains(e.target) && !e.target.closest('#nt-edit')) {
+            formatMenu.hidden = true;
+        }
+        if (palette && !palette.hidden && !palette.contains(e.target) && !e.target.closest('#nt-color')) {
+            palette.hidden = true;
+        }
+    });
+
+    // Close all menus on Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            ctxMenu.hidden = true;
+            const formatMenu = container.querySelector('#node-format-menu');
+            const palette = container.querySelector('#node-color-palette');
+            if (formatMenu) formatMenu.hidden = true;
+            if (palette) palette.hidden = true;
+            closeSearch();
         }
     });
 
@@ -450,37 +519,7 @@ function setupViewport() {
 
     container.querySelector('#cm-make-link')?.addEventListener('click', () => {
         if (!lastRightClickedNode) return;
-
-        let rootName = '';
-        try {
-            const root = findRootOfBranch(lastRightClickedNode.id);
-            rootName = root.type === 'text' ? root.text.split('\n')[0].trim() : '';
-        } catch (e) {
-            // If no root, just use the node itself
-        }
-
-        let nodeName = '';
-
-        if (lastRightClickedNode.type === 'file') {
-            const filename = lastRightClickedNode.file.split('/').pop();
-            nodeName = rootName ? `${rootName}_${filename}`.toLowerCase() : filename.toLowerCase();
-        } else if (lastRightClickedNode.type === 'text') {
-            const firstWord = lastRightClickedNode.text.trim().split(/\s+/)[0] || 'node';
-            nodeName = rootName ? `${rootName}_${firstWord}`.toLowerCase() : firstWord.toLowerCase();
-        } else {
-             nodeName = lastRightClickedNode.id;
-        }
-
-        // Clean up nodeName for markdown link safety
-        nodeName = nodeName.replace(/[^a-z0-9_.-]/g, '');
-
-        const chatInput = document.getElementById('chat-input') || document.getElementById('canvas-discussion-input');
-        if (chatInput) {
-            const linkText = `[Link to Node](#canvas:${nodeName})`;
-            chatInput.value = chatInput.value + (chatInput.value ? ' ' : '') + linkText;
-            chatInput.focus();
-            window.uiToast('Link inserted into chat', 'success');
-        }
+        generateAndInsertNodeLink(lastRightClickedNode);
     });
 
     container.querySelector('#cm-add-group')?.addEventListener('click', () => {
@@ -520,6 +559,7 @@ function setupViewport() {
 
 
     viewport.addEventListener('wheel', (e) => {
+        cancelAnimation();
         if (e.ctrlKey || e.metaKey) {
             // Zoom
             e.preventDefault();
@@ -548,11 +588,27 @@ function setupViewport() {
 function updateTransform() {
     content.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
     zoomLabel.textContent = `${Math.round(scale * 100)}%`;
+
+    // Keep node toolbar positioned correctly during pan/zoom
+    if (selectedNode) {
+        const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
+        if (el) showNodeToolbar(selectedNode, el);
+    }
+
+    renderMinimap();
 }
 
 function renderCanvas() {
+    // Clean up old window-level event listeners to prevent memory leaks
+    nodeCleanupFns.forEach(fn => fn());
+    nodeCleanupFns = [];
+
     nodesLayer.innerHTML = '';
+
+    // Preserve SVG defs (arrowhead markers) - clear only paths
+    const defs = edgesLayer.querySelector('defs');
     edgesLayer.innerHTML = '';
+    if (defs) edgesLayer.appendChild(defs);
 
     // Render edges
     canvasData.edges.forEach(edge => {
@@ -563,6 +619,25 @@ function renderCanvas() {
     canvasData.nodes.forEach(node => {
         renderNode(node);
     });
+
+    // Re-apply search highlights after DOM rebuild
+    reapplySearchHighlights();
+
+    renderMinimap();
+}
+
+// Re-apply search match CSS classes after renderCanvas rebuilds DOM
+function reapplySearchHighlights() {
+    if (searchResults.length === 0) return;
+    searchResults.forEach(n => {
+        const el = nodesLayer.querySelector(`[data-id="${n.id}"]`);
+        if (el) el.classList.add('search-match');
+    });
+    if (searchIndex >= 0 && searchIndex < searchResults.length) {
+        const currentNode = searchResults[searchIndex];
+        const el = nodesLayer.querySelector(`[data-id="${currentNode.id}"]`);
+        if (el) el.classList.add('search-current');
+    }
 }
 
 // -----------------------------------------------------------------
@@ -608,15 +683,15 @@ function renderNode(node) {
         // Handle images
         const fileExt = node.file.split('.').pop().toLowerCase();
         if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileExt)) {
-            // Reference repo root path
             let imgSrc;
             if (node._tempBase64) {
                 imgSrc = node._tempBase64;
             } else {
-                imgSrc = `./${node.file}`;
+                // Construct raw GitHub URL for reliable loading on GitHub Pages
+                const [owner, repo] = config.github.repo.split('/');
+                imgSrc = `https://raw.githubusercontent.com/${owner}/${repo}/main/${node.file}`;
             }
 
-            // If we are on GitHub pages, we can just use the path relative to root
             contentHtml = `
                 <div class="node-title">${node.file.split('/').pop()}</div>
                 <div class="node-content-image">
@@ -650,8 +725,36 @@ function renderNode(node) {
         el.classList.add('selected');
     }
 
+    // Multi-select persistence
+    if (multiSelectedNodes.has(node.id)) {
+        el.classList.add('selected');
+    }
+
+    // Make links in node content clickable
+    const textEl = el.querySelector('.node-content-text');
+    if (textEl) {
+        textEl.addEventListener('click', (e) => {
+            const link = e.target.closest('a');
+            if (!link) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const href = link.getAttribute('href');
+            if (href && href.startsWith('#canvas:')) {
+                window.location.hash = href.substring(1);
+            } else if (href) {
+                window.open(href, '_blank', 'noopener');
+            }
+        });
+    }
+
     // Node interactions
     setupNodeInteractions(el, node);
+
+    // Auto-resize text nodes on initial render if content overflows
+    // Double-rAF ensures the browser has completed layout before measuring
+    if (node.type === 'text' && node.text) {
+        requestAnimationFrame(() => requestAnimationFrame(() => autoResizeNode(node, el)));
+    }
 }
 
 function setupNodeInteractions(el, node) {
@@ -694,11 +797,36 @@ function setupNodeInteractions(el, node) {
             return;
         }
 
+        // If an active textarea exists in this node, don't interfere with text selection
+        if (el.querySelector('.node-content-textarea')) {
+            return; // Let textarea handle its own mouse events for text selection
+        }
+
+        // Shift+Click multi-select
+        if (e.shiftKey && isOwner) {
+            if (multiSelectedNodes.has(node.id)) {
+                multiSelectedNodes.delete(node.id);
+                el.classList.remove('selected');
+            } else {
+                multiSelectedNodes.add(node.id);
+                el.classList.add('selected');
+                // Also add the currently selected single node if any
+                if (selectedNode && !multiSelectedNodes.has(selectedNode.id)) {
+                    multiSelectedNodes.add(selectedNode.id);
+                }
+                multiSelectedNodes.add(node.id);
+            }
+            selectedNode = node;
+            showNodeToolbar(node, el);
+            updateDeleteBtn();
+            return; // Don't start drag on shift-click
+        }
+
         // Select node
         selectNode(node);
 
-        // Drag node
-        if (isOwner && currentTool === 'select' && !e.target.classList.contains('editing')) {
+        // Drag node (but NOT if currently editing this node)
+        if (isOwner && currentTool === 'select' && editingNodeId !== node.id) {
             isDragging = true;
             startX = e.clientX;
             startY = e.clientY;
@@ -791,28 +919,29 @@ function setupNodeInteractions(el, node) {
             if (currentTool !== 'select') return;
             e.stopPropagation();
 
+            // Don't re-enter edit mode if already editing
+            if (editingNodeId === node.id) return;
+
             // Swap HTML to Raw Textarea for Markdown editing
             const textarea = document.createElement('textarea');
             textarea.className = 'node-content-textarea';
-            textarea.style.width = '100%';
-            textarea.style.height = '100%';
-            textarea.style.resize = 'none';
-            textarea.style.border = 'none';
-            textarea.style.background = 'transparent';
-            textarea.style.color = 'inherit';
-            textarea.style.fontFamily = 'inherit';
-            textarea.style.fontSize = 'inherit';
-            textarea.style.outline = 'none';
             textarea.value = node.text || '';
 
+            editingNodeId = node.id;
             textContent.style.display = 'none';
             el.insertBefore(textarea, textContent);
 
             textarea.focus();
 
+            // Prevent node drag when interacting with textarea
+            textarea.addEventListener('mousedown', (me) => {
+                me.stopPropagation();
+            });
+
             textarea.addEventListener('blur', () => {
                 const newText = textarea.value;
                 textarea.remove();
+                editingNodeId = null;
 
                 if (newText !== node.text) {
                     node.text = newText;
@@ -829,10 +958,16 @@ function setupNodeInteractions(el, node) {
                     }
                 }
                 textContent.style.display = '';
+
+                // Auto-resize to fit content
+                autoResizeNode(node, el);
             });
 
             textarea.addEventListener('keydown', (ke) => {
                 // Ignore emulator hotkeys when editing
+                ke.stopPropagation();
+            });
+            textarea.addEventListener('keyup', (ke) => {
                 ke.stopPropagation();
             });
         });
@@ -843,15 +978,47 @@ function setupNodeInteractions(el, node) {
         if (isDragging) {
             const dx = (e.clientX - startX) / scale;
             const dy = (e.clientY - startY) / scale;
-            node.x = Math.round(origLeft + dx);
-            node.y = Math.round(origTop + dy);
 
-            el.style.left = `${node.x}px`;
-            el.style.top = `${node.y}px`;
+            // Multi-select drag: move all selected nodes together
+            if (multiSelectedNodes.size > 0 && multiSelectedNodes.has(node.id)) {
+                // We need start positions for all nodes - store them on first move
+                if (!el._multiDragOrigins) {
+                    el._multiDragOrigins = new Map();
+                    multiSelectedNodes.forEach(id => {
+                        const n = canvasData.nodes.find(nd => nd.id === id);
+                        if (n) el._multiDragOrigins.set(id, { x: n.x, y: n.y });
+                    });
+                }
+                multiSelectedNodes.forEach(id => {
+                    const n = canvasData.nodes.find(nd => nd.id === id);
+                    const orig = el._multiDragOrigins.get(id);
+                    if (n && orig) {
+                        n.x = Math.round(orig.x + dx);
+                        n.y = Math.round(orig.y + dy);
+                        const nel = nodesLayer.querySelector(`[data-id="${id}"]`);
+                        if (nel) {
+                            nel.style.left = `${n.x}px`;
+                            nel.style.top = `${n.y}px`;
+                        }
+                        updateEdgesForNode(id);
+                    }
+                });
+            } else {
+                node.x = Math.round(origLeft + dx);
+                node.y = Math.round(origTop + dy);
+
+                // Snap guides for single-node drag
+                const snap = getSnapGuides(node);
+                if (snap.snapX !== null) node.x = snap.snapX;
+                if (snap.snapY !== null) node.y = snap.snapY;
+                renderGuides(snap.guides);
+
+                el.style.left = `${node.x}px`;
+                el.style.top = `${node.y}px`;
+                updateEdgesForNode(node.id);
+            }
 
             if (selectedNode === node) showNodeToolbar(node, el);
-
-            updateEdgesForNode(node.id);
             markUnsaved();
         } else if (isResizing) {
             const dx = (e.clientX - startX) / scale;
@@ -883,12 +1050,22 @@ function setupNodeInteractions(el, node) {
     };
 
     const onMouseUp = () => {
+        if (isDragging) {
+            el._multiDragOrigins = null;
+            clearGuides();
+        }
         isDragging = false;
         isResizing = false;
     };
 
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
+
+    // Register cleanup so these get removed on next renderCanvas()
+    nodeCleanupFns.push(() => {
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+    });
 }
 
 function createNode(type, x, y, width, height, textOrFile) {
@@ -927,6 +1104,7 @@ function renderEdge(edge) {
 
     if (edge.id === selectedEdge?.id) {
         path.classList.add('selected');
+        path.setAttribute('marker-end', 'url(#arrowhead-selected)');
     }
 }
 
@@ -970,8 +1148,9 @@ function updateDrawingEdge(mouseX, mouseY) {
 
 function createEdge(fromNodeId, fromSide, toNodeId, toSide) {
     // Avoid duplicates
-    pushHistory();
     if (canvasData.edges.some(e => e.fromNode === fromNodeId && e.toNode === toNodeId)) return;
+
+    pushHistory();
 
     const edge = {
         id: generateId(),
@@ -989,11 +1168,11 @@ function createEdge(fromNodeId, fromSide, toNodeId, toSide) {
 function getPortPoint(node, side) {
     if (!node) return { x: 0, y: 0 };
     switch (side) {
-        case 'top': return { x: node.x + node.width / 2, y: node.y };
+        case 'top':    return { x: node.x + node.width / 2, y: node.y };
         case 'bottom': return { x: node.x + node.width / 2, y: node.y + node.height };
-        case 'left': return { x: node.x, y: node.y + node.height / 2 };
-        case 'right': return { x: node.x + node.width, y: node.y + node.height / 2 };
-        default: return { x: node.x + node.width / 2, y: node.y + node.height / 2 };
+        case 'left':   return { x: node.x,                  y: node.y + node.height / 2 };
+        case 'right':  return { x: node.x + node.width,      y: node.y + node.height / 2 };
+        default:       return { x: node.x + node.width / 2, y: node.y + node.height / 2 };
     }
 }
 
@@ -1073,12 +1252,10 @@ function showNodeToolbar(node, el) {
     const y = node.y;
 
     const rect = viewport.getBoundingClientRect();
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
 
     // Calculate the top-center position of the node in viewport coordinates
-    const vX = centerX + translateX + (node.x * scale) + (node.width * scale) / 2;
-    const vY = centerY + translateY + (node.y * scale);
+    const vX = translateX + (node.x * scale) + (node.width * scale) / 2;
+    const vY = translateY + (node.y * scale);
 
     // Shift up to sit above the node
     nodeToolbar.style.left = `${vX}px`;
@@ -1112,12 +1289,12 @@ function setupNodeToolbar() {
 
         const scaleX = rect.width / (selectedNode.width + padding * 2);
         const scaleY = rect.height / (selectedNode.height + padding * 2);
-        scale = Math.min(1, Math.min(scaleX, scaleY));
+        const targetScale = Math.min(1, Math.min(scaleX, scaleY));
 
-        translateX = -(selectedNode.x + selectedNode.width/2) * scale + (rect.width / 2);
-        translateY = -(selectedNode.y + selectedNode.height/2) * scale + (rect.height / 2);
+        const targetTX = -(selectedNode.x + selectedNode.width/2) * targetScale + (rect.width / 2);
+        const targetTY = -(selectedNode.y + selectedNode.height/2) * targetScale + (rect.height / 2);
 
-        updateTransform();
+        animateTo(targetScale, targetTX, targetTY);
     });
 
     nodeToolbar.querySelector('#nt-edit').addEventListener('click', () => {
@@ -1129,6 +1306,12 @@ function setupNodeToolbar() {
                 textContent.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
             }
         }
+    });
+
+    // Link button — generate a canvas link for this node and copy to chat input
+    nodeToolbar.querySelector('#nt-link')?.addEventListener('click', () => {
+        if (!selectedNode) return;
+        generateAndInsertNodeLink(selectedNode);
     });
 
     // Setup color swatches
@@ -1189,6 +1372,7 @@ function setupNodeToolbar() {
                     case 'ul': prefix = '- '; break;
                     case 'ol': prefix = '1. '; break;
                     case 'task': prefix = '- [ ] '; break;
+                    case 'link': prefix = '['; suffix = '](url)'; break;
                 }
 
                 // If currently editing, we can't easily inject without a ref to the textarea/contenteditable.
@@ -1254,8 +1438,13 @@ function setupOwnerTools() {
 
     // Keyboard shortcuts
     container.addEventListener('keydown', (e) => {
-        // Ignore if typing in text box
+        // Ignore if typing in text box (except Ctrl shortcuts)
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+            // Allow Ctrl+F even in inputs
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                openSearch();
+            }
             return;
         }
 
@@ -1270,6 +1459,23 @@ function setupOwnerTools() {
         } else if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
             e.preventDefault();
             saveCanvasData(false);
+        } else if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
+            e.preventDefault();
+            duplicateSelected();
+        } else if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+            e.preventDefault();
+            openSearch();
+        } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            if (selectedNode || multiSelectedNodes.size > 0) {
+                e.preventDefault();
+                const step = e.shiftKey ? 10 : 1;
+                let dx = 0, dy = 0;
+                if (e.key === 'ArrowUp') dy = -step;
+                if (e.key === 'ArrowDown') dy = step;
+                if (e.key === 'ArrowLeft') dx = -step;
+                if (e.key === 'ArrowRight') dx = step;
+                nudgeSelected(dx, dy);
+            }
         }
     });
 
@@ -1333,8 +1539,9 @@ async function uploadAndAddImage(file, filename) {
                     if (node) {
                         pushHistory();
                         node.file = repoPath;
+                        node._tempBase64 = reader.result; // Set BEFORE render for immediate preview
                         markUnsaved();
-                        renderCanvas(); // Render to ensure the container is ready
+                        renderCanvas();
                     }
                     window._targetImageNode = null;
                 } else {
@@ -1343,16 +1550,15 @@ async function uploadAndAddImage(file, filename) {
                     const x = (rect.width / 2 - translateX) / scale;
                     const y = (rect.height / 2 - translateY) / scale;
                     node = createNode('file', x - 150, y - 100, 300, 200, repoPath);
-                }
-
-                if (node) {
-                    node._tempBase64 = reader.result; // For immediate preview
-                    // Re-render node with base64 embedded
-                    const el = container.querySelector(`.canvas-node[data-id="${node.id}"]`);
-                    if (el) {
-                        const contentDiv = el.querySelector('.canvas-node-content');
-                        if (contentDiv) {
-                            contentDiv.innerHTML = `<img src="${node._tempBase64}" alt="Uploaded Image" style="max-width:100%; max-height:100%; display:block; margin:auto; pointer-events:none;" />`;
+                    if (node) {
+                        node._tempBase64 = reader.result;
+                        // Re-render this node with base64 preview
+                        const el = container.querySelector(`.canvas-node[data-id="${node.id}"]`);
+                        if (el) {
+                            const imgEl = el.querySelector('.node-content-image img');
+                            if (imgEl) {
+                                imgEl.src = reader.result;
+                            }
                         }
                     }
                 }
@@ -1470,11 +1676,13 @@ function setupZoomControls() {
         const scaleX = rect.width / width;
         const scaleY = rect.height / height;
 
-        scale = Math.min(1, Math.min(scaleX, scaleY));
-        translateX = -(minX - padding) * scale;
-        translateY = -(minY - padding) * scale;
+        const targetScale = Math.min(1, Math.min(scaleX, scaleY));
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        const targetTX = rect.width / 2 - centerX * targetScale;
+        const targetTY = rect.height / 2 - centerY * targetScale;
 
-        updateTransform();
+        animateTo(targetScale, targetTX, targetTY);
     });
 }
 
@@ -1494,6 +1702,46 @@ function hideOverlay() {
 }
 
 // -----------------------------------------------------------------
+// HELPERS FOR NODE LINKS
+// -----------------------------------------------------------------
+
+function getNodeLinkName(node) {
+    let rootName = '';
+    try {
+        const root = findRootOfBranch(node.id);
+        rootName = root.type === 'text' ? root.text.split('\n')[0].trim() : '';
+    } catch (e) { /* no root */ }
+
+    let nodeName = '';
+    if (node.type === 'file') {
+        const filename = node.file.split('/').pop();
+        nodeName = rootName ? `${rootName}_${filename}`.toLowerCase() : filename.toLowerCase();
+    } else if (node.type === 'text') {
+        const firstWord = node.text.trim().split(/\s+/)[0] || 'node';
+        nodeName = rootName ? `${rootName}_${firstWord}`.toLowerCase() : firstWord.toLowerCase();
+    } else {
+        nodeName = node.id;
+    }
+    return nodeName.replace(/[^a-z0-9_.-]/g, '');
+}
+
+function generateAndInsertNodeLink(node) {
+    const nodeName = getNodeLinkName(node);
+    const chatInput = document.getElementById('chat-input') || document.getElementById('canvas-discussion-input');
+    if (chatInput) {
+        const linkText = `[Link to Node](#canvas:${nodeName})`;
+        chatInput.value = chatInput.value + (chatInput.value ? ' ' : '') + linkText;
+        chatInput.focus();
+        window.uiToast('Link inserted into chat', 'success');
+    } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(`#canvas:${nodeName}`).then(() => {
+            window.uiToast('Canvas link copied to clipboard', 'success');
+        });
+    }
+}
+
+// -----------------------------------------------------------------
 // DIRECT LINKS
 // -----------------------------------------------------------------
 
@@ -1501,41 +1749,24 @@ function checkHashForDirectLink() {
     // Format: #canvas:NodeName_firstWord or #canvas:NodeName_image.jpg
     const hash = window.location.hash;
     if (hash.startsWith('#canvas:')) {
-        // Find matching node based on text/file rules requested by user
         const targetDesc = decodeURIComponent(hash.substring(8)).toLowerCase();
-
-        // Logic to trace backward to root to construct full "path name" if needed,
-        // but for zooming we just search all nodes to see if their derived name matches targetDesc
 
         let targetNode = null;
         for (const node of canvasData.nodes) {
-            let nodeName = '';
-
-            // Reconstruct path name (naive implementation matching user's request)
-            const root = findRootOfBranch(node.id);
-            const rootName = root.type === 'text' ? root.text.split('\n')[0].trim() : '';
-
-            if (node.type === 'file') {
-                const filename = node.file.split('/').pop();
-                nodeName = `${rootName}_${filename}`.toLowerCase();
-            } else if (node.type === 'text') {
-                const firstWord = node.text.trim().split(/\s+/)[0] || '';
-                nodeName = `${rootName}_${firstWord}`.toLowerCase();
-            }
-
-            if (nodeName === targetDesc || nodeName.includes(targetDesc)) {
+            const nodeName = getNodeLinkName(node);
+            if (nodeName === targetDesc || nodeName.includes(targetDesc) || targetDesc.includes(nodeName)) {
                 targetNode = node;
                 break;
             }
         }
 
         if (targetNode) {
-            // Pan and zoom slightly to target
-            scale = 1.0;
+            // Pan and zoom smoothly to target
+            const targetScale = 1.0;
             const rect = viewport.getBoundingClientRect();
-            translateX = -(targetNode.x + targetNode.width/2) * scale + (rect.width / 2);
-            translateY = -(targetNode.y + targetNode.height/2) * scale + (rect.height / 2);
-            updateTransform();
+            const targetTX = -(targetNode.x + targetNode.width/2) * targetScale + (rect.width / 2);
+            const targetTY = -(targetNode.y + targetNode.height/2) * targetScale + (rect.height / 2);
+            animateTo(targetScale, targetTX, targetTY);
             selectNode(targetNode);
         } else {
             console.warn("Target canvas node not found for hash:", targetDesc);
@@ -1670,12 +1901,26 @@ async function fetchDiscussion(messagesEl) {
             el.style.fontSize = '13px';
             el.style.padding = '8px';
             el.style.borderBottom = '1px solid var(--canvas-node-border)';
+
+            // Escape HTML then linkify URLs and #canvas: links
+            let bodyHtml = msg.body
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;')
+                .replace(/\n/g, '<br>');
+            // Linkify URLs
+            bodyHtml = bodyHtml.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--canvas-accent)">$1</a>');
+            // Linkify #canvas: links
+            bodyHtml = bodyHtml.replace(/(#canvas:[a-zA-Z0-9_.\-]+)/g, '<a href="$1" class="canvas-link">$1</a>');
+
             el.innerHTML = `
                 <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
                     <img src="${msg.author.avatarUrl}" width="16" height="16" style="border-radius:50%">
                     <strong>${msg.author.login}</strong>
                 </div>
-                <div style="color:var(--canvas-text);word-break:break-word">${msg.body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;').replace(/\n/g, '<br>')}</div>
+                <div style="color:var(--canvas-text);word-break:break-word">${bodyHtml}</div>
             `;
             messagesEl.appendChild(el);
         }
@@ -1721,6 +1966,550 @@ function createGroupNode(x, y) {
         height: 200,
         label: 'New Group'
     };
+}
+
+// -----------------------------------------------------------------
+// MINIMAP
+// -----------------------------------------------------------------
+
+function setupMinimap() {
+    if (!minimapEl || !minimapCanvas) return;
+
+    let isDraggingMinimap = false;
+
+    function minimapToCanvas(e) {
+        if (!minimapBounds) return;
+        const mr = minimapCanvas.getBoundingClientRect();
+        const mx = e.clientX - mr.left;
+        const my = e.clientY - mr.top;
+
+        const { minX, minY, maxX, maxY, mScale, pad } = minimapBounds;
+        // Convert minimap pixel to canvas coord
+        const canvasX = (mx / (mr.width)) * ((maxX - minX) + pad * 2) + (minX - pad);
+        const canvasY = (my / (mr.height)) * ((maxY - minY) + pad * 2) + (minY - pad);
+
+        // Pan so this canvas coord is at center of viewport
+        const rect = viewport.getBoundingClientRect();
+        translateX = -(canvasX) * scale + (rect.width / 2);
+        translateY = -(canvasY) * scale + (rect.height / 2);
+        updateTransform();
+    }
+
+    minimapEl.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        isDraggingMinimap = true;
+        minimapToCanvas(e);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (isDraggingMinimap) {
+            minimapToCanvas(e);
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        isDraggingMinimap = false;
+    });
+}
+
+function renderMinimap() {
+    if (!minimapCtx || !minimapCanvas) return;
+    const ctx = minimapCtx;
+    const w = minimapCanvas.width;
+    const h = minimapCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    if (canvasData.nodes.length === 0) {
+        minimapBounds = null;
+        minimapViewportEl.style.display = 'none';
+        return;
+    }
+
+    // Get bounding box of all nodes
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    canvasData.nodes.forEach(n => {
+        if (n.x < minX) minX = n.x;
+        if (n.y < minY) minY = n.y;
+        if (n.x + n.width > maxX) maxX = n.x + n.width;
+        if (n.y + n.height > maxY) maxY = n.y + n.height;
+    });
+
+    const pad = 80;
+    const totalW = (maxX - minX) + pad * 2;
+    const totalH = (maxY - minY) + pad * 2;
+    const mScale = Math.min(w / totalW, h / totalH);
+
+    minimapBounds = { minX, minY, maxX, maxY, mScale, pad };
+
+    const offsetX = (w - totalW * mScale) / 2;
+    const offsetY = (h - totalH * mScale) / 2;
+
+    // Draw nodes
+    const colorMap = { '1': '#ff5252', '2': '#ff9800', '3': '#ffd600', '4': '#4caf50', '5': '#00bcd4', '6': '#ba68c8' };
+
+    canvasData.nodes.forEach(n => {
+        const rx = offsetX + (n.x - minX + pad) * mScale;
+        const ry = offsetY + (n.y - minY + pad) * mScale;
+        const rw = Math.max(2, n.width * mScale);
+        const rh = Math.max(2, n.height * mScale);
+
+        if (n.type === 'group') {
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2, 2]);
+            ctx.strokeRect(rx, ry, rw, rh);
+            ctx.setLineDash([]);
+        } else {
+            ctx.fillStyle = n.color && colorMap[n.color] ? colorMap[n.color] : '#555';
+            ctx.fillRect(rx, ry, rw, rh);
+        }
+    });
+
+    // Draw edges as thin lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 0.5;
+    canvasData.edges.forEach(edge => {
+        const from = canvasData.nodes.find(n => n.id === edge.fromNode);
+        const to = canvasData.nodes.find(n => n.id === edge.toNode);
+        if (!from || !to) return;
+        const fx = offsetX + (from.x + from.width / 2 - minX + pad) * mScale;
+        const fy = offsetY + (from.y + from.height / 2 - minY + pad) * mScale;
+        const tx = offsetX + (to.x + to.width / 2 - minX + pad) * mScale;
+        const ty = offsetY + (to.y + to.height / 2 - minY + pad) * mScale;
+        ctx.beginPath();
+        ctx.moveTo(fx, fy);
+        ctx.lineTo(tx, ty);
+        ctx.stroke();
+    });
+
+    // Draw viewport rectangle
+    const vRect = viewport.getBoundingClientRect();
+    // Visible canvas bounds: top-left and bottom-right in canvas coords
+    const visLeft = -translateX / scale;
+    const visTop = -translateY / scale;
+    const visRight = visLeft + vRect.width / scale;
+    const visBottom = visTop + vRect.height / scale;
+
+    const vx = offsetX + (visLeft - minX + pad) * mScale;
+    const vy = offsetY + (visTop - minY + pad) * mScale;
+    const vw = (visRight - visLeft) * mScale;
+    const vh = (visBottom - visTop) * mScale;
+
+    minimapViewportEl.style.display = '';
+    minimapViewportEl.style.left = Math.max(0, vx) + 'px';
+    minimapViewportEl.style.top = Math.max(0, vy) + 'px';
+    minimapViewportEl.style.width = Math.min(w - Math.max(0, vx), Math.max(4, vw)) + 'px';
+    minimapViewportEl.style.height = Math.min(h - Math.max(0, vy), Math.max(4, vh)) + 'px';
+}
+
+// -----------------------------------------------------------------
+// SEARCH
+// -----------------------------------------------------------------
+
+function setupSearch() {
+    const bar = container.querySelector('#canvas-search-bar');
+    const input = container.querySelector('#canvas-search-input');
+    const countEl = container.querySelector('#canvas-search-count');
+    const prevBtn = container.querySelector('#canvas-search-prev');
+    const nextBtn = container.querySelector('#canvas-search-next');
+    const closeBtn = container.querySelector('#canvas-search-close');
+
+    if (!bar || !input) return;
+
+    input.addEventListener('input', () => {
+        performSearch(input.value);
+        updateSearchUI();
+    });
+
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (e.shiftKey) navigateSearch(-1);
+            else navigateSearch(1);
+        }
+        if (e.key === 'Escape') {
+            closeSearch();
+        }
+        e.stopPropagation();
+    });
+
+    prevBtn.addEventListener('click', () => navigateSearch(-1));
+    nextBtn.addEventListener('click', () => navigateSearch(1));
+    closeBtn.addEventListener('click', closeSearch);
+
+    function updateSearchUI() {
+        if (searchResults.length === 0) {
+            countEl.textContent = input.value ? 'No results' : '';
+        } else {
+            countEl.textContent = `${searchIndex + 1} of ${searchResults.length}`;
+        }
+    }
+
+    function performSearch(query) {
+        // Clear old highlights
+        nodesLayer.querySelectorAll('.search-match, .search-current').forEach(el => {
+            el.classList.remove('search-match', 'search-current');
+        });
+
+        if (!query.trim()) {
+            searchResults = [];
+            searchIndex = -1;
+            return;
+        }
+
+        const q = query.toLowerCase();
+        searchResults = canvasData.nodes.filter(n => {
+            if (n.type === 'text' && n.text && n.text.toLowerCase().includes(q)) return true;
+            if (n.type === 'file' && n.file && n.file.toLowerCase().includes(q)) return true;
+            if (n.type === 'group' && n.label && n.label.toLowerCase().includes(q)) return true;
+            return false;
+        });
+
+        searchIndex = searchResults.length > 0 ? 0 : -1;
+
+        // Highlight all matches
+        searchResults.forEach(n => {
+            const el = nodesLayer.querySelector(`[data-id="${n.id}"]`);
+            if (el) el.classList.add('search-match');
+        });
+
+        // Highlight current
+        if (searchIndex >= 0) {
+            const currentNode = searchResults[searchIndex];
+            const el = nodesLayer.querySelector(`[data-id="${currentNode.id}"]`);
+            if (el) el.classList.add('search-current');
+            zoomToSearchResult(currentNode);
+        }
+    }
+
+    function navigateSearch(dir) {
+        if (searchResults.length === 0) return;
+
+        // Remove current highlight
+        if (searchIndex >= 0) {
+            const prevNode = searchResults[searchIndex];
+            const el = nodesLayer.querySelector(`[data-id="${prevNode.id}"]`);
+            if (el) el.classList.remove('search-current');
+        }
+
+        searchIndex = (searchIndex + dir + searchResults.length) % searchResults.length;
+
+        const currentNode = searchResults[searchIndex];
+        const el = nodesLayer.querySelector(`[data-id="${currentNode.id}"]`);
+        if (el) el.classList.add('search-current');
+        zoomToSearchResult(currentNode);
+        updateSearchUI();
+    }
+
+    function zoomToSearchResult(node) {
+        const rect = viewport.getBoundingClientRect();
+        const targetScale = Math.min(1, Math.max(scale, 0.6));
+        const targetTX = -(node.x + node.width / 2) * targetScale + (rect.width / 2);
+        const targetTY = -(node.y + node.height / 2) * targetScale + (rect.height / 2);
+        animateTo(targetScale, targetTX, targetTY, 200);
+    }
+}
+
+function openSearch() {
+    const bar = container.querySelector('#canvas-search-bar');
+    const input = container.querySelector('#canvas-search-input');
+    if (!bar) return;
+    bar.hidden = false;
+    input.value = '';
+    input.focus();
+    searchResults = [];
+    searchIndex = -1;
+    container.querySelector('#canvas-search-count').textContent = '';
+}
+
+function closeSearch() {
+    const bar = container.querySelector('#canvas-search-bar');
+    if (bar) bar.hidden = true;
+    // Clear highlights
+    nodesLayer.querySelectorAll('.search-match, .search-current').forEach(el => {
+        el.classList.remove('search-match', 'search-current');
+    });
+    searchResults = [];
+    searchIndex = -1;
+}
+
+// -----------------------------------------------------------------
+// SNAP GUIDES
+// -----------------------------------------------------------------
+
+function getSnapGuides(dragNode) {
+    const THRESH = 8;
+    const guides = [];
+    let snapX = null, snapY = null;
+
+    const dl = dragNode.x;
+    const dr = dragNode.x + dragNode.width;
+    const dcx = dragNode.x + dragNode.width / 2;
+    const dt = dragNode.y;
+    const db = dragNode.y + dragNode.height;
+    const dcy = dragNode.y + dragNode.height / 2;
+
+    for (const other of canvasData.nodes) {
+        if (other.id === dragNode.id) continue;
+        if (multiSelectedNodes.has(other.id)) continue;
+
+        const ol = other.x;
+        const or_ = other.x + other.width;
+        const ocx = other.x + other.width / 2;
+        const ot = other.y;
+        const ob = other.y + other.height;
+        const ocy = other.y + other.height / 2;
+
+        // Horizontal alignment checks (snap X)
+        const xChecks = [
+            { drag: dl, other: ol, snapVal: ol },                            // left ↔ left
+            { drag: dl, other: or_, snapVal: or_ },                          // left ↔ right
+            { drag: dr, other: ol, snapVal: ol - dragNode.width },           // right ↔ left
+            { drag: dr, other: or_, snapVal: or_ - dragNode.width },         // right ↔ right
+            { drag: dcx, other: ocx, snapVal: ocx - dragNode.width / 2 },   // center ↔ center
+        ];
+
+        for (const chk of xChecks) {
+            if (Math.abs(chk.drag - chk.other) < THRESH) {
+                if (snapX === null) snapX = chk.snapVal;
+                // Vertical guide line at the align-x coordinate
+                const lineX = chk.other;
+                const lineTop = Math.min(dt, db, ot, ob) - 20;
+                const lineBot = Math.max(dt, db, ot, ob) + 20;
+                guides.push({ x1: lineX, y1: lineTop, x2: lineX, y2: lineBot });
+            }
+        }
+
+        // Vertical alignment checks (snap Y)
+        const yChecks = [
+            { drag: dt, other: ot, snapVal: ot },                            // top ↔ top
+            { drag: dt, other: ob, snapVal: ob },                            // top ↔ bottom
+            { drag: db, other: ot, snapVal: ot - dragNode.height },          // bottom ↔ top
+            { drag: db, other: ob, snapVal: ob - dragNode.height },          // bottom ↔ bottom
+            { drag: dcy, other: ocy, snapVal: ocy - dragNode.height / 2 },  // center ↔ center
+        ];
+
+        for (const chk of yChecks) {
+            if (Math.abs(chk.drag - chk.other) < THRESH) {
+                if (snapY === null) snapY = chk.snapVal;
+                const lineY = chk.other;
+                const lineLeft = Math.min(dl, dr, ol, or_) - 20;
+                const lineRight = Math.max(dl, dr, ol, or_) + 20;
+                guides.push({ x1: lineLeft, y1: lineY, x2: lineRight, y2: lineY });
+            }
+        }
+    }
+
+    return { snapX, snapY, guides };
+}
+
+function renderGuides(guides) {
+    if (!guidesLayer) return;
+    guidesLayer.innerHTML = '';
+    for (const g of guides) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', g.x1);
+        line.setAttribute('y1', g.y1);
+        line.setAttribute('x2', g.x2);
+        line.setAttribute('y2', g.y2);
+        line.setAttribute('class', 'canvas-guide-line');
+        guidesLayer.appendChild(line);
+    }
+}
+
+function clearGuides() {
+    if (guidesLayer) guidesLayer.innerHTML = '';
+}
+
+// -----------------------------------------------------------------
+// DUPLICATE
+// -----------------------------------------------------------------
+
+function duplicateSelected() {
+    if (!isOwner) return;
+
+    pushHistory();
+    const idMap = new Map();
+    const newNodes = [];
+
+    const nodesToClone = multiSelectedNodes.size > 0
+        ? canvasData.nodes.filter(n => multiSelectedNodes.has(n.id))
+        : (selectedNode ? [selectedNode] : []);
+
+    if (nodesToClone.length === 0) return;
+
+    for (const n of nodesToClone) {
+        const newId = generateId();
+        idMap.set(n.id, newId);
+        const clone = { ...n, id: newId, x: n.x + 30, y: n.y + 30 };
+        // Deep copy mutable fields
+        if (clone._tempBase64) delete clone._tempBase64;
+        newNodes.push(clone);
+        canvasData.nodes.push(clone);
+    }
+
+    // Duplicate edges between cloned nodes
+    if (nodesToClone.length > 1) {
+        canvasData.edges.forEach(edge => {
+            if (idMap.has(edge.fromNode) && idMap.has(edge.toNode)) {
+                canvasData.edges.push({
+                    id: generateId(),
+                    fromNode: idMap.get(edge.fromNode),
+                    fromSide: edge.fromSide,
+                    toNode: idMap.get(edge.toNode),
+                    toSide: edge.toSide,
+                });
+            }
+        });
+    }
+
+    // Select newly created nodes
+    clearSelection();
+    if (newNodes.length === 1) {
+        selectNode(newNodes[0]);
+    } else {
+        multiSelectedNodes = new Set(newNodes.map(n => n.id));
+        selectedNode = newNodes[0];
+    }
+
+    markUnsaved();
+    renderCanvas();
+}
+
+// -----------------------------------------------------------------
+// SMOOTH ANIMATION
+// -----------------------------------------------------------------
+
+function animateTo(targetScale, targetTX, targetTY, duration = 300) {
+    cancelAnimation();
+
+    const startScale = scale;
+    const startTX = translateX;
+    const startTY = translateY;
+    const startTime = performance.now();
+
+    function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+    }
+
+    function step(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / duration);
+        const t = easeOutCubic(progress);
+
+        scale = startScale + (targetScale - startScale) * t;
+        translateX = startTX + (targetTX - startTX) * t;
+        translateY = startTY + (targetTY - startTY) * t;
+        updateTransform();
+
+        if (progress < 1) {
+            animationFrameId = requestAnimationFrame(step);
+        } else {
+            animationFrameId = null;
+        }
+    }
+
+    animationFrameId = requestAnimationFrame(step);
+}
+
+function cancelAnimation() {
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+}
+
+// -----------------------------------------------------------------
+// COLLAPSIBLE CHAT SIDEBAR
+// -----------------------------------------------------------------
+
+function setupChatToggle() {
+    const sidebar = container.querySelector('#canvas-chat-sidebar');
+    const toggleBtn = container.querySelector('#canvas-chat-toggle');
+    const reopenBtn = container.querySelector('#canvas-chat-reopen');
+
+    if (!toggleBtn || !sidebar) return;
+
+    const chevronLeft = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><polyline points="15 18 9 12 15 6"></polyline></svg>';
+    const chevronRight = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><polyline points="9 6 15 12 9 18"></polyline></svg>';
+
+    toggleBtn.addEventListener('click', () => {
+        const isCollapsed = sidebar.classList.toggle('collapsed');
+        toggleBtn.innerHTML = isCollapsed ? chevronRight : chevronLeft;
+        if (reopenBtn) reopenBtn.hidden = !isCollapsed;
+    });
+
+    if (reopenBtn) {
+        reopenBtn.addEventListener('click', () => {
+            sidebar.classList.remove('collapsed');
+            toggleBtn.innerHTML = chevronLeft;
+            reopenBtn.hidden = true;
+        });
+    }
+}
+
+// -----------------------------------------------------------------
+// ARROW KEY NUDGE
+// -----------------------------------------------------------------
+
+function nudgeSelected(dx, dy) {
+    if (!isOwner) return;
+
+    // Debounced history push — only push once per nudge burst
+    if (!nudgeHistoryPushed) {
+        pushHistory();
+        nudgeHistoryPushed = true;
+    }
+    clearTimeout(nudgeTimeout);
+    nudgeTimeout = setTimeout(() => { nudgeHistoryPushed = false; }, 500);
+
+    const nodesToNudge = multiSelectedNodes.size > 0
+        ? canvasData.nodes.filter(n => multiSelectedNodes.has(n.id))
+        : (selectedNode ? [selectedNode] : []);
+
+    for (const node of nodesToNudge) {
+        node.x += dx;
+        node.y += dy;
+        const el = nodesLayer.querySelector(`[data-id="${node.id}"]`);
+        if (el) {
+            el.style.left = `${node.x}px`;
+            el.style.top = `${node.y}px`;
+        }
+        updateEdgesForNode(node.id);
+    }
+
+    if (selectedNode) {
+        const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
+        if (el) showNodeToolbar(selectedNode, el);
+    }
+
+    markUnsaved();
+    renderMinimap();
+}
+
+// -----------------------------------------------------------------
+// AUTO-RESIZE TEXT NODES
+// -----------------------------------------------------------------
+
+function autoResizeNode(node, el) {
+    if (node.type !== 'text') return;
+    const textEl = el.querySelector('.node-content-text');
+    if (!textEl) return;
+
+    // Measure the content's natural height
+    const scrollH = textEl.scrollHeight;
+    const newHeight = Math.max(80, scrollH + 4); // 4px buffer
+
+    if (newHeight !== node.height) {
+        node.height = newHeight;
+        el.style.height = `${newHeight}px`;
+        updateEdgesForNode(node.id);
+        if (selectedNode && selectedNode.id === node.id) {
+            showNodeToolbar(node, el);
+        }
+        renderMinimap();
+    }
 }
 
 // -----------------------------------------------------------------
