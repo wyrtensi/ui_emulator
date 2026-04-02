@@ -299,6 +299,21 @@ function setupViewport() {
             selectionBox.style.top = top + 'px';
             selectionBox.style.width = width + 'px';
             selectionBox.style.height = height + 'px';
+
+            // Live preview: highlight nodes that intersect the selection box
+            canvasData.nodes.forEach(n => {
+                const nx1 = translateX + (n.x * scale);
+                const ny1 = translateY + (n.y * scale);
+                const nx2 = nx1 + (n.width * scale);
+                const ny2 = ny1 + (n.height * scale);
+                const nodeEl = nodesLayer.querySelector(`[data-id="${n.id}"]`);
+                if (!nodeEl) return;
+                if (nx1 < left + width && nx2 > left && ny1 < top + height && ny2 > top) {
+                    nodeEl.classList.add('marquee-hover');
+                } else {
+                    nodeEl.classList.remove('marquee-hover');
+                }
+            });
         }
     });
 
@@ -306,8 +321,8 @@ function setupViewport() {
         isDraggingViewport = false;
         if (currentTool === 'select') viewport.style.cursor = 'grab';
 
-        // Restore toolbar position after panning if a node is still selected
-        if (selectedNode) {
+        // Restore toolbar position after panning if a node is still selected and toolbar visible
+        if (selectedNode && nodeToolbar && !nodeToolbar.hidden) {
             const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
             if (el) showNodeToolbar(selectedNode, el);
         }
@@ -337,6 +352,9 @@ function setupViewport() {
 
         if (isMarqueeSelect) {
             isMarqueeSelect = false;
+
+            // Clear marquee hover highlights
+            nodesLayer.querySelectorAll('.marquee-hover').forEach(el => el.classList.remove('marquee-hover'));
 
             // Capture selection box dimensions BEFORE hiding it
             const selLeft = parseFloat(selectionBox.style.left);
@@ -418,55 +436,17 @@ function setupViewport() {
 
     viewport.addEventListener('contextmenu', (e) => {
         const nodeEl = e.target.closest('.canvas-node');
-        const linkBtn = container.querySelector('#cm-make-link');
 
         if (nodeEl) {
+            // Right-click on a node: just prevent default browser menu, no custom menu
             e.preventDefault();
             const nodeId = nodeEl.dataset.id || nodeEl.id.replace('node-', '');
             lastRightClickedNode = canvasData.nodes.find(n => n.id === nodeId);
 
-            if (linkBtn) linkBtn.style.display = 'block';
-
-            // When right-clicking a node, HIDE add-node items — only show format/link
-            const addText = container.querySelector('#cm-add-text');
-            const addImg = container.querySelector('#cm-add-img');
-            const addGroup = container.querySelector('#cm-add-group');
-            if (addText) addText.style.display = 'none';
-            if (addImg) addImg.style.display = 'none';
-            if (addGroup) addGroup.style.display = 'none';
-
-            // Show rename option only for image nodes
-            const renameImg = container.querySelector('#cm-rename-img');
-            if (renameImg) renameImg.style.display = (lastRightClickedNode && lastRightClickedNode.type === 'file' && lastRightClickedNode.file) ? 'block' : 'none';
-
-            ctxMenu.style.left = e.clientX + 'px';
-            ctxMenu.style.top = e.clientY + 'px';
-            ctxMenu.hidden = false;
-
-            // If it's a text node, also show format menu
-            if (isOwner && lastRightClickedNode && lastRightClickedNode.type === 'text') {
-                const formatMenu = container.querySelector('#node-format-menu');
-                const palette = container.querySelector('#node-color-palette');
-                selectNode(lastRightClickedNode);
-                if (palette) palette.hidden = true;
-                if (formatMenu) formatMenu.hidden = false;
-            }
-
         } else if (!e.target.closest('.canvas-node')) {
             e.preventDefault();
-            if (!isOwner) return; // Only owners can interact with background right-click
+            if (!isOwner) return;
             lastRightClickedNode = null;
-            if (linkBtn) linkBtn.style.display = 'none';
-
-            const addText = container.querySelector('#cm-add-text');
-            const addImg = container.querySelector('#cm-add-img');
-            const addGroup = container.querySelector('#cm-add-group');
-            if (addText) addText.style.display = 'block';
-            if (addImg) addImg.style.display = 'block';
-            if (addGroup) addGroup.style.display = 'block';
-
-            const renameImg = container.querySelector('#cm-rename-img');
-            if (renameImg) renameImg.style.display = 'none';
 
             const rect = viewport.getBoundingClientRect();
             ctxMenu.style.left = e.clientX + 'px';
@@ -537,31 +517,6 @@ function setupViewport() {
         input.click();
     });
 
-    container.querySelector('#cm-make-link')?.addEventListener('click', () => {
-        if (!lastRightClickedNode) return;
-        generateAndInsertNodeLink(lastRightClickedNode);
-    });
-
-    container.querySelector('#cm-rename-img')?.addEventListener('click', () => {
-        if (!lastRightClickedNode || lastRightClickedNode.type !== 'file' || !lastRightClickedNode.file) return;
-        const oldPath = lastRightClickedNode.file;
-        const oldName = oldPath.split('/').pop();
-        const newName = prompt('Enter new image name:', oldName);
-        if (!newName || newName === oldName) return;
-
-        const newPath = oldPath.replace(oldName, newName);
-        // Check for conflicts
-        if (canvasData.nodes.some(n => n.type === 'file' && n.file === newPath && n.id !== lastRightClickedNode.id)) {
-            window.uiToast(`File "${newName}" already exists. Choose a different name.`, 'error');
-            return;
-        }
-        pushHistory();
-        lastRightClickedNode.file = newPath;
-        markUnsaved();
-        renderCanvas();
-        window.uiToast(`Image renamed to ${newName}`, 'success');
-    });
-
     container.querySelector('#cm-add-group')?.addEventListener('click', () => {
         pushHistory();
         const id = 'n_' + Date.now();
@@ -629,8 +584,8 @@ function updateTransform() {
     content.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
     zoomLabel.textContent = `${Math.round(scale * 100)}%`;
 
-    // Keep node toolbar positioned correctly during pan/zoom
-    if (selectedNode) {
+    // Only reposition toolbar if it's currently visible (don't re-show hidden toolbar)
+    if (selectedNode && nodeToolbar && !nodeToolbar.hidden) {
         const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
         if (el) showNodeToolbar(selectedNode, el);
     }
@@ -1199,6 +1154,7 @@ function updateDrawingEdge(mouseX, mouseY) {
 
     const d = getBezierPath(p1, p2, drawEdgeStartSide, 'left'); // fake dest side for curve
     drawingEdge.setAttribute('d', d);
+    drawingEdge.setAttribute('marker-end', markerUrl('arrowhead-draw'));
 }
 
 function createEdge(fromNodeId, fromSide, toNodeId, toSide) {
@@ -1264,6 +1220,12 @@ function selectNode(node) {
         showNodeToolbar(node, el);
     }
     updateDeleteBtn();
+
+    // Auto-show format menu for text nodes so formatting is immediately accessible
+    if (node.type === 'text') {
+        const formatMenu = container.querySelector('#node-format-menu');
+        if (formatMenu) formatMenu.hidden = false;
+    }
 }
 
 function selectEdge(edge) {
@@ -1404,12 +1366,10 @@ function setupNodeToolbar() {
 
     const formatMenu = nodeToolbar.querySelector('#node-format-menu');
 
-    // Add right click context menu to nodes
-
-    // Close menus when clicking elsewhere
+    // Close menus when clicking on empty canvas (but not when clicking on node or format items)
     viewport.addEventListener('mousedown', (e) => {
-        if (e.button === 0 && formatMenu && !e.target.closest('.node-format-menu') && !e.target.closest('.node-color-palette')) {
-            formatMenu.hidden = true;
+        if (e.button === 0 && !e.target.closest('.node-format-menu') && !e.target.closest('.node-color-palette') && !e.target.closest('.canvas-node')) {
+            if (formatMenu) formatMenu.hidden = true;
             palette.hidden = true;
         }
     });
@@ -1420,7 +1380,44 @@ function setupNodeToolbar() {
             item.addEventListener('click', (e) => {
                 if (!selectedNode || selectedNode.type !== 'text') return;
 
-                const fmt = e.target.dataset.format;
+                const fmt = e.target.closest('.format-item')?.dataset.format;
+                if (!fmt) return;
+
+                const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
+                const textContent = el.querySelector('.node-content-text');
+                const textarea = el.querySelector('.node-content-textarea');
+
+                // Handle "clear formatting" separately
+                if (fmt === 'clear') {
+                    if (textarea) {
+                        const start = textarea.selectionStart;
+                        const end = textarea.selectionEnd;
+                        const text = textarea.value;
+                        const selected = text.substring(start, end);
+                        if (selected) {
+                            // Strip markdown syntax from selected text
+                            const cleaned = selected
+                                .replace(/^#{1,3}\s/gm, '')
+                                .replace(/\*\*(.+?)\*\*/g, '$1')
+                                .replace(/\*(.+?)\*/g, '$1')
+                                .replace(/`(.+?)`/g, '$1')
+                                .replace(/^>\s/gm, '')
+                                .replace(/^- \[[ xX]\]\s/gm, '')
+                                .replace(/^- /gm, '')
+                                .replace(/^\d+\.\s/gm, '')
+                                .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+                            textarea.value = text.substring(0, start) + cleaned + text.substring(end);
+                            textarea.focus();
+                            textarea.setSelectionRange(start, start + cleaned.length);
+                        }
+                    } else {
+                        // Enter edit mode for clear formatting
+                        textContent.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+                    }
+                    markUnsaved();
+                    return;
+                }
+
                 let prefix = '';
                 let suffix = '';
 
@@ -1438,15 +1435,8 @@ function setupNodeToolbar() {
                     case 'link': prefix = '['; suffix = '](url)'; break;
                 }
 
-                // If currently editing, we can't easily inject without a ref to the textarea/contenteditable.
-                // If we aren't editing, we just prepend/wrap the whole text
-                const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
-                const textContent = el.querySelector('.node-content-text');
-
-                const textarea = el.querySelector('.node-content-textarea');
-
                 if (textarea) {
-                    // Insert into active textarea
+                    // Insert into active textarea — wrap selected text or insert at cursor
                     const start = textarea.selectionStart;
                     const end = textarea.selectionEnd;
                     const text = textarea.value;
@@ -1461,16 +1451,10 @@ function setupNodeToolbar() {
                         const newTextarea = el.querySelector('.node-content-textarea');
                         if (newTextarea) {
                             const text = newTextarea.value;
-                            // For line-level formats (headings, lists, quotes), apply to last line or append
-                            if (['h1','h2','h3','ul','ol','task','quote'].includes(fmt)) {
-                                newTextarea.value = text + (text ? '\n' : '') + prefix + 'text' + suffix;
-                            } else {
-                                // For inline formats (bold, italic, code, link), wrap 'text' placeholder
-                                newTextarea.value = text + (text ? '\n' : '') + prefix + 'text' + suffix;
-                            }
+                            newTextarea.value = text + (text ? '\n' : '') + prefix + 'text' + suffix;
                             newTextarea.focus();
                             // Select the placeholder 'text' so user can immediately type
-                            const insertedAt = newTextarea.value.length - suffix.length - 4; // 4 = 'text'.length
+                            const insertedAt = newTextarea.value.length - suffix.length - 4;
                             newTextarea.setSelectionRange(insertedAt, insertedAt + 4);
                         }
                     }, 50);
@@ -1599,6 +1583,11 @@ async function uploadAndAddImage(file, filename) {
                     node = canvasData.nodes.find(n => n.id === window._targetImageNode);
                     if (node) {
                         pushHistory();
+                        // Convert text node to file node if needed
+                        if (node.type === 'text') {
+                            node.type = 'file';
+                            delete node.text;
+                        }
                         node.file = repoPath;
                         node._tempBase64 = reader.result; // Set BEFORE render for immediate preview
                         markUnsaved();

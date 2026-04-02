@@ -430,6 +430,13 @@ body:not(.is-owner) .canvas-owner-only {
 .nrh-e  { top: calc(50% - 8px); right: -8px; cursor: ew-resize; }
 .nrh-s  { bottom: -8px; left: calc(50% - 8px); cursor: ns-resize; }
 
+/* Hide mid-edge resize handles when node is selected — edge handles take those positions */
+.canvas-node.selected .nrh-e,
+.canvas-node.selected .nrh-s {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Edge connection handles */
 .node-edge-handle {
   position: absolute;
@@ -444,20 +451,28 @@ body:not(.is-owner) .canvas-owner-only {
 }
 
 .canvas-node:hover .node-edge-handle,
+.canvas-node.selected .node-edge-handle,
 .canvas-viewport.tool-edge .node-edge-handle {
-  opacity: 0.5;
+  opacity: 0.7;
 }
 
 .node-edge-handle:hover {
   opacity: 1;
   background: var(--canvas-selected);
-  transform: scale(1.5);
+  transform: scale(1.3);
+  box-shadow: 0 0 6px rgba(85, 153, 255, 0.6);
 }
 
 .neh-t { top: -12px; left: calc(50% - 12px); }
 .neh-r { top: calc(50% - 12px); right: -12px; }
 .neh-b { bottom: -12px; left: calc(50% - 12px); }
 .neh-l { top: calc(50% - 12px); left: -12px; }
+
+/* Marquee selection preview highlight */
+.canvas-node.marquee-hover {
+  border-color: var(--canvas-selected);
+  box-shadow: 0 0 0 1px var(--canvas-selected), 0 4px 12px rgba(0,0,0,0.2);
+}
 
 /* Text Node Content */
 .node-content-text {
