@@ -6,7 +6,7 @@
       "x": 1747,
       "y": 951,
       "width": 200,
-      "height": 106,
+      "height": 108,
       "text": "New node"
     },
     {
@@ -15,16 +15,16 @@
       "x": 1740,
       "y": 36,
       "width": 200,
-      "height": 106,
+      "height": 108,
       "text": "New node"
     },
     {
       "id": "n_1775079368011",
       "type": "text",
-      "x": -375,
-      "y": -73,
+      "x": -383,
+      "y": 100,
       "width": 250,
-      "height": 156,
+      "height": 158,
       "text": "jhjhjkhjl\n"
     },
     {
@@ -33,7 +33,7 @@
       "x": -992,
       "y": -711,
       "width": 314,
-      "height": 215,
+      "height": 217,
       "text": "gdfgdfg\nbcbcvb\n",
       "color": "3"
     },
@@ -43,7 +43,7 @@
       "x": -436,
       "y": -629,
       "width": 250,
-      "height": 198,
+      "height": 200,
       "text": "gdfgfdg\n## text\n*text*",
       "color": "3"
     },
@@ -63,7 +63,7 @@
       "x": 263,
       "y": 236,
       "width": 200,
-      "height": 106,
+      "height": 108,
       "text": "New node"
     },
     {
@@ -81,7 +81,7 @@
       "x": 646,
       "y": -75,
       "width": 250,
-      "height": 156,
+      "height": 158,
       "text": "fsdfsdf\n"
     },
     {
