@@ -6,7 +6,7 @@
       "x": 1747,
       "y": 951,
       "width": 200,
-      "height": 106,
+      "height": 108,
       "text": "New node"
     },
     {
@@ -15,7 +15,7 @@
       "x": 1740,
       "y": 36,
       "width": 200,
-      "height": 106,
+      "height": 108,
       "text": "New node"
     },
     {
@@ -24,7 +24,7 @@
       "x": -375,
       "y": -73,
       "width": 250,
-      "height": 156,
+      "height": 158,
       "text": "jhjhjkhjl\n"
     },
     {
@@ -33,7 +33,7 @@
       "x": 176,
       "y": -67,
       "width": 314,
-      "height": 215,
+      "height": 217,
       "text": "gdfgdfg\nbcbcvb\n",
       "color": "3"
     },
@@ -63,7 +63,7 @@
       "x": 263,
       "y": 236,
       "width": 200,
-      "height": 106,
+      "height": 108,
       "text": "New node"
     },
     {
@@ -72,9 +72,9 @@
       "x": 208,
       "y": -342,
       "width": 458,
-      "height": 192,
-      "text": "dasfdsffsdfsddasfafdfsdfsdffsd",
-      "html": "<h1>dasfdsf</h1><blockquote><ol><li>fsdfsd</li><li><i>dasfafd</i></li><li><i><b>fsdfsdf</b></i></li><li><input type=\"checkbox\">fsd<span class=\"task-item-text\"></span></li><li><br></li></ol></blockquote>"
+      "height": 202,
+      "text": "dasfdsffsdfsddasfafdfsdfsdfdsaddsad",
+      "html": "<h1>dasfdsf</h1><blockquote><ol><li>fsdfsd</li><li><i>dasfafd</i></li><li><i><b>fsdfsdf</b></i></li></ol><div>dsaddsad</div><div><div><ol><li><br></li></ol></div></div><div><br></div></blockquote>"
     },
     {
       "id": "n_1775145509143",
@@ -82,7 +82,7 @@
       "x": 645,
       "y": -73,
       "width": 250,
-      "height": 158,
+      "height": 160,
       "text": "fsdfsdf\n",
       "html": "<p>fsdfsdf</p>"
     },
