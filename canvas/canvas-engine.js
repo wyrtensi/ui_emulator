@@ -17,6 +17,7 @@ let selectedEdge = null;
 let isDraggingNode = false;
 let multiSelectedNodes = new Set();
 let editingNodeId = null; // Track which node is currently being edited
+let preserveTextareaForFormat = false;
 
 let currentTool = 'select';
 let theme = 'dark';
@@ -60,6 +61,61 @@ let nodeCleanupFns = [];
 // DOM Elements
 let container, viewport, content, nodesLayer, edgesLayer, drawingLayer, drawingEdge;
 let zoomLabel, saveIndicator, nodeToolbar;
+
+async function ensureMarkedLoaded() {
+    if (typeof marked !== 'undefined' && typeof marked.parse === 'function') return;
+    if (window.__uiMarkedLoadPromise) {
+        await window.__uiMarkedLoadPromise;
+        return;
+    }
+
+    window.__uiMarkedLoadPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js';
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+
+    try {
+        await window.__uiMarkedLoadPromise;
+    } catch (err) {
+        console.warn('marked.js failed to load, using plain-text fallback');
+    }
+}
+
+function renderMarkdown(text) {
+    const raw = text || '';
+    try {
+        if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
+            return marked.parse(raw);
+        }
+    } catch (err) {
+        // Fall through to escaped text
+    }
+
+    return raw
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
+}
+
+function stripMarkdownFormatting(text) {
+    return (text || '')
+        .replace(/^#{1,6}\s+/gm, '')
+        .replace(/^>\s?/gm, '')
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/__(.*?)__/g, '$1')
+        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/_(.*?)_/g, '$1')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/^\s*[-*]\s+\[[ xX]\]\s+/gm, '')
+        .replace(/^\s*[-*]\s+/gm, '')
+        .replace(/^\s*\d+\.\s+/gm, '')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1');
+}
 
 export async function initCanvas(winContainer, config) {
     container = winContainer;
@@ -134,6 +190,9 @@ export async function initCanvas(winContainer, config) {
     setupViewport();
     setupThemeToggle();
     setupZoomControls();
+
+    // Ensure markdown parser is available before first render
+    await ensureMarkedLoaded();
 
     // Load data
     await loadCanvasData();
@@ -235,6 +294,14 @@ function markUnsaved() {
 function setupViewport() {
     viewport.addEventListener('mousedown', (e) => {
         cancelAnimation();
+        const clickedOnNode = e.target.closest('.canvas-node');
+        const clickedOnToolbarUi = e.target.closest('.canvas-node-toolbar') || e.target.closest('.node-format-menu') || e.target.closest('.node-color-palette');
+
+        // Deselect when clicking empty canvas (left/right), so toolbar always hides reliably
+        if (!clickedOnNode && !clickedOnToolbarUi && !window.isSpacePressed && !e.shiftKey && (e.button === 0 || e.button === 2)) {
+            clearSelection();
+        }
+
         // Obsidian style panning: Middle click OR (Spacebar + Left click) OR (Right click on background)
         if (e.button === 1 || (e.button === 0 && window.isSpacePressed) || e.button === 2) {
             isDraggingViewport = true;
@@ -247,10 +314,7 @@ function setupViewport() {
         }
 
         // Allow marquee/tool on empty canvas area (not just viewport element itself)
-        const clickedOnNode = e.target.closest('.canvas-node');
         if (e.button === 0 && !clickedOnNode && !window.isSpacePressed) {
-            if (!e.shiftKey) clearSelection();
-
             // Text tool - click to create node
             if (currentTool === 'text' && isOwner) {
                 const rect = viewport.getBoundingClientRect();
@@ -445,6 +509,7 @@ function setupViewport() {
             e.preventDefault();
             const nodeId = nodeEl.dataset.id || nodeEl.id.replace('node-', '');
             lastRightClickedNode = canvasData.nodes.find(n => n.id === nodeId);
+            const formatMenu = container.querySelector('#node-format-menu');
 
             if (isOwner && lastRightClickedNode && lastRightClickedNode.type === 'text') {
                 // Select the node if not already selected
@@ -452,13 +517,14 @@ function setupViewport() {
                     selectNode(lastRightClickedNode);
                 }
                 // Position format menu at cursor
-                const formatMenu = container.querySelector('#node-format-menu');
                 if (formatMenu) {
                     formatMenu.style.position = 'fixed';
                     formatMenu.style.left = e.clientX + 'px';
                     formatMenu.style.top = e.clientY + 'px';
                     formatMenu.hidden = false;
                 }
+            } else if (formatMenu) {
+                formatMenu.hidden = true;
             }
 
         } else if (!e.target.closest('.canvas-node')) {
@@ -484,6 +550,9 @@ function setupViewport() {
         // Also close format menu and palette when clicking outside them
         const formatMenu = container.querySelector('#node-format-menu');
         const palette = container.querySelector('#node-color-palette');
+        if (!e.target.closest('.node-format-menu')) {
+            preserveTextareaForFormat = false;
+        }
         if (formatMenu && !formatMenu.hidden && !formatMenu.contains(e.target) && !e.target.closest('#nt-edit')) {
             formatMenu.hidden = true;
         }
@@ -608,10 +677,13 @@ function updateTransform() {
     content.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
     zoomLabel.textContent = `${Math.round(scale * 100)}%`;
 
-    // Only reposition toolbar if it's currently visible (don't re-show hidden toolbar)
+    // Keep toolbar anchored to selected node, and hard-hide any ghost toolbar
     if (selectedNode && nodeToolbar && !nodeToolbar.hidden) {
         const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
         if (el) showNodeToolbar(selectedNode, el);
+        else hideNodeToolbar();
+    } else if (!selectedNode && nodeToolbar && !nodeToolbar.hidden) {
+        hideNodeToolbar();
     }
 
     renderMinimap();
@@ -685,15 +757,7 @@ function renderNode(node) {
     } else if (node.type === 'text') {
         let renderedHtml = node.text || '';
         const isEmpty = !node.text || !node.text.trim();
-        try {
-            if (typeof marked !== 'undefined') {
-                renderedHtml = marked.parse(renderedHtml);
-            } else {
-                renderedHtml = renderedHtml.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-            }
-        } catch(e) {
-            renderedHtml = renderedHtml.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-        }
+        renderedHtml = renderMarkdown(renderedHtml);
         // Enable checkbox interaction
         renderedHtml = renderedHtml.replace(/disabled=""/g, '').replace(/disabled/g, '');
         if (isEmpty) {
@@ -889,11 +953,20 @@ function setupNodeInteractions(el, node) {
         el.addEventListener('dblclick', (e) => {
             if (currentTool !== 'select') return;
             e.stopPropagation();
-            // Open the file dialog for this node
-            const input = container.querySelector('#canvas-upload-image');
-            // We need to pass the target node so the upload logic knows who to replace!
-            window._targetImageNode = node.id;
-            input.click();
+            const currentName = node.file ? node.file.split('/').pop() : '';
+            const newName = prompt('Rename image:', currentName);
+            if (!newName || newName === currentName) return;
+
+            pushHistory();
+            const dir = node.file && node.file.includes('/')
+                ? node.file.substring(0, node.file.lastIndexOf('/') + 1)
+                : 'canvas_uploads/';
+            node.file = dir + newName;
+            markUnsaved();
+            renderCanvas();
+
+            const refreshed = canvasData.nodes.find(n => n.id === node.id);
+            if (refreshed) selectNode(refreshed);
         });
     }
 
@@ -924,15 +997,7 @@ function setupNodeInteractions(el, node) {
                     markUnsaved();
 
                     // re-render the node text
-                    try {
-                        if (typeof marked !== 'undefined') {
-                            textContent.innerHTML = marked.parse(node.text);
-                        } else {
-                            textContent.innerHTML = node.text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-                        }
-                    } catch(err) {
-                        textContent.innerHTML = node.text;
-                    }
+                    textContent.innerHTML = renderMarkdown(node.text);
                     // Enable checkbox interaction
                     textContent.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.removeAttribute('disabled'));
                 }
@@ -963,6 +1028,10 @@ function setupNodeInteractions(el, node) {
             });
 
             textarea.addEventListener('blur', () => {
+                if (preserveTextareaForFormat) {
+                    return;
+                }
+
                 const newText = textarea.value;
                 textarea.remove();
                 editingNodeId = null;
@@ -971,15 +1040,7 @@ function setupNodeInteractions(el, node) {
                     node.text = newText;
                     markUnsaved();
                     // Re-render just this node's content
-                    try {
-                        if (typeof marked !== 'undefined') {
-                            textContent.innerHTML = marked.parse(node.text);
-                        } else {
-                            textContent.innerHTML = node.text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-                        }
-                    } catch(err) {
-                        textContent.innerHTML = node.text;
-                    }
+                    textContent.innerHTML = renderMarkdown(node.text);
                     // Enable checkbox interaction
                     textContent.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.removeAttribute('disabled'));
                 }
@@ -1133,11 +1194,13 @@ function renderEdge(edge) {
 
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('class', 'canvas-edge');
-    if (edge.color) path.style.stroke = edge.color;
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke-width', '2.5');
+    path.setAttribute('stroke', edge.color || '#8fa3c7');
 
     const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
     arrow.setAttribute('class', 'canvas-edge-arrow');
-    if (edge.color) arrow.style.fill = edge.color;
+    arrow.setAttribute('fill', edge.color || '#8fa3c7');
 
     g.appendChild(path);
     g.appendChild(arrow);
@@ -1174,10 +1237,12 @@ function updateEdgePath(edge, groupEl) {
     // Draw cubic bezier
     const result = getBezierPath(p1, p2, edge.fromSide, edge.toSide);
     pathEl.setAttribute('d', result.d);
+    if (edge.color) pathEl.setAttribute('stroke', edge.color);
 
     // Draw arrowhead triangle at endpoint
     const tri = getArrowhead(p2, result.cp2);
     arrowEl.setAttribute('points', tri.map(p => `${p.x},${p.y}`).join(' '));
+    if (edge.color) arrowEl.setAttribute('fill', edge.color);
 }
 
 function updateEdgesForNode(nodeId) {
@@ -1197,9 +1262,11 @@ function updateDrawingEdge(mouseX, mouseY) {
 
     const result = getBezierPath(p1, p2, drawEdgeStartSide, 'left');
     drawingEdge.setAttribute('d', result.d);
+    drawingEdge.setAttribute('stroke', '#8fa3c7');
 
     // Update drawing arrowhead
     const tri = getArrowhead(p2, result.cp2, 8);
+    drawingArrow.setAttribute('fill', '#8fa3c7');
     drawingArrow.setAttribute('points', tri.map(p => `${p.x},${p.y}`).join(' '));
 }
 
@@ -1257,10 +1324,6 @@ function getBezierPath(p1, p2, side1, side2) {
     };
 }
 
-// -----------------------------------------------------------------
-// SELECTION & TOOLS
-// -----------------------------------------------------------------
-
 function selectNode(node) {
     clearSelection();
     selectedNode = node;
@@ -1270,18 +1333,6 @@ function selectNode(node) {
         showNodeToolbar(node, el);
     }
     updateDeleteBtn();
-
-    // Auto-show format menu for text nodes so formatting is immediately accessible
-    if (node.type === 'text') {
-        const formatMenu = container.querySelector('#node-format-menu');
-        if (formatMenu && nodeToolbar) {
-            // Position format menu below the toolbar, right-aligned
-            const tbRect = nodeToolbar.getBoundingClientRect();
-            formatMenu.style.left = (tbRect.right - 140) + 'px';
-            formatMenu.style.top = (tbRect.bottom + 4) + 'px';
-            formatMenu.hidden = false;
-        }
-    }
 }
 
 function selectEdge(edge) {
@@ -1318,13 +1369,7 @@ function clearSelection() {
 }
 
 function showNodeToolbar(node, el) {
-    if (!isOwner) return;
-
-    // Calculate position relative to content layer
-    const x = node.x + (node.width / 2);
-    const y = node.y;
-
-    const rect = viewport.getBoundingClientRect();
+    if (!isOwner || !nodeToolbar) return;
 
     // Calculate the top-center position of the node in viewport coordinates
     const vX = translateX + (node.x * scale) + (node.width * scale) / 2;
@@ -1436,6 +1481,11 @@ function setupNodeToolbar() {
     });
 
     const formatMenu = nodeToolbar.querySelector('#node-format-menu');
+    if (formatMenu) {
+        formatMenu.addEventListener('mousedown', () => {
+            preserveTextareaForFormat = true;
+        });
+    }
 
     // Close menus when clicking on empty canvas (but not when clicking on node or format items)
     viewport.addEventListener('mousedown', (e) => {
@@ -1445,92 +1495,125 @@ function setupNodeToolbar() {
         }
     });
 
+    function applyFormatToTextarea(textarea, fmt) {
+        const text = textarea.value;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const hasSelection = end > start;
+
+        if (fmt === 'clear') {
+            if (hasSelection) {
+                const selected = text.substring(start, end);
+                const cleaned = stripMarkdownFormatting(selected);
+                textarea.value = text.substring(0, start) + cleaned + text.substring(end);
+                textarea.focus();
+                textarea.setSelectionRange(start, start + cleaned.length);
+            } else {
+                const cleanedAll = stripMarkdownFormatting(text);
+                textarea.value = cleanedAll;
+                textarea.focus();
+                textarea.setSelectionRange(0, cleanedAll.length);
+            }
+            return;
+        }
+
+        const linePrefixFormats = new Set(['h1', 'h2', 'h3', 'quote', 'ul', 'ol', 'task']);
+        if (linePrefixFormats.has(fmt)) {
+            const rangeStart = text.lastIndexOf('\n', start - 1) + 1;
+            const rangeEndIdx = text.indexOf('\n', hasSelection ? end : start);
+            const rangeEnd = rangeEndIdx === -1 ? text.length : rangeEndIdx;
+            const segment = text.substring(rangeStart, rangeEnd);
+            const lines = segment.split('\n');
+            const normalized = lines.map((line, idx) => {
+                const clean = line
+                    .replace(/^#{1,6}\s+/, '')
+                    .replace(/^>\s+/, '')
+                    .replace(/^\s*[-*]\s+\[[ xX]\]\s+/, '')
+                    .replace(/^\s*[-*]\s+/, '')
+                    .replace(/^\s*\d+\.\s+/, '');
+
+                if (fmt === 'h1') return `# ${clean}`;
+                if (fmt === 'h2') return `## ${clean}`;
+                if (fmt === 'h3') return `### ${clean}`;
+                if (fmt === 'quote') return `> ${clean}`;
+                if (fmt === 'ul') return `- ${clean}`;
+                if (fmt === 'task') return `- [ ] ${clean}`;
+                if (fmt === 'ol') return `${idx + 1}. ${clean}`;
+                return line;
+            }).join('\n');
+
+            textarea.value = text.substring(0, rangeStart) + normalized + text.substring(rangeEnd);
+            textarea.focus();
+            textarea.setSelectionRange(rangeStart, rangeStart + normalized.length);
+            return;
+        }
+
+        let prefix = '';
+        let suffix = '';
+
+        switch (fmt) {
+            case 'bold': prefix = '**'; suffix = '**'; break;
+            case 'italic': prefix = '*'; suffix = '*'; break;
+            case 'code': prefix = '`'; suffix = '`'; break;
+            case 'link': prefix = '['; suffix = '](url)'; break;
+            default: return;
+        }
+
+        if (hasSelection) {
+            const selected = text.substring(start, end);
+            textarea.value = text.substring(0, start) + prefix + selected + suffix + text.substring(end);
+            textarea.focus();
+            textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
+        } else {
+            textarea.value = text.substring(0, start) + prefix + suffix + text.substring(start);
+            textarea.focus();
+            textarea.setSelectionRange(start + prefix.length, start + prefix.length);
+        }
+    }
+
     // Handle format actions
     if (formatMenu) {
         formatMenu.querySelectorAll('.format-item').forEach(item => {
             item.addEventListener('click', (e) => {
-                if (!selectedNode || selectedNode.type !== 'text') return;
+                if (!selectedNode || selectedNode.type !== 'text') {
+                    preserveTextareaForFormat = false;
+                    return;
+                }
 
                 const fmt = e.target.closest('.format-item')?.dataset.format;
-                if (!fmt) return;
+                if (!fmt) {
+                    preserveTextareaForFormat = false;
+                    return;
+                }
 
                 const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
                 const textContent = el.querySelector('.node-content-text');
                 const textarea = el.querySelector('.node-content-textarea');
 
-                // Handle "clear formatting" separately
-                if (fmt === 'clear') {
-                    if (textarea) {
-                        const start = textarea.selectionStart;
-                        const end = textarea.selectionEnd;
-                        const text = textarea.value;
-                        const selected = text.substring(start, end);
-                        if (selected) {
-                            // Strip markdown syntax from selected text
-                            const cleaned = selected
-                                .replace(/^#{1,3}\s/gm, '')
-                                .replace(/\*\*(.+?)\*\*/g, '$1')
-                                .replace(/\*(.+?)\*/g, '$1')
-                                .replace(/`(.+?)`/g, '$1')
-                                .replace(/^>\s/gm, '')
-                                .replace(/^- \[[ xX]\]\s/gm, '')
-                                .replace(/^- /gm, '')
-                                .replace(/^\d+\.\s/gm, '')
-                                .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-                            textarea.value = text.substring(0, start) + cleaned + text.substring(end);
-                            textarea.focus();
-                            textarea.setSelectionRange(start, start + cleaned.length);
-                        }
-                    } else {
-                        // Enter edit mode for clear formatting
+                if (!textarea) {
+                    if (fmt === 'clear') {
+                        selectedNode.text = stripMarkdownFormatting(selectedNode.text || '');
+                        markUnsaved();
+                        renderCanvas();
+                        const refreshed = canvasData.nodes.find(n => n.id === selectedNode.id);
+                        if (refreshed) selectNode(refreshed);
+                        preserveTextareaForFormat = false;
+                        if (formatMenu) formatMenu.hidden = true;
+                        return;
+                    }
+
+                    // Open editor, but don't inject placeholder text
+                    if (textContent) {
                         textContent.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
                     }
-                    markUnsaved();
+                    preserveTextareaForFormat = false;
+                    if (formatMenu) formatMenu.hidden = true;
                     return;
                 }
 
-                let prefix = '';
-                let suffix = '';
+                applyFormatToTextarea(textarea, fmt);
 
-                switch (fmt) {
-                    case 'h1': prefix = '# '; break;
-                    case 'h2': prefix = '## '; break;
-                    case 'h3': prefix = '### '; break;
-                    case 'bold': prefix = '**'; suffix = '**'; break;
-                    case 'italic': prefix = '*'; suffix = '*'; break;
-                    case 'quote': prefix = '> '; break;
-                    case 'code': prefix = '`'; suffix = '`'; break;
-                    case 'ul': prefix = '- '; break;
-                    case 'ol': prefix = '1. '; break;
-                    case 'task': prefix = '- [ ] '; break;
-                    case 'link': prefix = '['; suffix = '](url)'; break;
-                }
-
-                if (textarea) {
-                    // Insert into active textarea — wrap selected text or insert at cursor
-                    const start = textarea.selectionStart;
-                    const end = textarea.selectionEnd;
-                    const text = textarea.value;
-                    const selected = text.substring(start, end) || 'text';
-                    textarea.value = text.substring(0, start) + prefix + selected + suffix + text.substring(end);
-                    textarea.focus();
-                    textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
-                } else {
-                    // Enter edit mode first, then apply formatting
-                    textContent.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-                    setTimeout(() => {
-                        const newTextarea = el.querySelector('.node-content-textarea');
-                        if (newTextarea) {
-                            const text = newTextarea.value;
-                            newTextarea.value = text + (text ? '\n' : '') + prefix + 'text' + suffix;
-                            newTextarea.focus();
-                            // Select the placeholder 'text' so user can immediately type
-                            const insertedAt = newTextarea.value.length - suffix.length - 4;
-                            newTextarea.setSelectionRange(insertedAt, insertedAt + 4);
-                        }
-                    }, 50);
-                }
-
+                preserveTextareaForFormat = false;
                 if (formatMenu) formatMenu.hidden = true;
                 markUnsaved();
             });
@@ -1850,7 +1933,7 @@ function generateAndInsertNodeLink(node) {
     const nodeName = getNodeLinkName(node);
     const chatInput = document.getElementById('chat-input') || document.getElementById('canvas-discussion-input');
     if (chatInput) {
-        const linkText = `[Link to Node](#canvas:${nodeName})`;
+        const linkText = `[Open ${nodeName}](#canvas:${nodeName})`;
         chatInput.value = chatInput.value + (chatInput.value ? ' ' : '') + linkText;
         chatInput.focus();
         window.uiToast('Link inserted into chat', 'success');
@@ -2023,18 +2106,28 @@ async function fetchDiscussion(messagesEl) {
             el.style.padding = '8px';
             el.style.borderBottom = '1px solid var(--canvas-node-border)';
 
-            // Escape HTML then linkify URLs and #canvas: links
+            // Escape HTML then linkify markdown links, raw URLs and #canvas links
             let bodyHtml = msg.body
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;')
-                .replace(/\n/g, '<br>');
-            // Linkify URLs
-            bodyHtml = bodyHtml.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--canvas-accent)">$1</a>');
-            // Linkify #canvas: links
-            bodyHtml = bodyHtml.replace(/(#canvas:[a-zA-Z0-9_.\-]+)/g, '<a href="$1" class="canvas-link">$1</a>');
+                .replace(/'/g, '&#039;');
+
+            // Markdown links: [text](#canvas:slug)
+            bodyHtml = bodyHtml.replace(/\[([^\]]+)\]\((#canvas:[^)\s]+)\)/g, '<a href="$2" class="canvas-link">$1</a>');
+
+            // Markdown links: [text](https://...)
+            bodyHtml = bodyHtml.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:var(--canvas-accent)">$1</a>');
+
+            // Raw URLs (standalone)
+            bodyHtml = bodyHtml.replace(/(^|\s)(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener" style="color:var(--canvas-accent)">$2</a>');
+
+            // Raw #canvas links (standalone)
+            bodyHtml = bodyHtml.replace(/(^|\s)(#canvas:[a-zA-Z0-9_.\-]+)/g, '$1<a href="$2" class="canvas-link">$2</a>');
+
+            // Preserve line breaks
+            bodyHtml = bodyHtml.replace(/\n/g, '<br>');
 
             el.innerHTML = `
                 <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">

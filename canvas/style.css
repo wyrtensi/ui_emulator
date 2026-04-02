@@ -370,8 +370,8 @@ body:not(.is-owner) .canvas-owner-only {
   position: absolute;
   top: 0;
   left: 0;
-  width: 0;
-  height: 0;
+  width: 1px;
+  height: 1px;
   overflow: visible;
   /* transform is handled in JS */
 }
@@ -577,8 +577,8 @@ body:not(.is-owner) .canvas-owner-only {
   position: absolute;
   top: 0;
   left: 0;
-  width: 0;
-  height: 0;
+  width: 1px;
+  height: 1px;
   overflow: visible;
   pointer-events: none; /* Let clicks pass through */
 }
@@ -622,8 +622,8 @@ body:not(.is-owner) .canvas-owner-only {
   position: absolute;
   top: 0;
   left: 0;
-  width: 0;
-  height: 0;
+  width: 1px;
+  height: 1px;
   overflow: visible;
   pointer-events: none;
   z-index: 50;
@@ -859,8 +859,8 @@ body:not(.is-owner) .canvas-owner-only {
   position: absolute;
   top: 0;
   left: 0;
-  width: 0;
-  height: 0;
+  width: 1px;
+  height: 1px;
   overflow: visible;
   pointer-events: none;
   z-index: 49;
