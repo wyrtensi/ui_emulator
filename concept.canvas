@@ -69,12 +69,12 @@
     {
       "id": "n_1775079944511",
       "type": "text",
-      "x": 307.5555419921875,
+      "x": 207.5555419921875,
       "y": -340.888916015625,
-      "width": 250,
-      "height": 154,
-      "text": "dasfdsf",
-      "html": "<h1>dasfdsf</h1>"
+      "width": 458,
+      "height": 188,
+      "text": "dasfdsffsdfsddasfafdfsdfsdf",
+      "html": "<h1>dasfdsf</h1><blockquote><ol><li>fsdfsd</li><li><i>dasfafd</i></li><li><i><b>fsdfsdf</b></i></li><li><i><b><br></b></i></li></ol></blockquote>"
     },
     {
       "id": "n_1775145509143",
