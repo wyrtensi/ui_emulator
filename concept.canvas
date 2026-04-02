@@ -33,7 +33,7 @@
       "x": -6.4444580078125,
       "y": -19.5,
       "width": 314,
-      "height": 215,
+      "height": 217,
       "text": "gdfgdfg\nbcbcvb\n",
       "color": "3"
     },
@@ -70,7 +70,7 @@
       "id": "n_1775079944511",
       "type": "file",
       "x": 307.5555419921875,
-      "y": -340.888916015625,
+      "y": -345,
       "width": 250,
       "height": 150,
       "file": "canvas_uploads/explorer_HvjTNXcvMK.png",
@@ -79,8 +79,8 @@
     {
       "id": "n_1775145509143",
       "type": "text",
-      "x": 646,
-      "y": -75,
+      "x": 647,
+      "y": -73,
       "width": 250,
       "height": 154,
       "text": "fsdfsdf\n"
