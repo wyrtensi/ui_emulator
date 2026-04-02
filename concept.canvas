@@ -31,10 +31,11 @@
       "id": "n_1775079373045",
       "type": "text",
       "x": 176,
-      "y": -68,
+      "y": -67,
       "width": 314,
       "height": 209,
-      "text": "gdfgdfg\nbcbcvb\n"
+      "text": "gdfgdfg\nbcbcvb\n",
+      "color": "3"
     },
     {
       "id": "n_1775079423645",
@@ -59,20 +60,11 @@
     {
       "id": "o8y43rabdi",
       "type": "text",
-      "x": 260,
-      "y": 235,
+      "x": 263,
+      "y": 236,
       "width": 200,
       "height": 100,
       "text": "New node"
-    },
-    {
-      "id": "n_1775079687376",
-      "type": "text",
-      "x": -271,
-      "y": 251,
-      "width": 329,
-      "height": 118,
-      "text": ""
     },
     {
       "id": "n_1775079944511",
@@ -131,13 +123,6 @@
       "fromSide": "right",
       "toNode": "n_1775079423645",
       "toSide": "left"
-    },
-    {
-      "id": "b3gpcs5dnx5",
-      "fromNode": "n_1775079368011",
-      "fromSide": "bottom",
-      "toNode": "n_1775079687376",
-      "toSide": "top"
     }
   ]
 }
