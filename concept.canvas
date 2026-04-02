@@ -34,9 +34,10 @@
       "x": 176,
       "y": -67,
       "width": 314,
-      "height": 221,
-      "text": "gdfgdfg\nbcbcvb\n",
-      "color": "3"
+      "height": 225,
+      "text": "gdfgdfg\nbcbcvbgfdggfdgfdgfdg\n",
+      "color": "3",
+      "html": "<p><ol><li>gdfgdfg\nbcbcvbgfdg</li><li>gfdgfd</li><li>gfdg</li></ol></p>"
     },
     {
       "id": "n_1775079423645",
