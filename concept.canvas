@@ -21,8 +21,8 @@
     {
       "id": "n_1775079368011",
       "type": "text",
-      "x": -269,
-      "y": -45,
+      "x": -265,
+      "y": -28,
       "width": 250,
       "height": 150,
       "text": "jhjhjkhjl\n"
@@ -86,11 +86,11 @@
     {
       "id": "n_1775145509143",
       "type": "text",
-      "x": 203.7777099609375,
-      "y": 55.111083984375,
+      "x": 646,
+      "y": -75,
       "width": 250,
       "height": 150,
-      "text": ""
+      "text": "fsdfsdf\n"
     }
   ],
   "edges": [
@@ -121,6 +121,13 @@
       "fromSide": "right",
       "toNode": "n_1775079423645",
       "toSide": "left"
+    },
+    {
+      "id": "b3gpcs5dnx5",
+      "fromNode": "n_1775079368011",
+      "fromSide": "bottom",
+      "toNode": "n_1775079687376",
+      "toSide": "top"
     }
   ]
 }
