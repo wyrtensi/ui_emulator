@@ -1,30 +1,12 @@
 {
   "nodes": [
     {
-      "id": "zzg1jmlmhy",
-      "type": "text",
-      "x": 1747,
-      "y": 951,
-      "width": 200,
-      "height": 124,
-      "text": "New node"
-    },
-    {
-      "id": "16q95i0ymqp",
-      "type": "text",
-      "x": 1740,
-      "y": 36,
-      "width": 200,
-      "height": 124,
-      "text": "New node"
-    },
-    {
       "id": "n_1775079373045",
       "type": "text",
       "x": 176,
       "y": -67,
       "width": 314,
-      "height": 233,
+      "height": 239,
       "text": "gdfgdfg\nbcbcvb\n",
       "color": "3"
     },
@@ -42,7 +24,7 @@
       "id": "vv1hjmt3jl",
       "type": "file",
       "x": -736,
-      "y": -113,
+      "y": -115,
       "width": 300,
       "height": 200,
       "file": "canvas_uploads/pasted_image_1775079450416.png",
@@ -54,7 +36,7 @@
       "x": 263,
       "y": 236,
       "width": 200,
-      "height": 124,
+      "height": 130,
       "text": "New node"
     },
     {
@@ -72,7 +54,7 @@
       "x": 646,
       "y": -75,
       "width": 250,
-      "height": 174,
+      "height": 180,
       "text": "fsdfsdf\n"
     }
   ],
