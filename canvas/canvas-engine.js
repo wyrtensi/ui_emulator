@@ -1052,8 +1052,21 @@ function setupNodeInteractions(el, node) {
             return; // Don't start drag on shift-click
         }
 
-        // Select node
-        selectNode(node);
+        const keepMultiSelection = isOwner
+            && currentTool === 'select'
+            && multiSelectedNodes.size > 1
+            && multiSelectedNodes.has(node.id);
+
+        // Keep existing multi-selection when dragging one of its nodes.
+        // Otherwise fall back to normal single-node selection behavior.
+        if (keepMultiSelection) {
+            selectedNode = node;
+            el.classList.add('selected');
+            showNodeToolbar(node, el);
+            updateDeleteBtn();
+        } else {
+            selectNode(node);
+        }
 
         // Drag node (but NOT if currently editing this node)
         if (isOwner && currentTool === 'select' && editingNodeId !== node.id) {
@@ -1336,7 +1349,7 @@ function setupNodeInteractions(el, node) {
 
             // Multi-select drag: move all selected nodes together
             if (multiSelectedNodes.size > 0 && multiSelectedNodes.has(node.id)) {
-                // We need start positions for all nodes - store them on first move
+                // Cache drag origins once per drag gesture.
                 if (!el._multiDragOrigins) {
                     el._multiDragOrigins = new Map();
                     multiSelectedNodes.forEach(id => {
@@ -1344,12 +1357,27 @@ function setupNodeInteractions(el, node) {
                         if (n) el._multiDragOrigins.set(id, { x: n.x, y: n.y });
                     });
                 }
+
+                const anchorOrigin = el._multiDragOrigins.get(node.id) || { x: origLeft, y: origTop };
+                let anchorX = Math.round(anchorOrigin.x + dx);
+                let anchorY = Math.round(anchorOrigin.y + dy);
+
+                // Snap based on the dragged anchor node while moving the full selection as a block.
+                const anchorSnapProbe = { ...node, x: anchorX, y: anchorY };
+                const snap = getSnapGuides(anchorSnapProbe);
+                if (snap.snapX !== null) anchorX = snap.snapX;
+                if (snap.snapY !== null) anchorY = snap.snapY;
+                renderGuides(snap.guides);
+
+                const deltaX = anchorX - anchorOrigin.x;
+                const deltaY = anchorY - anchorOrigin.y;
+
                 multiSelectedNodes.forEach(id => {
                     const n = canvasData.nodes.find(nd => nd.id === id);
                     const orig = el._multiDragOrigins.get(id);
                     if (n && orig) {
-                        n.x = Math.round(orig.x + dx);
-                        n.y = Math.round(orig.y + dy);
+                        n.x = Math.round(orig.x + deltaX);
+                        n.y = Math.round(orig.y + deltaY);
                         const nel = nodesLayer.querySelector(`[data-id="${id}"]`);
                         if (nel) {
                             nel.style.left = `${n.x}px`;
