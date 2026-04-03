@@ -3,11 +3,12 @@
     {
       "id": "n_1775175413733",
       "type": "text",
-      "x": -595.7806411085293,
-      "y": -30.555371244188613,
+      "x": -1021,
+      "y": -499,
       "width": 250,
-      "height": 150,
-      "text": ""
+      "height": 154,
+      "text": "Armor concept",
+      "html": "<div>Armor concept</div><div><br></div>"
     }
   ],
   "edges": []
