@@ -145,8 +145,8 @@
 }
 
 .canvas-node-toolbar.has-format-row {
-  width: min(340px, calc(100vw - 32px));
-  max-width: min(340px, calc(100vw - 32px));
+  width: 340px !important;
+  max-width: 340px !important;
 }
 
 .node-toolbar-btn {
@@ -196,14 +196,14 @@
   background: transparent;
   border: 1px solid transparent;
   color: var(--canvas-text);
-  height: 22px;
-  min-width: 22px;
-  width: 22px;
+  height: 22px !important;
+  min-width: 22px !important;
+  width: 22px !important;
   border-radius: 3px;
   cursor: pointer;
   font-size: 9px;
   line-height: 1;
-  padding: 0;
+  padding: 0 !important;
   opacity: 0.9;
   display: inline-flex;
   align-items: center;
@@ -217,16 +217,16 @@
 }
 
 .node-toolbar-format-btn svg {
-  width: 12px;
-  height: 12px;
+  width: 12px !important;
+  height: 12px !important;
 }
 
 .node-toolbar-format-text {
   font-weight: 700;
   letter-spacing: 0.02em;
-  width: auto;
-  min-width: 24px;
-  padding: 0 4px;
+  width: auto !important;
+  min-width: 24px !important;
+  padding: 0 4px !important;
 }
 
 .node-toolbar-format-divider {

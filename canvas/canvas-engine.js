@@ -3955,8 +3955,28 @@ function showNodeToolbar(node, el) {
     const showTextFormatControls = !!isOwner && node?.type === 'text' && !isNodeLocked(node);
     if (quickFormatRow) {
         quickFormatRow.hidden = !showTextFormatControls;
+        quickFormatRow.style.cssText = showTextFormatControls
+            ? 'display:flex;flex-wrap:wrap;gap:3px;width:100%;margin-top:3px;padding-top:3px;border-top:1px solid var(--canvas-node-border);align-items:center;'
+            : '';
     }
     nodeToolbar.classList.toggle('has-format-row', showTextFormatControls);
+    if (showTextFormatControls) {
+        nodeToolbar.style.width = '340px';
+        nodeToolbar.style.maxWidth = '340px';
+        nodeToolbar.style.flexWrap = 'wrap';
+        // Force compact button sizing
+        quickFormatRow.querySelectorAll('.node-toolbar-format-btn').forEach(btn => {
+            btn.style.cssText = 'height:22px;min-width:22px;width:22px;padding:0;border-radius:3px;font-size:9px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;color:var(--canvas-text);cursor:pointer;opacity:0.9;';
+            const svg = btn.querySelector('svg');
+            if (svg) { svg.style.width = '12px'; svg.style.height = '12px'; }
+            if (btn.classList.contains('node-toolbar-format-text')) {
+                btn.style.width = 'auto'; btn.style.minWidth = '24px'; btn.style.padding = '0 4px'; btn.style.fontWeight = '700';
+            }
+        });
+    } else {
+        nodeToolbar.style.width = '';
+        nodeToolbar.style.maxWidth = '';
+    }
 
     // Viewers should still see non-edit actions (e.g., link), while owner actions stay hidden.
     const hasVisibleAction = Array.from(nodeToolbar.querySelectorAll('.node-toolbar-btn'))
@@ -3990,10 +4010,12 @@ function hideNodeToolbar() {
         hideForeignNodeToolbars();
         nodeToolbar.hidden = true;
         nodeToolbar.style.display = 'none';
+        nodeToolbar.style.width = '';
+        nodeToolbar.style.maxWidth = '';
         nodeToolbar.classList.remove('has-format-row');
         nodeToolbar.querySelector('#node-color-palette').hidden = true;
         const quickFormatRow = nodeToolbar.querySelector('#node-toolbar-format-row');
-        if (quickFormatRow) quickFormatRow.hidden = true;
+        if (quickFormatRow) { quickFormatRow.hidden = true; quickFormatRow.style.cssText = ''; }
         const formatMenu = container.querySelector('#node-format-menu');
         const linkMenu = container.querySelector('#node-link-menu');
         if (formatMenu) formatMenu.hidden = true;
