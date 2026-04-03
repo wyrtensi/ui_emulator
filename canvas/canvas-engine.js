@@ -1052,6 +1052,18 @@ function setupNodeInteractions(el, node) {
             return; // Don't start drag on shift-click
         }
 
+        if (isOwner && currentTool === 'select') {
+            const domSelectedIds = Array.from(nodesLayer.querySelectorAll('.canvas-node.selected'))
+                .map(n => n.dataset.id)
+                .filter(Boolean);
+
+            // If visual selection has multiple nodes but internal set drifted,
+            // rebuild from DOM so dragging keeps the intended group selection.
+            if (domSelectedIds.length > 1 && domSelectedIds.includes(node.id) && (multiSelectedNodes.size <= 1 || !multiSelectedNodes.has(node.id))) {
+                multiSelectedNodes = new Set(domSelectedIds);
+            }
+        }
+
         const keepMultiSelection = isOwner
             && currentTool === 'select'
             && multiSelectedNodes.size > 1
