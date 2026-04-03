@@ -3969,10 +3969,10 @@ function showNodeToolbar(node, el) {
     const vX = translateX + (node.x * scale) + (node.width * scale) / 2;
     const vY = translateY + (node.y * scale);
 
-    // Shift up to sit above the node
+    // Anchor toolbar above node regardless of toolbar height.
     nodeToolbar.style.left = `${vX}px`;
-    nodeToolbar.style.top = `${vY - 45}px`;
-    nodeToolbar.style.transform = 'translateX(-50%)';
+    nodeToolbar.style.top = `${vY}px`;
+    nodeToolbar.style.transform = 'translate(-50%, -100%)';
     nodeToolbar.style.display = 'flex';
     nodeToolbar.hidden = false;
 

@@ -145,8 +145,8 @@
 }
 
 .canvas-node-toolbar.has-format-row {
-  width: min(420px, calc(100vw - 40px));
-  max-width: min(420px, calc(100vw - 40px));
+  width: min(340px, calc(100vw - 32px));
+  max-width: min(340px, calc(100vw - 32px));
 }
 
 .node-toolbar-btn {
@@ -178,11 +178,13 @@
 .node-toolbar-format-row {
   flex: 0 0 100%;
   width: 100%;
-  display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 4px;
-  margin-top: 4px;
-  padding-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  margin-top: 3px;
+  padding-top: 3px;
   border-top: 1px solid var(--canvas-node-border);
 }
 
@@ -194,14 +196,14 @@
   background: transparent;
   border: 1px solid transparent;
   color: var(--canvas-text);
-  height: 24px;
-  min-width: 0;
-  width: 100%;
-  border-radius: 4px;
+  height: 22px;
+  min-width: 22px;
+  width: 22px;
+  border-radius: 3px;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1;
-  padding: 0 4px;
+  padding: 0;
   opacity: 0.9;
   display: inline-flex;
   align-items: center;
@@ -215,13 +217,16 @@
 }
 
 .node-toolbar-format-btn svg {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
 }
 
 .node-toolbar-format-text {
   font-weight: 700;
   letter-spacing: 0.02em;
+  width: auto;
+  min-width: 24px;
+  padding: 0 4px;
 }
 
 .node-toolbar-format-divider {
@@ -230,12 +235,8 @@
 
 @media (max-width: 680px) {
   .canvas-node-toolbar.has-format-row {
-    width: min(360px, calc(100vw - 28px));
-    max-width: min(360px, calc(100vw - 28px));
-  }
-
-  .node-toolbar-format-row {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    width: min(300px, calc(100vw - 20px));
+    max-width: min(300px, calc(100vw - 20px));
   }
 }
 
