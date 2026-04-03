@@ -4353,9 +4353,6 @@ function setupNodeToolbar() {
         selectedNode.html = editor.innerHTML;
         selectedNode.text = editor.textContent || '';
 
-        const nodeEl = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
-        if (nodeEl) autoResizeNode(selectedNode, nodeEl);
-
         preserveTextareaForFormat = false;
         if (closeMenu && formatMenu) formatMenu.hidden = true;
         markUnsaved();
@@ -4378,7 +4375,7 @@ function setupNodeToolbar() {
                 e.preventDefault();
                 e.stopPropagation();
 
-                const fmt = btn.dataset.quickFormat;
+                const fmt = btn.dataset.format;
                 if (!fmt) {
                     preserveTextareaForFormat = false;
                     return;
