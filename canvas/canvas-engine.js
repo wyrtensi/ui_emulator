@@ -2475,17 +2475,16 @@ function fitCanvasToScreen(animate = true) {
 }
 
 function applyInitialViewportPolicy() {
-    const maxAttempts = 40;
-    let attempts = 0;
-
     const run = () => {
+        if (!viewport || !container || !container.isConnected) return;
         const rect = viewport.getBoundingClientRect();
+        const viewportStyle = window.getComputedStyle(viewport);
+        const isMeasurable = rect.width >= 32 && rect.height >= 32 && viewportStyle.display !== 'none' && viewportStyle.visibility !== 'hidden';
 
         // Canvas init can run before window is actually visible/opened.
         // Wait until viewport has usable dimensions to get a correct fit.
-        if ((rect.width < 32 || rect.height < 32) && attempts < maxAttempts) {
-            attempts += 1;
-            requestAnimationFrame(run);
+        if (!isMeasurable) {
+            setTimeout(() => requestAnimationFrame(run), 80);
             return;
         }
 
@@ -2690,6 +2689,7 @@ function loadCanvasViewState() {
         const raw = localStorage.getItem(CANVAS_VIEW_STATE_KEY);
         if (!raw) return false;
         const parsed = JSON.parse(raw);
+        if (parsed?.v !== 2) return false;
         const nextScale = Number(parsed?.scale);
         const nextTX = Number(parsed?.translateX);
         const nextTY = Number(parsed?.translateY);
@@ -2710,6 +2710,7 @@ function queueSaveCanvasViewState() {
     viewStateSaveTimer = setTimeout(() => {
         try {
             localStorage.setItem(CANVAS_VIEW_STATE_KEY, JSON.stringify({
+                v: 2,
                 scale,
                 translateX,
                 translateY,
