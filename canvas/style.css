@@ -158,6 +158,11 @@
 .node-toolbar-btn:hover { background: var(--canvas-btn-bg); opacity: 1; }
 .node-toolbar-btn svg { width: 16px; height: 16px; }
 
+.node-toolbar-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .node-toolbar-sep {
   width: 1px; height: 16px;
   background: var(--canvas-node-border);
@@ -444,6 +449,33 @@ body:not(.is-owner) .canvas-owner-only {
   z-index: 100;
 }
 
+.canvas-node.node-locked {
+  border-style: dashed;
+  border-color: rgba(180, 190, 205, 0.7);
+}
+
+.canvas-node.node-locked::before {
+  content: 'LOCK';
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: rgba(232, 238, 246, 0.92);
+  background: rgba(18, 24, 34, 0.68);
+  border: 1px solid rgba(200, 210, 225, 0.28);
+  border-radius: 4px;
+  padding: 1px 5px;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.canvas-node.node-locked .node-resize-handle,
+.canvas-node.node-locked .node-edge-handle {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 /* Resize handles */
 .node-resize-handle {
   position: absolute;
@@ -704,6 +736,61 @@ body:not(.is-owner) .canvas-owner-only {
 .canvas-node:hover .node-title,
 .canvas-node.selected .node-title {
   opacity: 1;
+}
+
+.group-title {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 86px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--canvas-text);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 8px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.group-title.editing {
+  outline: none;
+  border-color: var(--canvas-selected);
+  background: rgba(0, 0, 0, 0.35);
+  cursor: text;
+  user-select: text;
+}
+
+.group-members-count {
+  position: absolute;
+  top: 12px;
+  right: 10px;
+  font-size: 11px;
+  color: rgba(220, 230, 245, 0.9);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  padding: 2px 7px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.canvas-node.grouped-node:not(.canvas-group)::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--canvas-selected);
+  box-shadow: 0 0 0 2px rgba(20, 26, 36, 0.65);
+  pointer-events: none;
 }
 
 /* ══ EDGES ══ */
@@ -1017,12 +1104,113 @@ body:not(.is-owner) .canvas-owner-only {
 
 /* Group Styles */
 .canvas-group {
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 2px dashed rgba(255, 255, 255, 0.2);
-    z-index: 1; /* ensure it stays behind other nodes */
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 2px dashed rgba(255, 255, 255, 0.24);
+  z-index: 1;
 }
 .canvas-group:hover {
-    border-color: rgba(255, 255, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.46);
+}
+
+.canvas-group.group-has-selected-member {
+  border-color: rgba(85, 153, 255, 0.8);
+  box-shadow: 0 0 0 1px rgba(85, 153, 255, 0.6), 0 0 18px rgba(85, 153, 255, 0.22);
+}
+
+.canvas-group.group-collapsed {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.canvas-group.group-collapsed .group-members-count {
+  background: rgba(85, 153, 255, 0.22);
+  border-color: rgba(115, 175, 255, 0.46);
+}
+
+.canvas-group-picker {
+  position: absolute;
+  z-index: 10010;
+  min-width: 220px;
+  max-width: 280px;
+  background: var(--canvas-toolbar-bg);
+  border: 1px solid var(--canvas-node-border);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.canvas-group-picker[hidden] {
+  display: none !important;
+}
+
+.canvas-group-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--canvas-node-border);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--canvas-text);
+}
+
+.canvas-group-picker-head button {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #bcc7d6;
+  cursor: pointer;
+}
+
+.canvas-group-picker-head button:hover {
+  background: var(--canvas-btn-hover);
+  color: #ffffff;
+}
+
+.canvas-group-picker-list {
+  max-height: 220px;
+  overflow: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.canvas-group-picker-item {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--canvas-text);
+  cursor: pointer;
+  text-align: left;
+  padding: 7px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.canvas-group-picker-item:hover {
+  background: rgba(85, 153, 255, 0.2);
+  border-color: rgba(85, 153, 255, 0.35);
+}
+
+.canvas-group-picker-item-label {
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas-group-picker-item-meta {
+  font-size: 11px;
+  color: #9fb0c7;
+  flex-shrink: 0;
 }
 
 /* Selection Box */

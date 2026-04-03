@@ -152,6 +152,435 @@ function getRepoRawUrl(filePath) {
     return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
 }
 
+function escapeHtmlText(text) {
+    return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function getCurrentSelectionNodeIds() {
+    if (multiSelectedNodes.size > 0) {
+        return new Set(multiSelectedNodes);
+    }
+    return selectedNode ? new Set([selectedNode.id]) : new Set();
+}
+
+function getSelectedNonGroupNodeIds() {
+    const ids = getCurrentSelectionNodeIds();
+    return Array.from(ids).filter(id => {
+        const node = canvasData.nodes.find(n => n.id === id);
+        return !!node && node.type !== 'group';
+    });
+}
+
+function getSelectedNodes() {
+    return Array.from(getCurrentSelectionNodeIds())
+        .map(id => canvasData.nodes.find(n => n.id === id))
+        .filter(Boolean);
+}
+
+function getGroupNodes() {
+    return canvasData.nodes.filter(n => n.type === 'group');
+}
+
+function getGroupMemberNodes(groupId) {
+    if (!groupId) return [];
+    return canvasData.nodes.filter(n => n.type !== 'group' && n.groupId === groupId);
+}
+
+function getGroupMemberCount(groupId) {
+    return getGroupMemberNodes(groupId).length;
+}
+
+function isNodeVisible(node) {
+    if (!node) return false;
+    if (node.type === 'group') return true;
+
+    const gid = typeof node.groupId === 'string' ? node.groupId : '';
+    if (!gid) return true;
+
+    const group = canvasData.nodes.find(n => n.id === gid && n.type === 'group');
+    if (!group) return true;
+    return !group.collapsed;
+}
+
+function isNodeLocked(node) {
+    return !!node?.locked;
+}
+
+function groupHasSelectedMembers(groupId) {
+    if (!groupId) return false;
+    const selectedIds = getCurrentSelectionNodeIds();
+    for (const id of selectedIds) {
+        const node = canvasData.nodes.find(n => n.id === id);
+        if (node && node.type !== 'group' && node.groupId === groupId) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function setNodeGroupId(node, groupId) {
+    if (!node || node.type === 'group') return false;
+    const currentGroupId = typeof node.groupId === 'string' && node.groupId ? node.groupId : null;
+    const nextGroupId = typeof groupId === 'string' && groupId ? groupId : null;
+
+    if (currentGroupId === nextGroupId) return false;
+
+    if (nextGroupId) {
+        node.groupId = nextGroupId;
+    } else {
+        delete node.groupId;
+    }
+
+    return true;
+}
+
+function setNodeLocked(node, locked) {
+    if (!node || typeof node !== 'object') return false;
+    const nextLocked = !!locked;
+    if (!!node.locked === nextLocked) return false;
+
+    if (nextLocked) {
+        node.locked = true;
+    } else {
+        delete node.locked;
+    }
+    return true;
+}
+
+function setNodesLocked(nodeIds, locked) {
+    let changed = false;
+    const ids = new Set(Array.isArray(nodeIds) ? nodeIds : []);
+
+    ids.forEach(id => {
+        const node = canvasData.nodes.find(n => n.id === id);
+        if (!node) return;
+        if (setNodeLocked(node, locked)) {
+            changed = true;
+        }
+    });
+
+    return changed;
+}
+
+function assignNodesToGroup(nodeIds, groupId) {
+    const targetGroup = canvasData.nodes.find(n => n.id === groupId && n.type === 'group');
+    if (!targetGroup) return false;
+
+    let changed = false;
+    const ids = new Set(Array.isArray(nodeIds) ? nodeIds : []);
+    ids.forEach(id => {
+        const node = canvasData.nodes.find(n => n.id === id);
+        if (!node || node.type === 'group' || node.id === groupId) return;
+        if (setNodeGroupId(node, groupId)) changed = true;
+    });
+
+    return changed;
+}
+
+function removeNodesFromGroup(nodeIds) {
+    let changed = false;
+    const ids = new Set(Array.isArray(nodeIds) ? nodeIds : []);
+
+    ids.forEach(id => {
+        const node = canvasData.nodes.find(n => n.id === id);
+        if (!node || node.type === 'group') return;
+        if (setNodeGroupId(node, null)) changed = true;
+    });
+
+    return changed;
+}
+
+function clearGroupMembershipForGroup(groupId, exceptNodeIds = null) {
+    const except = exceptNodeIds instanceof Set ? exceptNodeIds : new Set();
+    let changed = false;
+
+    canvasData.nodes.forEach(node => {
+        if (node.type === 'group') return;
+        if (node.groupId !== groupId) return;
+        if (except.has(node.id)) return;
+        if (setNodeGroupId(node, null)) changed = true;
+    });
+
+    return changed;
+}
+
+function sanitizeGroupMembership() {
+    const validGroupIds = new Set(getGroupNodes().map(g => g.id));
+
+    canvasData.nodes.forEach(node => {
+        if (!node || typeof node !== 'object') return;
+
+        if (node.type === 'group') {
+            if ('groupId' in node) delete node.groupId;
+            if (typeof node.label !== 'string' || !node.label.trim()) {
+                node.label = 'New Group';
+            }
+            if (node.collapsed) {
+                node.collapsed = true;
+                const expandedHeight = Number(node.expandedHeight || 0);
+                if (expandedHeight > 56) {
+                    node.expandedHeight = Math.round(expandedHeight);
+                } else {
+                    delete node.expandedHeight;
+                }
+            } else {
+                delete node.collapsed;
+                delete node.expandedHeight;
+            }
+
+            if (node.locked) {
+                node.locked = true;
+            } else {
+                delete node.locked;
+            }
+            return;
+        }
+
+        const gid = typeof node.groupId === 'string' ? node.groupId.trim() : '';
+        if (!gid || !validGroupIds.has(gid)) {
+            delete node.groupId;
+        } else {
+            node.groupId = gid;
+        }
+
+        if (node.locked) {
+            node.locked = true;
+        } else {
+            delete node.locked;
+        }
+    });
+}
+
+function createGroupFromSelectionAt(anchorX, anchorY, options = {}) {
+    const boundsNodeIds = Array.isArray(options.boundsNodeIds) ? options.boundsNodeIds : [];
+    const memberNodeIds = Array.isArray(options.memberNodeIds) ? options.memberNodeIds : [];
+    const label = (options.label || 'New Group').trim() || 'New Group';
+
+    const boundsNodes = boundsNodeIds
+        .map(id => canvasData.nodes.find(n => n.id === id))
+        .filter(Boolean);
+
+    let minX = Number(anchorX) || 0;
+    let minY = Number(anchorY) || 0;
+    let maxX = minX + 400;
+    let maxY = minY + 300;
+
+    if (boundsNodes.length > 0) {
+        minX = Math.min(...boundsNodes.map(n => n.x)) - 40;
+        minY = Math.min(...boundsNodes.map(n => n.y)) - 60;
+        maxX = Math.max(...boundsNodes.map(n => n.x + n.width)) + 40;
+        maxY = Math.max(...boundsNodes.map(n => n.y + n.height)) + 40;
+    }
+
+    const id = `n_${Date.now()}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+    const newGroup = {
+        id,
+        type: 'group',
+        label,
+        x: minX,
+        y: minY,
+        width: Math.max(200, maxX - minX),
+        height: Math.max(120, maxY - minY),
+    };
+
+    canvasData.nodes.push(newGroup);
+    assignNodesToGroup(memberNodeIds, newGroup.id);
+    connectPendingEdgeToNode(newGroup);
+    return newGroup;
+}
+
+function promptSelectGroupId() {
+    const groups = getGroupNodes();
+    if (groups.length === 0) {
+        window.uiToast?.('Create a group first', 'info');
+        return '';
+    }
+
+    const lines = groups.map((g, idx) => {
+        const label = (g.label || 'Group').trim() || 'Group';
+        const members = getGroupMemberCount(g.id);
+        const suffix = members === 1 ? 'node' : 'nodes';
+        return `${idx + 1}. ${label} (${members} ${suffix})`;
+    });
+
+    const input = prompt(`Select group by number:\n${lines.join('\n')}`, '1');
+    if (input === null) return '';
+
+    const byIndex = Number.parseInt(input, 10);
+    if (Number.isInteger(byIndex) && byIndex >= 1 && byIndex <= groups.length) {
+        return groups[byIndex - 1].id;
+    }
+
+    window.uiToast?.('Invalid group selection', 'error');
+    return '';
+}
+
+function getContainingGroupForNode(node, ignoreGroupIds = null) {
+    if (!node || node.type === 'group') return null;
+
+    const ignore = ignoreGroupIds instanceof Set ? ignoreGroupIds : new Set();
+    const cx = node.x + node.width / 2;
+    const cy = node.y + node.height / 2;
+
+    const containers = getGroupNodes().filter(group => {
+        if (!group || ignore.has(group.id)) return false;
+        if (group.collapsed) return false;
+        return cx >= group.x
+            && cx <= group.x + group.width
+            && cy >= group.y
+            && cy <= group.y + group.height;
+    });
+
+    if (containers.length === 0) return null;
+
+    containers.sort((a, b) => (a.width * a.height) - (b.width * b.height));
+    return containers[0];
+}
+
+function updateGroupMembershipForNodeIds(nodeIds, options = {}) {
+    const ids = new Set(Array.isArray(nodeIds) ? nodeIds : []);
+    const ignoreGroupIds = options.ignoreGroupIds instanceof Set ? options.ignoreGroupIds : new Set();
+    let changed = false;
+
+    ids.forEach(id => {
+        const node = canvasData.nodes.find(n => n.id === id);
+        if (!node || node.type === 'group') return;
+
+        const group = getContainingGroupForNode(node, ignoreGroupIds);
+        if (setNodeGroupId(node, group ? group.id : null)) {
+            changed = true;
+        }
+    });
+
+    return changed;
+}
+
+function alignSelectedNodes(mode) {
+    const selected = getSelectedNodes().filter(node => !isNodeLocked(node));
+    if (selected.length < 2) {
+        window.uiToast?.('Select at least two unlocked nodes', 'info');
+        return false;
+    }
+
+    pushHistory();
+
+    const minX = Math.min(...selected.map(n => n.x));
+    const maxX = Math.max(...selected.map(n => n.x + n.width));
+    const minY = Math.min(...selected.map(n => n.y));
+    const maxY = Math.max(...selected.map(n => n.y + n.height));
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    selected.forEach(node => {
+        switch (mode) {
+            case 'left':
+                node.x = Math.round(minX);
+                break;
+            case 'center':
+                node.x = Math.round(centerX - node.width / 2);
+                break;
+            case 'right':
+                node.x = Math.round(maxX - node.width);
+                break;
+            case 'top':
+                node.y = Math.round(minY);
+                break;
+            case 'middle':
+                node.y = Math.round(centerY - node.height / 2);
+                break;
+            case 'bottom':
+                node.y = Math.round(maxY - node.height);
+                break;
+            default:
+                break;
+        }
+    });
+
+    const movedNonGroupIds = selected.filter(n => n.type !== 'group').map(n => n.id);
+    if (movedNonGroupIds.length > 0) {
+        updateGroupMembershipForNodeIds(movedNonGroupIds);
+    }
+
+    markUnsaved();
+    renderCanvas();
+    return true;
+}
+
+function setSelectedNodesLocked(locked) {
+    const ids = Array.from(getCurrentSelectionNodeIds());
+    if (ids.length === 0) {
+        window.uiToast?.('Select node(s) first', 'info');
+        return false;
+    }
+
+    const hasChanges = ids.some(id => {
+        const node = canvasData.nodes.find(n => n.id === id);
+        return !!node && !!node.locked !== !!locked;
+    });
+
+    if (!hasChanges) {
+        window.uiToast?.(locked ? 'Selection is already locked' : 'Selection is already unlocked', 'info');
+        return false;
+    }
+
+    pushHistory();
+    setNodesLocked(ids, locked);
+
+    markUnsaved();
+    renderCanvas();
+    return true;
+}
+
+function setGroupCollapsed(group, collapsed) {
+    if (!group || group.type !== 'group') return false;
+    const nextCollapsed = !!collapsed;
+    const currentCollapsed = !!group.collapsed;
+    if (currentCollapsed === nextCollapsed) return false;
+
+    if (nextCollapsed) {
+        const currentHeight = Math.round(Number(group.height) || 120);
+        if (currentHeight > 56) {
+            group.expandedHeight = currentHeight;
+        }
+        group.collapsed = true;
+        group.height = 56;
+    } else {
+        const expanded = Math.round(Number(group.expandedHeight) || 180);
+        group.height = Math.max(120, expanded);
+        delete group.expandedHeight;
+        delete group.collapsed;
+    }
+
+    return true;
+}
+
+function toggleCollapseSelectedGroups() {
+    const selectedGroups = getSelectedNodes().filter(n => n.type === 'group' && !isNodeLocked(n));
+    if (selectedGroups.length === 0) {
+        window.uiToast?.('Select unlocked group node(s) first', 'info');
+        return false;
+    }
+
+    const shouldCollapse = selectedGroups.some(g => !g.collapsed);
+    let changed = false;
+
+    pushHistory();
+    selectedGroups.forEach(group => {
+        if (setGroupCollapsed(group, shouldCollapse)) changed = true;
+    });
+
+    if (!changed) return false;
+
+    markUnsaved();
+    renderCanvas();
+    return true;
+}
+
 function createInlineImageMarkerId() {
     return `inline-image-marker-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -808,6 +1237,8 @@ async function loadCanvasData() {
         canvasData = { nodes: [], edges: [] };
     }
 
+    sanitizeGroupMembership();
+
     renderCanvas();
     hideOverlay();
 
@@ -989,14 +1420,8 @@ function setupViewport() {
             // Show context menu here so they can create a node!
             const targetNode = e.target.closest('.canvas-node');
             if (!targetNode && isOwner) {
-                const rect = viewport.getBoundingClientRect();
-                ctxMenu.style.left = e.clientX + 'px';
-                ctxMenu.style.top = e.clientY + 'px';
-                ctxMenu.hidden = false;
+                openContextMenu(e.clientX, e.clientY, null);
                 suppressCtxMenuCloseUntil = Date.now() + 200;
-
-                ctxMenuX = (e.clientX - rect.left - translateX) / scale;
-                ctxMenuY = (e.clientY - rect.top - translateY) / scale;
 
                 // Save context so we can auto-connect after creation
                 window._pendingEdgeConnect = {
@@ -1089,54 +1514,243 @@ function setupViewport() {
         }
     });
 
-    // Right click context menu on background
-    let lastRightClickedNode = null;
+    // Right click context menu
     const ctxMenu = container.querySelector('#canvas-context-menu');
     let ctxMenuX = 0, ctxMenuY = 0;
+    let ctxMenuTargetNodeId = null;
+
+    const cmAddText = container.querySelector('#cm-add-text');
+    const cmAddImg = container.querySelector('#cm-add-img');
+    const cmAddGroup = container.querySelector('#cm-add-group');
+    const cmGroupSelected = container.querySelector('#cm-group-selected');
+    const cmAddSelectedToGroup = container.querySelector('#cm-add-selected-to-group');
+    const cmAddSelectedToTargetGroup = container.querySelector('#cm-add-selected-to-target-group');
+    const cmRemoveSelectedFromGroup = container.querySelector('#cm-remove-selected-from-group');
+    const cmRenameGroup = container.querySelector('#cm-rename-group');
+    const cmUngroupKeep = container.querySelector('#cm-ungroup-keep');
+    const cmDeleteGroupWithMembers = container.querySelector('#cm-delete-group-with-members');
+    const cmOpenFormat = container.querySelector('#cm-open-format');
+    const cmAlignLeft = container.querySelector('#cm-align-left');
+    const cmAlignCenter = container.querySelector('#cm-align-center');
+    const cmAlignRight = container.querySelector('#cm-align-right');
+    const cmAlignTop = container.querySelector('#cm-align-top');
+    const cmAlignMiddle = container.querySelector('#cm-align-middle');
+    const cmAlignBottom = container.querySelector('#cm-align-bottom');
+    const cmLockSelected = container.querySelector('#cm-lock-selected');
+    const cmUnlockSelected = container.querySelector('#cm-unlock-selected');
+    const cmToggleCollapseSelectedGroups = container.querySelector('#cm-toggle-collapse-selected-groups');
+
+    const groupPicker = container.querySelector('#canvas-group-picker');
+    const groupPickerTitle = container.querySelector('#canvas-group-picker-title');
+    const groupPickerList = container.querySelector('#canvas-group-picker-list');
+    const groupPickerClose = container.querySelector('#canvas-group-picker-close');
+
+    let groupPickerAction = null;
+
+    function setMenuItemVisible(el, isVisible) {
+        if (!el) return;
+        el.hidden = !isVisible;
+    }
+
+    function getContextTargetNode() {
+        if (!ctxMenuTargetNodeId) return null;
+        return canvasData.nodes.find(n => n.id === ctxMenuTargetNodeId) || null;
+    }
+
+    function closeGroupPicker() {
+        if (!groupPicker) return;
+        groupPicker.hidden = true;
+        groupPickerAction = null;
+        if (groupPickerList) {
+            groupPickerList.innerHTML = '';
+        }
+    }
+
+    function openGroupPicker(options = {}) {
+        if (!groupPicker || !groupPickerList) return;
+
+        const title = (options.title || 'Select Group').trim() || 'Select Group';
+        const excludeIds = new Set(Array.isArray(options.excludeIds) ? options.excludeIds : []);
+        const groups = getGroupNodes().filter(g => !excludeIds.has(g.id));
+
+        if (groups.length === 0) {
+            window.uiToast?.('No groups available', 'info');
+            return;
+        }
+
+        groupPickerAction = typeof options.onPick === 'function' ? options.onPick : null;
+        if (!groupPickerAction) return;
+
+        if (groupPickerTitle) {
+            groupPickerTitle.textContent = title;
+        }
+
+        groupPickerList.innerHTML = '';
+        groups.forEach(group => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'canvas-group-picker-item';
+
+            const label = (group.label || 'Group').trim() || 'Group';
+            const memberCount = getGroupMemberCount(group.id);
+            const memberText = memberCount === 1 ? '1 node' : `${memberCount} nodes`;
+            btn.innerHTML = `<span class="canvas-group-picker-item-label">${escapeHtmlText(label)}</span><span class="canvas-group-picker-item-meta">${memberText}</span>`;
+
+            btn.addEventListener('click', () => {
+                const action = groupPickerAction;
+                closeGroupPicker();
+                if (action) {
+                    action(group.id);
+                }
+            });
+
+            groupPickerList.appendChild(btn);
+        });
+
+        const baseLeft = Number.parseFloat(ctxMenu?.style.left || '') || 24;
+        const baseTop = Number.parseFloat(ctxMenu?.style.top || '') || 24;
+        groupPicker.style.left = `${baseLeft + 12}px`;
+        groupPicker.style.top = `${baseTop + 12}px`;
+        groupPicker.hidden = false;
+    }
+
+    groupPickerClose?.addEventListener('click', () => {
+        closeGroupPicker();
+    });
+
+    function showFormatMenuForNode(node) {
+        if (!node || node.type !== 'text') return;
+
+        const formatMenu = container.querySelector('#node-format-menu');
+        if (!formatMenu) return;
+
+        if (selectedNode?.id !== node.id || multiSelectedNodes.size > 0) {
+            selectNode(node);
+        }
+
+        const nodeEl = nodesLayer.querySelector(`[data-id="${node.id}"]`);
+        if (nodeEl) {
+            showNodeToolbar(node, nodeEl);
+        }
+
+        formatMenu.style.position = 'absolute';
+        formatMenu.style.left = '100%';
+        formatMenu.style.top = '100%';
+        formatMenu.style.marginTop = '8px';
+        formatMenu.style.display = 'flex';
+        formatMenu.hidden = false;
+    }
+
+    function refreshContextMenuItems() {
+        const targetNode = getContextTargetNode();
+        const isBackgroundMenu = !targetNode;
+        const selectedIds = getCurrentSelectionNodeIds();
+        const selectedNodes = Array.from(selectedIds)
+            .map(id => canvasData.nodes.find(n => n.id === id))
+            .filter(Boolean);
+        const selectedNonGroupNodes = Array.from(selectedIds)
+            .map(id => canvasData.nodes.find(n => n.id === id))
+            .filter(n => !!n && n.type !== 'group');
+        const selectedEditableNonGroupNodes = selectedNonGroupNodes.filter(n => !isNodeLocked(n));
+        const selectedNonGroupIds = selectedNonGroupNodes.map(n => n.id);
+        const selectedGroups = selectedNodes.filter(n => n.type === 'group');
+        const alignableCount = selectedNodes.filter(n => !isNodeLocked(n)).length;
+        const hasLockedSelection = selectedNodes.some(n => isNodeLocked(n));
+        const hasUnlockedSelection = selectedNodes.some(n => !isNodeLocked(n));
+        const hasSelectedGroups = selectedGroups.length > 0;
+        const hasUnlockedSelectedGroups = selectedGroups.some(g => !isNodeLocked(g));
+        const allSelectedGroupsCollapsed = hasSelectedGroups && selectedGroups.every(g => !!g.collapsed);
+        const hasGroupedSelection = selectedEditableNonGroupNodes.some(n => !!n.groupId);
+        const targetIsGroup = !!targetNode && targetNode.type === 'group';
+        const canGroupSelection = selectedEditableNonGroupNodes.length > 1;
+        const hasGroups = getGroupNodes().length > 0;
+        const targetGroupCanAcceptSelection = targetIsGroup
+            && selectedEditableNonGroupNodes.some(n => n.id !== targetNode.id && n.groupId !== targetNode.id);
+
+        setMenuItemVisible(cmAddText, isBackgroundMenu || (targetIsGroup && !isNodeLocked(targetNode)));
+        setMenuItemVisible(cmAddImg, isBackgroundMenu || (targetIsGroup && !isNodeLocked(targetNode)));
+        setMenuItemVisible(cmAddGroup, isBackgroundMenu && !canGroupSelection);
+        setMenuItemVisible(cmGroupSelected, canGroupSelection);
+        setMenuItemVisible(cmAddSelectedToGroup, !targetIsGroup && selectedEditableNonGroupNodes.length > 0 && hasGroups);
+        setMenuItemVisible(cmAddSelectedToTargetGroup, targetGroupCanAcceptSelection);
+        setMenuItemVisible(cmRemoveSelectedFromGroup, selectedEditableNonGroupNodes.length > 0 && hasGroupedSelection);
+        setMenuItemVisible(cmRenameGroup, targetIsGroup && !isNodeLocked(targetNode));
+        setMenuItemVisible(cmUngroupKeep, targetIsGroup);
+        setMenuItemVisible(cmDeleteGroupWithMembers, targetIsGroup && getGroupMemberCount(targetNode.id) > 0);
+        setMenuItemVisible(cmOpenFormat, !!targetNode && targetNode.type === 'text' && selectedNonGroupIds.length <= 1 && !isNodeLocked(targetNode));
+        setMenuItemVisible(cmAlignLeft, alignableCount >= 2);
+        setMenuItemVisible(cmAlignCenter, alignableCount >= 2);
+        setMenuItemVisible(cmAlignRight, alignableCount >= 2);
+        setMenuItemVisible(cmAlignTop, alignableCount >= 2);
+        setMenuItemVisible(cmAlignMiddle, alignableCount >= 2);
+        setMenuItemVisible(cmAlignBottom, alignableCount >= 2);
+        setMenuItemVisible(cmLockSelected, hasUnlockedSelection);
+        setMenuItemVisible(cmUnlockSelected, hasLockedSelection);
+        setMenuItemVisible(cmToggleCollapseSelectedGroups, hasUnlockedSelectedGroups);
+
+        if (cmToggleCollapseSelectedGroups) {
+            cmToggleCollapseSelectedGroups.textContent = allSelectedGroupsCollapsed
+                ? 'Expand Selected Groups'
+                : 'Collapse Selected Groups';
+        }
+    }
+
+    function openContextMenu(clientX, clientY, targetNode = null) {
+        if (!ctxMenu) return;
+
+        closeGroupPicker();
+
+        const formatMenu = container.querySelector('#node-format-menu');
+        if (formatMenu) {
+            formatMenu.hidden = true;
+        }
+
+        ctxMenuTargetNodeId = targetNode?.id || null;
+        refreshContextMenuItems();
+
+        const rect = viewport.getBoundingClientRect();
+        ctxMenu.style.left = `${clientX}px`;
+        ctxMenu.style.top = `${clientY}px`;
+        ctxMenu.hidden = false;
+
+        ctxMenuX = (clientX - rect.left - translateX) / scale;
+        ctxMenuY = (clientY - rect.top - translateY) / scale;
+    }
 
     viewport.addEventListener('contextmenu', (e) => {
         const nodeEl = e.target.closest('.canvas-node');
-
-        if (nodeEl) {
-            // Right-click on a node: show format menu at cursor position
-            e.preventDefault();
-            const nodeId = nodeEl.dataset.id || nodeEl.id.replace('node-', '');
-            lastRightClickedNode = canvasData.nodes.find(n => n.id === nodeId);
-            const formatMenu = container.querySelector('#node-format-menu');
-
-            if (isOwner && lastRightClickedNode && lastRightClickedNode.type === 'text') {
-                // Select the node if not already selected
-                if (selectedNode !== lastRightClickedNode) {
-                    selectNode(lastRightClickedNode);
-                }
-                // Position format menu next to node toolbar (close to selected node)
-                if (formatMenu) {
-                    formatMenu.style.position = 'absolute';
-                    formatMenu.style.left = '100%';
-                    formatMenu.style.top = '100%';
-                    formatMenu.style.marginTop = '8px';
-                    formatMenu.style.display = 'flex';
-                    formatMenu.hidden = false;
-                }
-            } else if (formatMenu) {
-                formatMenu.hidden = true;
-            }
-
-        } else if (!e.target.closest('.canvas-node')) {
+        if (!nodeEl) {
             e.preventDefault();
             if (!isOwner) return;
-            lastRightClickedNode = null;
             window._pendingEdgeConnect = null;
-
-            const rect = viewport.getBoundingClientRect();
-            ctxMenu.style.left = e.clientX + 'px';
-            ctxMenu.style.top = e.clientY + 'px';
-            ctxMenu.hidden = false;
-
-            // Calc logic canvas coords
-            ctxMenuX = (e.clientX - rect.left - translateX) / scale;
-            ctxMenuY = (e.clientY - rect.top - translateY) / scale;
+            openContextMenu(e.clientX, e.clientY, null);
+            return;
         }
+
+        e.preventDefault();
+        if (!isOwner) return;
+
+        const nodeId = nodeEl.dataset.id || nodeEl.id.replace('node-', '');
+        const clickedNode = canvasData.nodes.find(n => n.id === nodeId);
+        if (!clickedNode) return;
+
+        const selectedBefore = getCurrentSelectionNodeIds();
+        const clickedAlreadySelected = selectedBefore.has(clickedNode.id);
+        const hasSelectedNonGroupBesidesClicked = Array.from(selectedBefore).some(id => {
+            if (id === clickedNode.id) return false;
+            const node = canvasData.nodes.find(n => n.id === id);
+            return !!node && node.type !== 'group';
+        });
+
+        const keepSelectionForGroupTarget = clickedNode.type === 'group'
+            && !clickedAlreadySelected
+            && hasSelectedNonGroupBesidesClicked;
+
+        if (!clickedAlreadySelected && !keepSelectionForGroupTarget) {
+            selectNode(clickedNode);
+        }
+
+        openContextMenu(e.clientX, e.clientY, clickedNode);
     });
 
     document.addEventListener('click', (e) => {
@@ -1145,6 +1759,10 @@ function setupViewport() {
         if (ctxMenu && !ctxMenu.hidden && !ctxMenu.contains(e.target)) {
             ctxMenu.hidden = true;
             window._pendingEdgeConnect = null;
+            ctxMenuTargetNodeId = null;
+        }
+        if (groupPicker && !groupPicker.hidden && !groupPicker.contains(e.target) && !(ctxMenu && ctxMenu.contains(e.target))) {
+            closeGroupPicker();
         }
         // Also close format menu and palette when clicking outside them
         const formatMenu = container.querySelector('#node-format-menu');
@@ -1165,7 +1783,7 @@ function setupViewport() {
 
         // Belt-and-suspenders: deselect node when clicking on empty viewport area
         // This ensures toolbar always hides even if mousedown handler didn't catch it
-        if (selectedNode && e.target.closest && !e.target.closest('.canvas-node') && !e.target.closest('.canvas-node-toolbar') && !e.target.closest('.node-format-menu') && !e.target.closest('.node-color-palette') && !e.target.closest('.node-link-menu') && !e.target.closest('.canvas-context-menu') && !e.target.closest('.ui-context-menu')) {
+        if (selectedNode && e.target.closest && !e.target.closest('.canvas-node') && !e.target.closest('.canvas-node-toolbar') && !e.target.closest('.node-format-menu') && !e.target.closest('.node-color-palette') && !e.target.closest('.node-link-menu') && !e.target.closest('.canvas-context-menu') && !e.target.closest('.canvas-group-picker') && !e.target.closest('.ui-context-menu')) {
             clearSelection();
         }
     });
@@ -1175,6 +1793,8 @@ function setupViewport() {
         if (e.key === 'Escape') {
             ctxMenu.hidden = true;
             window._pendingEdgeConnect = null;
+            ctxMenuTargetNodeId = null;
+            closeGroupPicker();
             const formatMenu = container.querySelector('#node-format-menu');
             const palette = container.querySelector('#node-color-palette');
             const linkMenu = container.querySelector('#node-link-menu');
@@ -1185,26 +1805,44 @@ function setupViewport() {
         }
     });
 
-    container.querySelector('#cm-add-text')?.addEventListener('click', () => {
+    cmAddText?.addEventListener('click', () => {
         if (ctxMenu) ctxMenu.hidden = true;
         pushHistory();
         const id = 'n_' + Date.now();
-           const newNode = { id, type: 'text', x: ctxMenuX, y: ctxMenuY, width: 250, height: 150, text: '', textAlign: 'left', verticalAlign: 'top' };
-           canvasData.nodes.push(newNode);
+        const newNode = { id, type: 'text', x: ctxMenuX, y: ctxMenuY, width: 250, height: 150, text: '', textAlign: 'left', verticalAlign: 'top' };
 
-           connectPendingEdgeToNode(newNode);
+        const targetNode = getContextTargetNode();
+        if (targetNode?.type === 'group') {
+            if (targetNode.collapsed) {
+                setGroupCollapsed(targetNode, false);
+            }
+            newNode.groupId = targetNode.id;
+        }
+
+        canvasData.nodes.push(newNode);
+
+        connectPendingEdgeToNode(newNode);
         saveCanvasData(true);
         renderCanvas();
     });
 
-    container.querySelector('#cm-add-img')?.addEventListener('click', () => {
+    cmAddImg?.addEventListener('click', () => {
         if (ctxMenu) ctxMenu.hidden = true;
         pushHistory();
         const id = 'n_' + Date.now();
-           const newNode = { id, type: 'file', file: '', x: ctxMenuX, y: ctxMenuY, width: 250, height: 250 };
-           canvasData.nodes.push(newNode);
+        const newNode = { id, type: 'file', file: '', x: ctxMenuX, y: ctxMenuY, width: 250, height: 250 };
 
-           connectPendingEdgeToNode(newNode);
+        const targetNode = getContextTargetNode();
+        if (targetNode?.type === 'group') {
+            if (targetNode.collapsed) {
+                setGroupCollapsed(targetNode, false);
+            }
+            newNode.groupId = targetNode.id;
+        }
+
+        canvasData.nodes.push(newNode);
+
+        connectPendingEdgeToNode(newNode);
         saveCanvasData(true);
         renderCanvas();
 
@@ -1215,38 +1853,257 @@ function setupViewport() {
         input.click();
     });
 
-    container.querySelector('#cm-add-group')?.addEventListener('click', () => {
+    cmAddGroup?.addEventListener('click', () => {
         if (ctxMenu) ctxMenu.hidden = true;
         pushHistory();
-        const id = 'n_' + Date.now();
+        const selectedIds = Array.from(getCurrentSelectionNodeIds());
+        const memberIds = selectedIds.filter(id => {
+            const node = canvasData.nodes.find(n => n.id === id);
+            return !!node && node.type !== 'group' && !isNodeLocked(node);
+        });
 
-        let minX = ctxMenuX, minY = ctxMenuY, maxX = ctxMenuX + 400, maxY = ctxMenuY + 300;
+        const newGroup = createGroupFromSelectionAt(ctxMenuX, ctxMenuY, {
+            boundsNodeIds: selectedIds,
+            memberNodeIds: memberIds,
+        });
 
-        // If there are multiSelectedNodes, snap group box around them!
-        if (multiSelectedNodes && multiSelectedNodes.size > 0) {
-            let first = true;
-            canvasData.nodes.forEach(n => {
-                if (multiSelectedNodes.has(n.id)) {
-                    if (first) {
-                        minX = n.x; minY = n.y; maxX = n.x + n.width; maxY = n.y + n.height;
-                        first = false;
-                    } else {
-                        minX = Math.min(minX, n.x);
-                        minY = Math.min(minY, n.y);
-                        maxX = Math.max(maxX, n.x + n.width);
-                        maxY = Math.max(maxY, n.y + n.height);
-                    }
-                }
-            });
-            // Give some padding
-            minX -= 40; minY -= 60; maxX += 40; maxY += 40;
-        }
-
-           const newNode = { id, type: 'group', label: 'New Group', x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-           canvasData.nodes.push(newNode);
-           connectPendingEdgeToNode(newNode);
         saveCanvasData(true);
         renderCanvas();
+
+        const refreshed = newGroup ? canvasData.nodes.find(n => n.id === newGroup.id) : null;
+        if (refreshed) {
+            selectNode(refreshed);
+        }
+    });
+
+    cmGroupSelected?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+
+        const selectedIds = Array.from(getCurrentSelectionNodeIds());
+        const memberIds = selectedIds.filter(id => {
+            const node = canvasData.nodes.find(n => n.id === id);
+            return !!node && node.type !== 'group' && !isNodeLocked(node);
+        });
+
+        if (memberIds.length < 2) {
+            window.uiToast?.('Select at least two unlocked non-group nodes', 'info');
+            return;
+        }
+
+        pushHistory();
+        const newGroup = createGroupFromSelectionAt(ctxMenuX, ctxMenuY, {
+            boundsNodeIds: selectedIds,
+            memberNodeIds: memberIds,
+        });
+
+        markUnsaved();
+        renderCanvas();
+
+        const refreshed = newGroup ? canvasData.nodes.find(n => n.id === newGroup.id) : null;
+        if (refreshed) {
+            selectNode(refreshed);
+        }
+    });
+
+    cmAddSelectedToTargetGroup?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+
+        const targetNode = getContextTargetNode();
+        if (!targetNode || targetNode.type !== 'group') return;
+
+        const selectedIds = getSelectedNonGroupNodeIds().filter(id => {
+            const node = canvasData.nodes.find(n => n.id === id);
+            return !!node && !isNodeLocked(node);
+        });
+        if (selectedIds.length === 0) {
+            window.uiToast?.('Select unlocked node(s) to add', 'info');
+            return;
+        }
+
+        const hasChanges = selectedIds.some(id => {
+            const node = canvasData.nodes.find(n => n.id === id);
+            return !!node && node.groupId !== targetNode.id;
+        });
+
+        if (!hasChanges) {
+            window.uiToast?.('Selection is already in this group', 'info');
+            return;
+        }
+
+        pushHistory();
+        if (targetNode.collapsed) {
+            setGroupCollapsed(targetNode, false);
+        }
+        assignNodesToGroup(selectedIds, targetNode.id);
+
+        markUnsaved();
+        renderCanvas();
+    });
+
+    cmAddSelectedToGroup?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+
+        const selectedIds = getSelectedNonGroupNodeIds().filter(id => {
+            const node = canvasData.nodes.find(n => n.id === id);
+            return !!node && !isNodeLocked(node);
+        });
+        if (selectedIds.length === 0) {
+            window.uiToast?.('Select unlocked node(s) to add', 'info');
+            return;
+        }
+
+        openGroupPicker({
+            title: 'Add Selected To Group',
+            onPick: (targetGroupId) => {
+                const hasChanges = selectedIds.some(id => {
+                    const node = canvasData.nodes.find(n => n.id === id);
+                    return !!node && node.groupId !== targetGroupId;
+                });
+
+                if (!hasChanges) {
+                    window.uiToast?.('Selection is already in that group', 'info');
+                    return;
+                }
+
+                pushHistory();
+                const targetGroup = canvasData.nodes.find(n => n.id === targetGroupId && n.type === 'group');
+                if (targetGroup?.collapsed) {
+                    setGroupCollapsed(targetGroup, false);
+                }
+                assignNodesToGroup(selectedIds, targetGroupId);
+
+                markUnsaved();
+                renderCanvas();
+            }
+        });
+    });
+
+    cmRemoveSelectedFromGroup?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+
+        const selectedIds = getSelectedNonGroupNodeIds().filter(id => {
+            const node = canvasData.nodes.find(n => n.id === id);
+            return !!node && !isNodeLocked(node);
+        });
+        if (selectedIds.length === 0) {
+            window.uiToast?.('Select unlocked node(s) first', 'info');
+            return;
+        }
+
+        const hasChanges = selectedIds.some(id => {
+            const node = canvasData.nodes.find(n => n.id === id);
+            return !!node && !!node.groupId;
+        });
+
+        if (!hasChanges) {
+            window.uiToast?.('Selected nodes are not grouped', 'info');
+            return;
+        }
+
+        pushHistory();
+        removeNodesFromGroup(selectedIds);
+
+        markUnsaved();
+        renderCanvas();
+    });
+
+    cmRenameGroup?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+
+        const targetNode = getContextTargetNode();
+        if (!targetNode || targetNode.type !== 'group') return;
+
+        selectNode(targetNode);
+        requestAnimationFrame(() => {
+            const titleEl = nodesLayer?.querySelector(`[data-id="${targetNode.id}"] .group-title`);
+            if (titleEl) {
+                titleEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+            }
+        });
+    });
+
+    cmUngroupKeep?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+
+        const targetNode = getContextTargetNode();
+        if (!targetNode || targetNode.type !== 'group') return;
+
+        pushHistory();
+        deleteNodesByIds(new Set([targetNode.id]));
+    });
+
+    cmDeleteGroupWithMembers?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+
+        const targetNode = getContextTargetNode();
+        if (!targetNode || targetNode.type !== 'group') return;
+
+        const members = getGroupMemberNodes(targetNode.id);
+        if (members.length === 0) {
+            pushHistory();
+            deleteNodesByIds(new Set([targetNode.id]));
+            return;
+        }
+
+        const memberText = members.length === 1 ? '1 node' : `${members.length} nodes`;
+        if (!confirm(`Delete group "${targetNode.label || 'Group'}" and its ${memberText}?`)) return;
+
+        pushHistory();
+        const ids = new Set([targetNode.id, ...members.map(n => n.id)]);
+        deleteNodesByIds(ids);
+    });
+
+    cmOpenFormat?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+
+        const targetNode = getContextTargetNode();
+        if (!targetNode || targetNode.type !== 'text') return;
+        showFormatMenuForNode(targetNode);
+    });
+
+    cmAlignLeft?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+        alignSelectedNodes('left');
+    });
+
+    cmAlignCenter?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+        alignSelectedNodes('center');
+    });
+
+    cmAlignRight?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+        alignSelectedNodes('right');
+    });
+
+    cmAlignTop?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+        alignSelectedNodes('top');
+    });
+
+    cmAlignMiddle?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+        alignSelectedNodes('middle');
+    });
+
+    cmAlignBottom?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+        alignSelectedNodes('bottom');
+    });
+
+    cmLockSelected?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+        setSelectedNodesLocked(true);
+    });
+
+    cmUnlockSelected?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+        setSelectedNodesLocked(false);
+    });
+
+    cmToggleCollapseSelectedGroups?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+        toggleCollapseSelectedGroups();
     });
 
     viewport.addEventListener('dragover', (e) => {
@@ -1354,13 +2211,43 @@ function renderCanvas() {
     nodesLayer.innerHTML = '';
     edgesLayer.innerHTML = '';
 
+    const visibleNodeIds = new Set(
+        canvasData.nodes.filter(isNodeVisible).map(n => n.id)
+    );
+
+    let selectionChanged = false;
+
+    if (selectedNode && !visibleNodeIds.has(selectedNode.id)) {
+        selectedNode = null;
+        selectionChanged = true;
+    }
+
+    if (multiSelectedNodes.size > 0) {
+        Array.from(multiSelectedNodes).forEach(id => {
+            if (!visibleNodeIds.has(id)) {
+                multiSelectedNodes.delete(id);
+                selectionChanged = true;
+            }
+        });
+    }
+
+    if (selectedEdge) {
+        const edgeVisible = visibleNodeIds.has(selectedEdge.fromNode) && visibleNodeIds.has(selectedEdge.toNode);
+        if (!edgeVisible) {
+            selectedEdge = null;
+            selectionChanged = true;
+        }
+    }
+
     // Render edges
     canvasData.edges.forEach(edge => {
+        if (!visibleNodeIds.has(edge.fromNode) || !visibleNodeIds.has(edge.toNode)) return;
         renderEdge(edge);
     });
 
     // Render nodes
     canvasData.nodes.forEach(node => {
+        if (!visibleNodeIds.has(node.id)) return;
         renderNode(node);
     });
 
@@ -1368,7 +2255,14 @@ function renderCanvas() {
         const selectedFigure = nodesLayer.querySelector(`[data-id="${selectedInlineImage.nodeId}"] .node-inline-image[data-inline-id="${selectedInlineImage.inlineId}"]`);
         if (!selectedFigure) {
             selectedInlineImage = null;
-            updateDeleteBtn();
+            selectionChanged = true;
+        }
+    }
+
+    if (selectionChanged) {
+        updateDeleteBtn();
+        if (!selectedNode) {
+            hideNodeToolbar();
         }
     }
 
@@ -1405,6 +2299,15 @@ function renderNode(node) {
     el.style.width = `${node.width}px`;
     el.style.height = `${node.height}px`;
 
+    if (isNodeLocked(node)) {
+        el.classList.add('node-locked');
+    }
+
+    if (node.type !== 'group' && typeof node.groupId === 'string' && node.groupId) {
+        el.dataset.groupId = node.groupId;
+        el.classList.add('grouped-node');
+    }
+
     if (node.color) {
         if (['1','2','3','4','5','6'].includes(node.color)) {
             el.classList.add(`color-${node.color}`);
@@ -1415,10 +2318,22 @@ function renderNode(node) {
 
     let contentHtml = '';
     if (node.type === 'group') {
-        el.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-        el.style.border = '2px dashed var(--canvas-node-border)';
-        el.style.zIndex = '0';
-        contentHtml = `<div class="node-title" style="font-weight:bold; font-size:18px; padding:8px; opacity:0.8;">${node.label || 'Group'}</div>`;
+        const memberCount = getGroupMemberCount(node.id);
+        const groupLabel = (node.label || 'New Group').trim() || 'New Group';
+        const memberLabel = memberCount === 1 ? '1 node' : `${memberCount} nodes`;
+
+        el.classList.add('canvas-group');
+        if (node.collapsed) {
+            el.classList.add('group-collapsed');
+        }
+        if (groupHasSelectedMembers(node.id)) {
+            el.classList.add('group-has-selected-member');
+        }
+
+        contentHtml = `
+            <div class="group-title" title="Double-click to rename group">${escapeHtmlText(groupLabel)}</div>
+            <div class="group-members-count" title="Grouped nodes">${memberLabel}</div>
+        `;
     } else if (node.type === 'text') {
         const htmlText = (node.html || '').trim();
         const rawText = (node.text || '').trim();
@@ -1539,14 +2454,47 @@ function setupNodeInteractions(el, node) {
     let textContentEl = null;
     let inlineImageResizeState = null;
     let inlineImageDragState = null;
+    let dragMovedNodeIds = null;
+    let dragIncludesGroupNode = false;
 
     el.addEventListener('mousedown', (e) => {
         if (e.button !== 0) return;
         e.stopPropagation(); // prevent viewport drag
 
+        const clickedGroupTitle = e.target.closest('.group-title');
+        if (clickedGroupTitle) {
+            if (!clickedGroupTitle.isContentEditable) {
+                if (selectedNode?.id !== node.id || multiSelectedNodes.size > 0) {
+                    selectNode(node);
+                }
+            }
+            return;
+        }
+
+        if (isNodeLocked(node)) {
+            if (e.shiftKey && isOwner) {
+                if (multiSelectedNodes.has(node.id)) {
+                    multiSelectedNodes.delete(node.id);
+                    el.classList.remove('selected');
+                } else {
+                    multiSelectedNodes.add(node.id);
+                    el.classList.add('selected');
+                    if (selectedNode && !multiSelectedNodes.has(selectedNode.id)) {
+                        multiSelectedNodes.add(selectedNode.id);
+                    }
+                }
+                selectedNode = node;
+                showNodeToolbar(node, el);
+                updateDeleteBtn();
+            } else if (selectedNode?.id !== node.id || multiSelectedNodes.size > 0) {
+                selectNode(node);
+            }
+            return;
+        }
+
         // Push history if starting to drag or resize
         if (e.target.classList.contains('node-resize-handle') || !e.target.classList.contains('node-edge-handle')) {
-            if (isOwner) pushHistory();
+            if (isOwner && !isNodeLocked(node)) pushHistory();
         }
 
         // Handle edge creation handles
@@ -1668,6 +2616,7 @@ function setupNodeInteractions(el, node) {
     if (node.type === 'file' && isOwner) {
         el.addEventListener('dblclick', (e) => {
             if (currentTool !== 'select') return;
+            if (isNodeLocked(node)) return;
             e.stopPropagation();
             const currentName = node.file ? node.file.split('/').pop() : '';
             const newName = prompt('Rename image:', currentName);
@@ -1684,6 +2633,79 @@ function setupNodeInteractions(el, node) {
             const refreshed = canvasData.nodes.find(n => n.id === node.id);
             if (refreshed) selectNode(refreshed);
         });
+    }
+
+    if (node.type === 'group' && isOwner) {
+        const titleEl = el.querySelector('.group-title');
+        if (titleEl) {
+            let originalLabel = '';
+            let isRenaming = false;
+
+            const finishRename = (commit) => {
+                if (!isRenaming) return;
+
+                const nextLabel = (titleEl.textContent || '').trim() || 'New Group';
+                titleEl.contentEditable = 'false';
+                titleEl.classList.remove('editing');
+                isRenaming = false;
+
+                if (commit) {
+                    node.label = nextLabel;
+                    if (node.label !== originalLabel) {
+                        markUnsaved();
+                    }
+                }
+
+                titleEl.textContent = (node.label || originalLabel || 'New Group').trim() || 'New Group';
+            };
+
+            const startRename = () => {
+                if (isRenaming || currentTool !== 'select' || isNodeLocked(node)) return;
+
+                pushHistory();
+                if (selectedNode?.id !== node.id || multiSelectedNodes.size > 0) {
+                    selectNode(node);
+                }
+
+                originalLabel = (node.label || 'New Group').trim() || 'New Group';
+                titleEl.contentEditable = 'true';
+                titleEl.classList.add('editing');
+                titleEl.focus();
+                isRenaming = true;
+
+                const range = document.createRange();
+                range.selectNodeContents(titleEl);
+                const sel = window.getSelection();
+                if (sel) {
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+            };
+
+            titleEl.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                startRename();
+            });
+
+            titleEl.addEventListener('keydown', (e) => {
+                if (!isRenaming) return;
+                e.stopPropagation();
+
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    finishRename(true);
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    node.label = originalLabel;
+                    finishRename(false);
+                }
+            });
+
+            titleEl.addEventListener('blur', () => {
+                finishRename(true);
+            });
+        }
     }
 
     if (node.type === 'text' && isOwner) {
@@ -1734,6 +2756,7 @@ function setupNodeInteractions(el, node) {
 
         function startRichEdit() {
             if (editingNodeId === node.id) return;
+            if (isNodeLocked(node)) return;
 
             // Close any other active editor first
             if (editingNodeId && editingNodeId !== node.id) {
@@ -1850,6 +2873,7 @@ function setupNodeInteractions(el, node) {
         // Double click enters preview-mode rich editor (not raw markdown editor)
         el.addEventListener('dblclick', (e) => {
             if (currentTool !== 'select') return;
+            if (isNodeLocked(node)) return;
             e.stopPropagation();
             startRichEdit();
         });
@@ -2159,13 +3183,30 @@ function setupNodeInteractions(el, node) {
         if (isDragging) {
             const dx = (e.clientX - startX) / scale;
             const dy = (e.clientY - startY) / scale;
+            dragMovedNodeIds = new Set();
+            dragIncludesGroupNode = false;
 
             // Multi-select drag: move all selected nodes together
             if (multiSelectedNodes.size > 0 && multiSelectedNodes.has(node.id)) {
+                const dragNodeIds = new Set(Array.from(multiSelectedNodes).filter(id => {
+                    const target = canvasData.nodes.find(n => n.id === id);
+                    return !!target && !isNodeLocked(target);
+                }));
+                const selectedGroupIds = new Set();
+
+                multiSelectedNodes.forEach(id => {
+                    const selected = canvasData.nodes.find(n => n.id === id);
+                    if (!selected || selected.type !== 'group') return;
+                    selectedGroupIds.add(selected.id);
+                    getGroupMemberNodes(selected.id)
+                        .filter(member => !isNodeLocked(member))
+                        .forEach(member => dragNodeIds.add(member.id));
+                });
+
                 // Cache drag origins once per drag gesture.
                 if (!el._multiDragOrigins) {
                     el._multiDragOrigins = new Map();
-                    multiSelectedNodes.forEach(id => {
+                    dragNodeIds.forEach(id => {
                         const n = canvasData.nodes.find(nd => nd.id === id);
                         if (n) el._multiDragOrigins.set(id, { x: n.x, y: n.y });
                     });
@@ -2185,7 +3226,7 @@ function setupNodeInteractions(el, node) {
                 const deltaX = anchorX - anchorOrigin.x;
                 const deltaY = anchorY - anchorOrigin.y;
 
-                multiSelectedNodes.forEach(id => {
+                dragNodeIds.forEach(id => {
                     const n = canvasData.nodes.find(nd => nd.id === id);
                     const orig = el._multiDragOrigins.get(id);
                     if (n && orig) {
@@ -2199,6 +3240,48 @@ function setupNodeInteractions(el, node) {
                         updateEdgesForNode(id);
                     }
                 });
+                dragMovedNodeIds = dragNodeIds;
+                dragIncludesGroupNode = selectedGroupIds.size > 0;
+            } else if (node.type === 'group') {
+                if (!el._groupDragOrigins) {
+                    el._groupDragOrigins = new Map();
+                    el._groupDragOrigins.set(node.id, { x: node.x, y: node.y });
+                    getGroupMemberNodes(node.id)
+                        .filter(member => !isNodeLocked(member))
+                        .forEach(member => {
+                        el._groupDragOrigins.set(member.id, { x: member.x, y: member.y });
+                    });
+                }
+
+                const anchorOrigin = el._groupDragOrigins.get(node.id) || { x: origLeft, y: origTop };
+                let anchorX = Math.round(anchorOrigin.x + dx);
+                let anchorY = Math.round(anchorOrigin.y + dy);
+
+                const anchorSnapProbe = { ...node, x: anchorX, y: anchorY };
+                const snap = getSnapGuides(anchorSnapProbe);
+                if (snap.snapX !== null) anchorX = snap.snapX;
+                if (snap.snapY !== null) anchorY = snap.snapY;
+                renderGuides(snap.guides);
+
+                const deltaX = anchorX - anchorOrigin.x;
+                const deltaY = anchorY - anchorOrigin.y;
+
+                el._groupDragOrigins.forEach((orig, id) => {
+                    const n = canvasData.nodes.find(nd => nd.id === id);
+                    if (!n) return;
+
+                    n.x = Math.round(orig.x + deltaX);
+                    n.y = Math.round(orig.y + deltaY);
+                    const movedEl = nodesLayer.querySelector(`[data-id="${id}"]`);
+                    if (movedEl) {
+                        movedEl.style.left = `${n.x}px`;
+                        movedEl.style.top = `${n.y}px`;
+                    }
+                    updateEdgesForNode(id);
+                });
+
+                dragMovedNodeIds = new Set(el._groupDragOrigins.keys());
+                dragIncludesGroupNode = true;
             } else {
                 node.x = Math.round(origLeft + dx);
                 node.y = Math.round(origTop + dy);
@@ -2212,6 +3295,7 @@ function setupNodeInteractions(el, node) {
                 el.style.left = `${node.x}px`;
                 el.style.top = `${node.y}px`;
                 updateEdgesForNode(node.id);
+                dragMovedNodeIds = new Set([node.id]);
             }
 
             if (selectedNode === node) showNodeToolbar(node, el);
@@ -2255,7 +3339,18 @@ function setupNodeInteractions(el, node) {
         }
 
         if (isDragging) {
+            if (dragMovedNodeIds && dragMovedNodeIds.size > 0 && !dragIncludesGroupNode) {
+                const membershipChanged = updateGroupMembershipForNodeIds(Array.from(dragMovedNodeIds));
+                if (membershipChanged) {
+                    markUnsaved();
+                    renderCanvas();
+                }
+            }
+
             el._multiDragOrigins = null;
+            el._groupDragOrigins = null;
+            dragMovedNodeIds = null;
+            dragIncludesGroupNode = false;
             clearGuides();
         }
         isDragging = false;
@@ -2282,6 +3377,13 @@ function createNode(type, x, y, width, height, textOrFile) {
         node.verticalAlign = 'top';
     }
     if (type === 'file') node.file = textOrFile;
+
+    if (type !== 'group') {
+        const group = getContainingGroupForNode(node);
+        if (group) {
+            node.groupId = group.id;
+        }
+    }
 
     canvasData.nodes.push(node);
     renderNode(node);
@@ -2557,6 +3659,14 @@ function showNodeToolbar(node, el) {
     nodeToolbar.style.transform = 'translateX(-50%)';
     nodeToolbar.style.display = 'flex';
     nodeToolbar.hidden = false;
+
+    const locked = !!node?.locked;
+    ['#nt-color', '#nt-edit', '#nt-image', '#nt-disconnect'].forEach(sel => {
+        const btn = nodeToolbar.querySelector(sel);
+        if (btn) {
+            btn.disabled = locked;
+        }
+    });
 }
 
 function hideNodeToolbar() {
@@ -2569,6 +3679,11 @@ function hideNodeToolbar() {
         const linkMenu = container.querySelector('#node-link-menu');
         if (formatMenu) formatMenu.hidden = true;
         if (linkMenu) linkMenu.hidden = true;
+
+        ['#nt-color', '#nt-edit', '#nt-image', '#nt-disconnect'].forEach(sel => {
+            const btn = nodeToolbar.querySelector(sel);
+            if (btn) btn.disabled = false;
+        });
     }
 }
 
@@ -2604,6 +3719,10 @@ function setupNodeToolbar() {
     const linkCopyBtn = nodeToolbar.querySelector('#nt-link-copy-url');
     nodeToolbar.querySelector('#nt-color').addEventListener('click', () => {
         if (!isOwner) return;
+        if (selectedNode && isNodeLocked(selectedNode)) {
+            window.uiToast?.('Unlock node to change color', 'info');
+            return;
+        }
         palette.hidden = !palette.hidden;
         if (linkMenu) linkMenu.hidden = true;
     });
@@ -2627,6 +3746,10 @@ function setupNodeToolbar() {
     nodeToolbar.querySelector('#nt-edit').addEventListener('click', () => {
         if (!isOwner) return;
         if (!selectedNode) return;
+        if (isNodeLocked(selectedNode)) {
+            window.uiToast?.('Unlock node to edit', 'info');
+            return;
+        }
         if (selectedNode.type === 'text') {
             const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
             const textContent = el.querySelector('.node-content-text');
@@ -2646,6 +3769,14 @@ function setupNodeToolbar() {
                 // Re-select the node to update toolbar
                 selectNode(selectedNode);
             }
+        } else if (selectedNode.type === 'group') {
+            const groupId = selectedNode.id;
+            requestAnimationFrame(() => {
+                const titleEl = nodesLayer?.querySelector(`[data-id="${groupId}"] .group-title`);
+                if (titleEl) {
+                    titleEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+                }
+            });
         }
     });
 
@@ -2653,6 +3784,10 @@ function setupNodeToolbar() {
     nodeToolbar.querySelector('#nt-image')?.addEventListener('click', () => {
         if (!isOwner) return;
         if (!selectedNode) return;
+        if (isNodeLocked(selectedNode)) {
+            window.uiToast?.('Unlock node to import image', 'info');
+            return;
+        }
         const input = container.querySelector('#canvas-upload-image');
         clearPendingInlineImageMarker();
 
@@ -2709,6 +3844,10 @@ function setupNodeToolbar() {
     nodeToolbar.querySelector('#nt-disconnect')?.addEventListener('click', () => {
         if (!isOwner) return;
         if (!selectedNode) return;
+        if (isNodeLocked(selectedNode)) {
+            window.uiToast?.('Unlock node to edit connections', 'info');
+            return;
+        }
         disconnectSelectedNodeEdges();
     });
 
@@ -2717,6 +3856,10 @@ function setupNodeToolbar() {
         swatch.addEventListener('click', (e) => {
             if (!isOwner) return;
             if (!selectedNode) return;
+            if (isNodeLocked(selectedNode)) {
+                window.uiToast?.('Unlock node to change color', 'info');
+                return;
+            }
             const colorCode = e.target.dataset.color;
 
             const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
@@ -2765,6 +3908,7 @@ function setupNodeToolbar() {
 
     function ensureActiveRichEditor() {
         if (!selectedNode || selectedNode.type !== 'text') return null;
+        if (isNodeLocked(selectedNode)) return null;
         const nodeEl = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
         if (!nodeEl) return null;
         const editor = nodeEl.querySelector('.node-content-text');
@@ -2780,6 +3924,7 @@ function setupNodeToolbar() {
 
     function applyFormatToRichEditor(editor, fmt) {
         if (!selectedNode || selectedNode.type !== 'text') return;
+        if (isNodeLocked(selectedNode)) return;
 
         if (fmt === 'align-left' || fmt === 'align-center' || fmt === 'align-right') {
             selectedNode.textAlign = fmt.replace('align-', '');
@@ -2958,6 +4103,42 @@ function setupOwnerTools() {
         } else if (isCtrlOrCmd && (e.key === 'd' || e.key === 'D')) {
             e.preventDefault();
             duplicateSelected();
+        } else if (isCtrlOrCmd && (e.key === 'g' || e.key === 'G')) {
+            e.preventDefault();
+
+            const selectedIds = Array.from(getCurrentSelectionNodeIds());
+            const memberIds = selectedIds.filter(id => {
+                const node = canvasData.nodes.find(n => n.id === id);
+                return !!node && node.type !== 'group' && !isNodeLocked(node);
+            });
+
+            if (memberIds.length < 2) {
+                window.uiToast('Select at least two unlocked non-group nodes to group', 'info');
+                return;
+            }
+
+            const selectedNodes = selectedIds
+                .map(id => canvasData.nodes.find(n => n.id === id))
+                .filter(Boolean);
+
+            const fallbackX = (viewport.clientWidth / 2 - translateX) / scale;
+            const fallbackY = (viewport.clientHeight / 2 - translateY) / scale;
+            const anchorX = selectedNodes.length > 0 ? selectedNodes[0].x : fallbackX;
+            const anchorY = selectedNodes.length > 0 ? selectedNodes[0].y : fallbackY;
+
+            pushHistory();
+            const newGroup = createGroupFromSelectionAt(anchorX, anchorY, {
+                boundsNodeIds: selectedIds,
+                memberNodeIds: memberIds,
+            });
+
+            markUnsaved();
+            renderCanvas();
+
+            const refreshed = newGroup ? canvasData.nodes.find(n => n.id === newGroup.id) : null;
+            if (refreshed) {
+                selectNode(refreshed);
+            }
         } else if (isCtrlOrCmd && (e.key === 'f' || e.key === 'F')) {
             e.preventDefault();
             openSearch();
@@ -3212,6 +4393,63 @@ function setTool(toolName) {
     viewport.className = 'canvas-viewport ' + `tool-${toolName}`;
 }
 
+function collectRepoFilesFromNodes(nodes) {
+    return [...new Set((nodes || []).flatMap(n => {
+        if (n.type === 'file' && typeof n.file === 'string' && n.file.startsWith('canvas_uploads/')) {
+            return [n.file];
+        }
+        if (n.type === 'text') {
+            return getInlineImageRepoFilesFromTextNode(n);
+        }
+        return [];
+    }))];
+}
+
+function deleteNodesByIds(nodeIds) {
+    const ids = nodeIds instanceof Set ? new Set(nodeIds) : new Set(nodeIds || []);
+    if (ids.size === 0) return false;
+
+    const nodesToDelete = canvasData.nodes.filter(n => ids.has(n.id));
+    if (nodesToDelete.length === 0) return false;
+
+    hideNodeToolbar();
+
+    const deletedGroupIds = new Set(
+        nodesToDelete.filter(n => n.type === 'group').map(n => n.id)
+    );
+
+    // Default behavior: deleting a group keeps member nodes by clearing membership.
+    deletedGroupIds.forEach(groupId => {
+        clearGroupMembershipForGroup(groupId, ids);
+    });
+
+    // Delete associated edges for every selected node.
+    canvasData.edges = canvasData.edges.filter(e => !ids.has(e.fromNode) && !ids.has(e.toNode));
+
+    const imageFiles = collectRepoFilesFromNodes(nodesToDelete);
+
+    nodesToDelete.forEach(n => {
+        inlineRepoFilesAtEditStart.delete(n.id);
+        inlineRepoFilesHandledInEdit.delete(n.id);
+        inlineRepoFilesLastSeenInEdit.delete(n.id);
+    });
+
+    canvasData.nodes = canvasData.nodes.filter(n => !ids.has(n.id));
+
+    sanitizeGroupMembership();
+
+    if (selectedInlineImage?.nodeId && ids.has(selectedInlineImage.nodeId)) {
+        clearInlineImageSelection();
+    }
+
+    promptDeleteRepoFiles(imageFiles);
+
+    markUnsaved();
+    clearSelection();
+    renderCanvas();
+    return true;
+}
+
 function deleteSelected() {
     if (!isOwner) return;
 
@@ -3225,36 +4463,7 @@ function deleteSelected() {
 
     if (selectedNodeIds && selectedNodeIds.size > 0) {
         pushHistory();
-        hideNodeToolbar();
-
-        // Delete associated edges for every selected node
-        canvasData.edges = canvasData.edges.filter(e => !selectedNodeIds.has(e.fromNode) && !selectedNodeIds.has(e.toNode));
-
-        const nodesToDelete = canvasData.nodes.filter(n => selectedNodeIds.has(n.id));
-        const imageFiles = [...new Set(nodesToDelete.flatMap(n => {
-            if (n.type === 'file' && typeof n.file === 'string' && n.file.startsWith('canvas_uploads/')) {
-                return [n.file];
-            }
-            if (n.type === 'text') {
-                return getInlineImageRepoFilesFromTextNode(n);
-            }
-            return [];
-        }))];
-
-        nodesToDelete.forEach(n => {
-            inlineRepoFilesAtEditStart.delete(n.id);
-            inlineRepoFilesHandledInEdit.delete(n.id);
-            inlineRepoFilesLastSeenInEdit.delete(n.id);
-        });
-
-        // Delete nodes
-        canvasData.nodes = canvasData.nodes.filter(n => !selectedNodeIds.has(n.id));
-
-        promptDeleteRepoFiles(imageFiles);
-
-        markUnsaved();
-        clearSelection();
-        renderCanvas();
+        deleteNodesByIds(selectedNodeIds);
         return;
     } else if (selectedEdge) {
         pushHistory();
@@ -4341,6 +5550,10 @@ function getSnapGuides(dragNode) {
     const guides = [];
     let snapX = null, snapY = null;
 
+    if (!isNodeVisible(dragNode)) {
+        return { snapX, snapY, guides };
+    }
+
     const dl = dragNode.x;
     const dr = dragNode.x + dragNode.width;
     const dcx = dragNode.x + dragNode.width / 2;
@@ -4351,6 +5564,7 @@ function getSnapGuides(dragNode) {
     for (const other of canvasData.nodes) {
         if (other.id === dragNode.id) continue;
         if (multiSelectedNodes.has(other.id)) continue;
+        if (!isNodeVisible(other)) continue;
 
         const ol = other.x;
         const or_ = other.x + other.width;
@@ -4493,6 +5707,20 @@ function pasteFromClipboard() {
         newNodes.push(clone);
     }
 
+    for (const clone of newNodes) {
+        if (clone.type === 'group') {
+            delete clone.groupId;
+            continue;
+        }
+
+        const originalGroupId = typeof clone.groupId === 'string' ? clone.groupId : '';
+        if (originalGroupId && idMap.has(originalGroupId)) {
+            clone.groupId = idMap.get(originalGroupId);
+        } else {
+            delete clone.groupId;
+        }
+    }
+
     for (const sourceEdge of (canvasClipboard.edges || [])) {
         if (!idMap.has(sourceEdge.fromNode) || !idMap.has(sourceEdge.toNode)) continue;
         canvasData.edges.push({
@@ -4537,6 +5765,20 @@ function duplicateSelected() {
         if (clone._tempBase64) delete clone._tempBase64;
         newNodes.push(clone);
         canvasData.nodes.push(clone);
+    }
+
+    for (const clone of newNodes) {
+        if (clone.type === 'group') {
+            delete clone.groupId;
+            continue;
+        }
+
+        const originalGroupId = typeof clone.groupId === 'string' ? clone.groupId : '';
+        if (originalGroupId && idMap.has(originalGroupId)) {
+            clone.groupId = idMap.get(originalGroupId);
+        } else {
+            delete clone.groupId;
+        }
     }
 
     // Duplicate edges between cloned nodes
@@ -4646,6 +5888,27 @@ function setupChatToggle() {
 function nudgeSelected(dx, dy) {
     if (!isOwner) return;
 
+    const baseSelection = multiSelectedNodes.size > 0
+        ? canvasData.nodes.filter(n => multiSelectedNodes.has(n.id))
+        : (selectedNode ? [selectedNode] : []);
+
+    const nodesToMove = new Map();
+    baseSelection.forEach(node => {
+        if (!node || isNodeLocked(node)) return;
+        nodesToMove.set(node.id, node);
+
+        if (node.type === 'group') {
+            getGroupMemberNodes(node.id)
+                .filter(member => !isNodeLocked(member))
+                .forEach(member => nodesToMove.set(member.id, member));
+        }
+    });
+
+    if (nodesToMove.size === 0) {
+        window.uiToast?.('Selected nodes are locked', 'info');
+        return;
+    }
+
     // Debounced history push — only push once per nudge burst
     if (!nudgeHistoryPushed) {
         pushHistory();
@@ -4654,11 +5917,7 @@ function nudgeSelected(dx, dy) {
     clearTimeout(nudgeTimeout);
     nudgeTimeout = setTimeout(() => { nudgeHistoryPushed = false; }, 500);
 
-    const nodesToNudge = multiSelectedNodes.size > 0
-        ? canvasData.nodes.filter(n => multiSelectedNodes.has(n.id))
-        : (selectedNode ? [selectedNode] : []);
-
-    for (const node of nodesToNudge) {
+    nodesToMove.forEach(node => {
         node.x += dx;
         node.y += dy;
         const el = nodesLayer.querySelector(`[data-id="${node.id}"]`);
@@ -4667,6 +5926,14 @@ function nudgeSelected(dx, dy) {
             el.style.top = `${node.y}px`;
         }
         updateEdgesForNode(node.id);
+    });
+
+    const movedIncludesGroup = Array.from(nodesToMove.values()).some(n => n.type === 'group');
+    if (!movedIncludesGroup) {
+        const movedNonGroupIds = Array.from(nodesToMove.values())
+            .filter(n => n.type !== 'group')
+            .map(n => n.id);
+        updateGroupMembershipForNodeIds(movedNonGroupIds);
     }
 
     if (selectedNode) {
@@ -4675,7 +5942,7 @@ function nudgeSelected(dx, dy) {
     }
 
     markUnsaved();
-    renderMinimap();
+    renderCanvas();
 }
 
 // -----------------------------------------------------------------
