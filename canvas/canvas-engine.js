@@ -1860,7 +1860,7 @@ function setupViewport() {
         closeGroupPicker();
     });
 
-    function showFormatMenuForNode(node, options = {}) {
+    function showFormatMenuForNode(node) {
         if (!node || node.type !== 'text') return;
 
         const formatMenu = container.querySelector('#node-format-menu');
@@ -1875,50 +1875,21 @@ function setupViewport() {
             showNodeToolbar(node, nodeEl);
         }
 
-        const clientX = Number(options.clientX);
-        const clientY = Number(options.clientY);
-        const useCursorAnchor = Number.isFinite(clientX) && Number.isFinite(clientY);
+        const palette = container.querySelector('#node-color-palette');
+        const linkMenu = container.querySelector('#node-link-menu');
+        if (palette) palette.hidden = true;
+        if (linkMenu) linkMenu.hidden = true;
 
-        if (useCursorAnchor) {
-            formatMenu.style.position = 'fixed';
-            formatMenu.style.marginTop = '0';
-            formatMenu.style.transform = 'none';
-            formatMenu.style.zIndex = '10020';
-            formatMenu.style.left = `${Math.round(clientX + 8)}px`;
-            formatMenu.style.top = `${Math.round(clientY + 8)}px`;
-        } else {
-            formatMenu.style.position = 'absolute';
-            formatMenu.style.left = '100%';
-            formatMenu.style.top = '100%';
-            formatMenu.style.marginTop = '8px';
-            formatMenu.style.transform = '';
-            formatMenu.style.zIndex = '';
-        }
+        // Keep format menu attached to the floating node toolbar for consistent positioning.
+        formatMenu.style.position = 'absolute';
+        formatMenu.style.left = '50%';
+        formatMenu.style.top = '100%';
+        formatMenu.style.marginTop = '8px';
+        formatMenu.style.transform = 'translateX(-50%)';
+        formatMenu.style.zIndex = '120';
 
         formatMenu.style.display = 'flex';
         formatMenu.hidden = false;
-
-        if (useCursorAnchor) {
-            requestAnimationFrame(() => {
-                if (formatMenu.hidden) return;
-
-                const menuRect = formatMenu.getBoundingClientRect();
-                let nextLeft = Number.parseFloat(formatMenu.style.left) || (clientX + 8);
-                let nextTop = Number.parseFloat(formatMenu.style.top) || (clientY + 8);
-                const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
-                const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-
-                if (nextLeft + menuRect.width > viewportWidth - 8) {
-                    nextLeft = Math.max(8, clientX - menuRect.width - 8);
-                }
-                if (nextTop + menuRect.height > viewportHeight - 8) {
-                    nextTop = Math.max(8, viewportHeight - menuRect.height - 8);
-                }
-
-                formatMenu.style.left = `${Math.round(nextLeft)}px`;
-                formatMenu.style.top = `${Math.round(nextTop)}px`;
-            });
-        }
     }
 
     function refreshContextMenuItems() {
@@ -2053,7 +2024,7 @@ function setupViewport() {
         if (!e.target.closest('.node-format-menu')) {
             preserveTextareaForFormat = false;
         }
-        if (formatMenu && !formatMenu.hidden && !formatMenu.contains(e.target) && !e.target.closest('#nt-edit')) {
+        if (formatMenu && !formatMenu.hidden && !formatMenu.contains(e.target) && !e.target.closest('#nt-edit') && !e.target.closest('#nt-format')) {
             formatMenu.hidden = true;
         }
         if (palette && !palette.hidden && !palette.contains(e.target) && !e.target.closest('#nt-color')) {
@@ -2367,11 +2338,8 @@ function setupViewport() {
         const targetNode = getContextTargetNode();
         if (!targetNode || targetNode.type !== 'text') return;
 
-        suppressCtxMenuCloseUntil = Date.now() + 180;
-        showFormatMenuForNode(targetNode, {
-            clientX: event.clientX,
-            clientY: event.clientY,
-        });
+        suppressCtxMenuCloseUntil = Date.now() + 120;
+        showFormatMenuForNode(targetNode);
     });
 
     cmAlignLeft?.addEventListener('click', () => {
@@ -3983,6 +3951,16 @@ function clearSelection() {
 function showNodeToolbar(node, el) {
     if (!nodeToolbar) return;
 
+    const formatBtn = nodeToolbar.querySelector('#nt-format');
+    const formatSep = nodeToolbar.querySelector('#nt-format-sep');
+    const showTextFormatControls = !!isOwner && node?.type === 'text';
+    if (formatBtn) {
+        formatBtn.hidden = !showTextFormatControls;
+    }
+    if (formatSep) {
+        formatSep.hidden = !showTextFormatControls;
+    }
+
     // Viewers should still see non-edit actions (e.g., link), while owner actions stay hidden.
     const hasVisibleAction = Array.from(nodeToolbar.querySelectorAll('.node-toolbar-btn'))
         .some(btn => !btn.hidden && window.getComputedStyle(btn).display !== 'none');
@@ -4002,7 +3980,7 @@ function showNodeToolbar(node, el) {
     nodeToolbar.hidden = false;
 
     const locked = !!node?.locked;
-    ['#nt-color', '#nt-edit', '#nt-image', '#nt-disconnect'].forEach(sel => {
+    ['#nt-color', '#nt-edit', '#nt-format', '#nt-image', '#nt-disconnect'].forEach(sel => {
         const btn = nodeToolbar.querySelector(sel);
         if (btn) {
             btn.disabled = locked;
@@ -4021,7 +3999,7 @@ function hideNodeToolbar() {
         if (formatMenu) formatMenu.hidden = true;
         if (linkMenu) linkMenu.hidden = true;
 
-        ['#nt-color', '#nt-edit', '#nt-image', '#nt-disconnect'].forEach(sel => {
+        ['#nt-color', '#nt-edit', '#nt-format', '#nt-image', '#nt-disconnect'].forEach(sel => {
             const btn = nodeToolbar.querySelector(sel);
             if (btn) btn.disabled = false;
         });
@@ -4055,6 +4033,7 @@ function setupNodeToolbar() {
     nodeToolbar.querySelector('#nt-delete').addEventListener('click', deleteSelected);
 
     const palette = nodeToolbar.querySelector('#node-color-palette');
+    const formatMenu = nodeToolbar.querySelector('#node-format-menu');
     const linkMenu = nodeToolbar.querySelector('#node-link-menu');
     const linkShareBtn = nodeToolbar.querySelector('#nt-link-share-chat');
     const linkCopyBtn = nodeToolbar.querySelector('#nt-link-copy-url');
@@ -4065,6 +4044,7 @@ function setupNodeToolbar() {
             return;
         }
         palette.hidden = !palette.hidden;
+        if (formatMenu) formatMenu.hidden = true;
         if (linkMenu) linkMenu.hidden = true;
     });
 
@@ -4119,6 +4099,39 @@ function setupNodeToolbar() {
                 }
             });
         }
+    });
+
+    nodeToolbar.querySelector('#nt-format')?.addEventListener('click', () => {
+        if (!isOwner) return;
+        if (!selectedNode || selectedNode.type !== 'text') return;
+        if (isNodeLocked(selectedNode)) {
+            window.uiToast?.('Unlock node to format text', 'info');
+            return;
+        }
+
+        if (palette) palette.hidden = true;
+        if (linkMenu) linkMenu.hidden = true;
+
+        if (!formatMenu) return;
+
+        if (!formatMenu.hidden) {
+            formatMenu.hidden = true;
+            return;
+        }
+
+        const nodeEl = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
+        if (nodeEl) {
+            showNodeToolbar(selectedNode, nodeEl);
+        }
+
+        formatMenu.style.position = 'absolute';
+        formatMenu.style.left = '50%';
+        formatMenu.style.top = '100%';
+        formatMenu.style.marginTop = '8px';
+        formatMenu.style.transform = 'translateX(-50%)';
+        formatMenu.style.zIndex = '120';
+        formatMenu.style.display = 'flex';
+        formatMenu.hidden = false;
     });
 
     // Import image button — open file picker for selected node
@@ -4222,7 +4235,6 @@ function setupNodeToolbar() {
         });
     });
 
-    const formatMenu = nodeToolbar.querySelector('#node-format-menu');
     if (formatMenu) {
         formatMenu.addEventListener('mousedown', () => {
             preserveTextareaForFormat = true;
