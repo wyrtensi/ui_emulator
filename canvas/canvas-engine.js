@@ -138,6 +138,41 @@ function stripMarkdownFormatting(text) {
         .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1');
 }
 
+function escapeHtmlAttr(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function getRepoRawUrl(filePath) {
+    if (!filePath) return '';
+    const [owner, repo] = (config.github?.repo || '').split('/');
+    const branch = config.github?.branch || 'main';
+    if (!owner || !repo) return filePath;
+    return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
+}
+
+function buildInlineImageMarkup(filePath) {
+    const src = getRepoRawUrl(filePath);
+    const name = (filePath || '').split('/').pop() || 'embedded-image';
+    return `<figure class="node-inline-image" contenteditable="false" style="width:240px;"><img src="${escapeHtmlAttr(src)}" alt="${escapeHtmlAttr(name)}" data-file="${escapeHtmlAttr(filePath)}"><span class="node-inline-image-resizer" title="Resize image"></span></figure>`;
+}
+
+function appendInlineImageToTextNode(node, filePath) {
+    if (!node || node.type !== 'text' || !filePath) return false;
+
+    const baseHtml = (node.html || '').trim() || ((node.text || '').trim() ? renderMarkdown(node.text || '') : '');
+    const inlineHtml = buildInlineImageMarkup(filePath);
+    node.html = baseHtml ? `${baseHtml}<br>${inlineHtml}` : inlineHtml;
+
+    const tmp = document.createElement('div');
+    tmp.innerHTML = node.html;
+    node.text = tmp.textContent || '';
+    return true;
+}
+
 export async function initCanvas(winContainer, config) {
     container = winContainer;
 
@@ -677,6 +712,7 @@ function setupViewport() {
     });
 
     container.querySelector('#cm-add-text')?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
         pushHistory();
         const id = 'n_' + Date.now();
            const newNode = { id, type: 'text', x: ctxMenuX, y: ctxMenuY, width: 250, height: 150, text: '', textAlign: 'left', verticalAlign: 'top' };
@@ -688,6 +724,7 @@ function setupViewport() {
     });
 
     container.querySelector('#cm-add-img')?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
         pushHistory();
         const id = 'n_' + Date.now();
            const newNode = { id, type: 'file', file: '', x: ctxMenuX, y: ctxMenuY, width: 250, height: 250 };
@@ -700,10 +737,12 @@ function setupViewport() {
         // Immediately open file picker for the new image node
         const input = container.querySelector('#canvas-upload-image');
         window._targetImageNode = id;
+        window._targetImageMode = 'file-node';
         input.click();
     });
 
     container.querySelector('#cm-add-group')?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
         pushHistory();
         const id = 'n_' + Date.now();
 
@@ -919,9 +958,7 @@ function renderNode(node) {
             if (node._tempBase64) {
                 imgSrc = node._tempBase64;
             } else {
-                // Construct raw GitHub URL for reliable loading on GitHub Pages
-                const [owner, repo] = config.github.repo.split('/');
-                imgSrc = `https://raw.githubusercontent.com/${owner}/${repo}/main/${filePath}`;
+                imgSrc = getRepoRawUrl(filePath);
             }
 
             contentHtml = `
@@ -1009,6 +1046,8 @@ function setupNodeInteractions(el, node) {
     let isResizing = false;
     let resizeDir = null;
     let origWidth, origHeight;
+    let textContentEl = null;
+    let inlineImageResizeState = null;
 
     el.addEventListener('mousedown', (e) => {
         if (e.button !== 0) return;
@@ -1158,6 +1197,23 @@ function setupNodeInteractions(el, node) {
 
     if (node.type === 'text' && isOwner) {
         const textContent = el.querySelector('.node-content-text');
+        textContentEl = textContent;
+
+        function ensureInlineImageControls() {
+            textContent.querySelectorAll('.node-inline-image').forEach(fig => {
+                if (!fig.style.width) fig.style.width = '240px';
+                if (!fig.querySelector('.node-inline-image-resizer')) {
+                    const handle = document.createElement('span');
+                    handle.className = 'node-inline-image-resizer';
+                    handle.title = 'Resize image';
+                    fig.appendChild(handle);
+                }
+                const img = fig.querySelector('img');
+                if (img) img.setAttribute('draggable', 'false');
+            });
+        }
+
+        ensureInlineImageControls();
 
         function setCaretAtEnd(target) {
             const range = document.createRange();
@@ -1216,6 +1272,7 @@ function setupNodeInteractions(el, node) {
                 node.html = html;
                 textContent.innerHTML = node.html;
                 textContent.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.removeAttribute('disabled'));
+                ensureInlineImageControls();
             }
 
             applyNodeTextAlignment(node, textContent);
@@ -1253,6 +1310,7 @@ function setupNodeInteractions(el, node) {
                     markUnsaved();
                     textContent.innerHTML = renderMarkdown(node.text);
                     textContent.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.removeAttribute('disabled'));
+                    ensureInlineImageControls();
                     applyNodeTextAlignment(node, textContent);
                 }
             }
@@ -1266,6 +1324,27 @@ function setupNodeInteractions(el, node) {
         });
 
         textContent.addEventListener('mousedown', (me) => {
+            const resizer = me.target.closest('.node-inline-image-resizer');
+            const inlineImage = me.target.closest('.node-inline-image');
+
+            if (resizer && inlineImage) {
+                me.preventDefault();
+                me.stopPropagation();
+
+                const startWidth = inlineImage.getBoundingClientRect().width || parseFloat(inlineImage.style.width) || 240;
+                inlineImageResizeState = {
+                    figure: inlineImage,
+                    startX: me.clientX,
+                    startWidth,
+                };
+                return;
+            }
+
+            if (inlineImage) {
+                me.stopPropagation();
+                return;
+            }
+
             if (editingNodeId === node.id) {
                 me.stopPropagation();
             }
@@ -1371,6 +1450,15 @@ function setupNodeInteractions(el, node) {
 
     // Global drag handlers attached to window to capture fast movement
     const onMouseMove = (e) => {
+        if (inlineImageResizeState && textContentEl) {
+            const dx = e.clientX - inlineImageResizeState.startX;
+            const maxWidth = Math.max(80, node.width - 24);
+            const newWidth = Math.max(80, Math.min(maxWidth, Math.round(inlineImageResizeState.startWidth + dx)));
+            inlineImageResizeState.figure.style.width = `${newWidth}px`;
+            autoResizeNode(node, el);
+            return;
+        }
+
         if (isDragging) {
             const dx = (e.clientX - startX) / scale;
             const dy = (e.clientY - startY) / scale;
@@ -1461,6 +1549,14 @@ function setupNodeInteractions(el, node) {
     };
 
     const onMouseUp = () => {
+        if (inlineImageResizeState && textContentEl) {
+            inlineImageResizeState = null;
+            node.html = textContentEl.innerHTML.trim();
+            node.text = textContentEl.textContent || '';
+            markUnsaved();
+            autoResizeNode(node, el);
+        }
+
         if (isDragging) {
             el._multiDragOrigins = null;
             clearGuides();
@@ -1860,6 +1956,7 @@ function setupNodeToolbar() {
         if (!selectedNode) return;
         const input = container.querySelector('#canvas-upload-image');
         window._targetImageNode = selectedNode.id;
+        window._targetImageMode = selectedNode.type === 'text' ? 'inline-text' : 'file-node';
         input.click();
     });
 
@@ -2259,20 +2356,39 @@ async function uploadAndAddImage(file, filename, dropPos = null) {
 
                 let node;
                 if (window._targetImageNode) {
+                    const targetMode = window._targetImageMode || 'file-node';
                     node = canvasData.nodes.find(n => n.id === window._targetImageNode);
                     if (node) {
                         pushHistory();
-                        // Convert text node to file node if needed
-                        if (node.type === 'text') {
-                            node.type = 'file';
-                            delete node.text;
+
+                        if (targetMode === 'inline-text' && node.type === 'text') {
+                            const inserted = appendInlineImageToTextNode(node, repoPath);
+                            if (!inserted) {
+                                node.type = 'file';
+                                delete node.text;
+                                delete node.html;
+                                node.file = repoPath;
+                                node._tempBase64 = reader.result;
+                            }
+                        } else {
+                            // Convert text node to file node if needed
+                            if (node.type === 'text') {
+                                node.type = 'file';
+                                delete node.text;
+                                delete node.html;
+                            }
+                            node.file = repoPath;
+                            node._tempBase64 = reader.result; // Set BEFORE render for immediate preview
                         }
-                        node.file = repoPath;
-                        node._tempBase64 = reader.result; // Set BEFORE render for immediate preview
+
                         markUnsaved();
                         renderCanvas();
+
+                        const refreshed = canvasData.nodes.find(n => n.id === node.id);
+                        if (refreshed) selectNode(refreshed);
                     }
                     window._targetImageNode = null;
+                    window._targetImageMode = null;
                 } else {
                     // Add to drop point when available, otherwise at center of viewport.
                     let x;
