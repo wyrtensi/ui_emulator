@@ -195,6 +195,106 @@ function getGroupMemberCount(groupId) {
     return getGroupMemberNodes(groupId).length;
 }
 
+const GROUP_PADDING = Object.freeze({
+    left: 40,
+    top: 60,
+    right: 40,
+    bottom: 40,
+});
+
+function getBoundsFromNodes(nodes, padding = GROUP_PADDING) {
+    const list = Array.isArray(nodes) ? nodes.filter(Boolean) : [];
+    if (list.length === 0) return null;
+
+    const pad = {
+        left: Number(padding?.left) || 0,
+        top: Number(padding?.top) || 0,
+        right: Number(padding?.right) || 0,
+        bottom: Number(padding?.bottom) || 0,
+    };
+
+    const minX = Math.min(...list.map(n => n.x)) - pad.left;
+    const minY = Math.min(...list.map(n => n.y)) - pad.top;
+    const maxX = Math.max(...list.map(n => n.x + n.width)) + pad.right;
+    const maxY = Math.max(...list.map(n => n.y + n.height)) + pad.bottom;
+
+    return { minX, minY, maxX, maxY };
+}
+
+function ensureGroupCoversMembers(groupId, options = {}) {
+    const group = canvasData.nodes.find(n => n.id === groupId && n.type === 'group');
+    if (!group) return false;
+
+    const members = getGroupMemberNodes(groupId);
+    const bounds = getBoundsFromNodes(members, options.padding || GROUP_PADDING);
+    if (!bounds) return false;
+
+    const expandOnly = options.expandOnly === true;
+    const minWidth = Math.max(120, Number(options.minWidth) || 200);
+    const minHeight = Math.max(80, Number(options.minHeight) || 120);
+
+    let nextMinX = bounds.minX;
+    let nextMinY = bounds.minY;
+    let nextMaxX = bounds.maxX;
+    let nextMaxY = bounds.maxY;
+
+    if (expandOnly) {
+        const currentMaxX = group.x + group.width;
+        const currentMaxY = group.y + group.height;
+        nextMinX = Math.min(group.x, nextMinX);
+        nextMinY = Math.min(group.y, nextMinY);
+        nextMaxX = Math.max(currentMaxX, nextMaxX);
+        nextMaxY = Math.max(currentMaxY, nextMaxY);
+    }
+
+    const nextWidth = Math.max(minWidth, Math.round(nextMaxX - nextMinX));
+    const nextHeight = Math.max(minHeight, Math.round(nextMaxY - nextMinY));
+    const roundedX = Math.round(nextMinX);
+    const roundedY = Math.round(nextMinY);
+
+    const changed = group.x !== roundedX
+        || group.y !== roundedY
+        || group.width !== nextWidth
+        || group.height !== nextHeight;
+
+    if (!changed) return false;
+
+    group.x = roundedX;
+    group.y = roundedY;
+    group.width = nextWidth;
+    group.height = nextHeight;
+    return true;
+}
+
+function ensureGroupsCoverMembers(groupIds, options = {}) {
+    const ids = new Set(Array.isArray(groupIds) ? groupIds : []);
+    let changed = false;
+
+    ids.forEach(groupId => {
+        if (!groupId) return;
+        if (ensureGroupCoversMembers(groupId, options)) {
+            changed = true;
+        }
+    });
+
+    return changed;
+}
+
+function fitGroupsForNodeIds(nodeIds, options = {}) {
+    const ids = new Set(Array.isArray(nodeIds) ? nodeIds : []);
+    const groupIds = new Set();
+
+    ids.forEach(id => {
+        const node = canvasData.nodes.find(n => n.id === id);
+        if (!node || node.type === 'group') return;
+        if (node.groupId) {
+            groupIds.add(node.groupId);
+        }
+    });
+
+    return ensureGroupsCoverMembers(Array.from(groupIds), options);
+}
+
 function isNodeVisible(node) {
     if (!node) return false;
     if (node.type === 'group') return true;
@@ -279,18 +379,28 @@ function assignNodesToGroup(nodeIds, groupId) {
         if (setNodeGroupId(node, groupId)) changed = true;
     });
 
+    if (changed) {
+        ensureGroupCoversMembers(groupId);
+    }
+
     return changed;
 }
 
 function removeNodesFromGroup(nodeIds) {
     let changed = false;
     const ids = new Set(Array.isArray(nodeIds) ? nodeIds : []);
+    const affectedGroupIds = new Set();
 
     ids.forEach(id => {
         const node = canvasData.nodes.find(n => n.id === id);
         if (!node || node.type === 'group') return;
+        if (node.groupId) affectedGroupIds.add(node.groupId);
         if (setNodeGroupId(node, null)) changed = true;
     });
+
+    if (changed) {
+        ensureGroupsCoverMembers(Array.from(affectedGroupIds));
+    }
 
     return changed;
 }
@@ -370,11 +480,12 @@ function createGroupFromSelectionAt(anchorX, anchorY, options = {}) {
     let maxX = minX + 400;
     let maxY = minY + 300;
 
-    if (boundsNodes.length > 0) {
-        minX = Math.min(...boundsNodes.map(n => n.x)) - 40;
-        minY = Math.min(...boundsNodes.map(n => n.y)) - 60;
-        maxX = Math.max(...boundsNodes.map(n => n.x + n.width)) + 40;
-        maxY = Math.max(...boundsNodes.map(n => n.y + n.height)) + 40;
+    const bounds = getBoundsFromNodes(boundsNodes, GROUP_PADDING);
+    if (bounds) {
+        minX = bounds.minX;
+        minY = bounds.minY;
+        maxX = bounds.maxX;
+        maxY = bounds.maxY;
     }
 
     const id = `n_${Date.now()}${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
@@ -446,16 +557,27 @@ function updateGroupMembershipForNodeIds(nodeIds, options = {}) {
     const ids = new Set(Array.isArray(nodeIds) ? nodeIds : []);
     const ignoreGroupIds = options.ignoreGroupIds instanceof Set ? options.ignoreGroupIds : new Set();
     let changed = false;
+    const affectedGroupIds = new Set();
 
     ids.forEach(id => {
         const node = canvasData.nodes.find(n => n.id === id);
         if (!node || node.type === 'group') return;
 
+        const previousGroupId = node.groupId || null;
+        if (previousGroupId) affectedGroupIds.add(previousGroupId);
+
         const group = getContainingGroupForNode(node, ignoreGroupIds);
         if (setNodeGroupId(node, group ? group.id : null)) {
             changed = true;
         }
+
+        const nextGroupId = node.groupId || null;
+        if (nextGroupId) affectedGroupIds.add(nextGroupId);
     });
+
+    if (affectedGroupIds.size > 0) {
+        ensureGroupsCoverMembers(Array.from(affectedGroupIds));
+    }
 
     return changed;
 }
@@ -504,6 +626,7 @@ function alignSelectedNodes(mode) {
     const movedNonGroupIds = selected.filter(n => n.type !== 'group').map(n => n.id);
     if (movedNonGroupIds.length > 0) {
         updateGroupMembershipForNodeIds(movedNonGroupIds);
+        fitGroupsForNodeIds(movedNonGroupIds);
     }
 
     markUnsaved();
@@ -1820,6 +1943,9 @@ function setupViewport() {
         }
 
         canvasData.nodes.push(newNode);
+        if (targetNode?.type === 'group') {
+            ensureGroupCoversMembers(targetNode.id);
+        }
 
         connectPendingEdgeToNode(newNode);
         saveCanvasData(true);
@@ -1841,6 +1967,9 @@ function setupViewport() {
         }
 
         canvasData.nodes.push(newNode);
+        if (targetNode?.type === 'group') {
+            ensureGroupCoversMembers(targetNode.id);
+        }
 
         connectPendingEdgeToNode(newNode);
         saveCanvasData(true);
@@ -2690,6 +2819,18 @@ function setupNodeInteractions(el, node) {
 
             titleEl.addEventListener('keydown', (e) => {
                 if (!isRenaming) return;
+
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (e.shiftKey) {
+                        redo();
+                    } else {
+                        undo();
+                    }
+                    return;
+                }
+
                 e.stopPropagation();
 
                 if (e.key === 'Enter') {
@@ -3338,10 +3479,14 @@ function setupNodeInteractions(el, node) {
             inlineImageResizeState = null;
         }
 
+        const wasResizing = isResizing;
+
         if (isDragging) {
             if (dragMovedNodeIds && dragMovedNodeIds.size > 0 && !dragIncludesGroupNode) {
-                const membershipChanged = updateGroupMembershipForNodeIds(Array.from(dragMovedNodeIds));
-                if (membershipChanged) {
+                const movedIds = Array.from(dragMovedNodeIds);
+                const membershipChanged = updateGroupMembershipForNodeIds(movedIds);
+                const fitChanged = fitGroupsForNodeIds(movedIds);
+                if (membershipChanged || fitChanged) {
                     markUnsaved();
                     renderCanvas();
                 }
@@ -3353,6 +3498,15 @@ function setupNodeInteractions(el, node) {
             dragIncludesGroupNode = false;
             clearGuides();
         }
+
+        if (wasResizing && node.type !== 'group') {
+            const fitChanged = fitGroupsForNodeIds([node.id]);
+            if (fitChanged) {
+                markUnsaved();
+                renderCanvas();
+            }
+        }
+
         isDragging = false;
         isResizing = false;
     };
@@ -3386,6 +3540,9 @@ function createNode(type, x, y, width, height, textOrFile) {
     }
 
     canvasData.nodes.push(node);
+    if (node.type !== 'group' && node.groupId) {
+        ensureGroupCoversMembers(node.groupId);
+    }
     renderNode(node);
     selectNode(node);
     markUnsaved();
@@ -4417,6 +4574,11 @@ function deleteNodesByIds(nodeIds) {
     const deletedGroupIds = new Set(
         nodesToDelete.filter(n => n.type === 'group').map(n => n.id)
     );
+    const affectedGroupIds = new Set(
+        nodesToDelete
+            .filter(n => n.type !== 'group' && typeof n.groupId === 'string' && n.groupId)
+            .map(n => n.groupId)
+    );
 
     // Default behavior: deleting a group keeps member nodes by clearing membership.
     deletedGroupIds.forEach(groupId => {
@@ -4437,6 +4599,7 @@ function deleteNodesByIds(nodeIds) {
     canvasData.nodes = canvasData.nodes.filter(n => !ids.has(n.id));
 
     sanitizeGroupMembership();
+    ensureGroupsCoverMembers(Array.from(affectedGroupIds));
 
     if (selectedInlineImage?.nodeId && ids.has(selectedInlineImage.nodeId)) {
         clearInlineImageSelection();
@@ -5934,6 +6097,7 @@ function nudgeSelected(dx, dy) {
             .filter(n => n.type !== 'group')
             .map(n => n.id);
         updateGroupMembershipForNodeIds(movedNonGroupIds);
+        fitGroupsForNodeIds(movedNonGroupIds);
     }
 
     if (selectedNode) {
