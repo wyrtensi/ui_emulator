@@ -47,6 +47,8 @@ let viewStateSaveTimer = null;
 let pendingInitialViewportPolicy = false;
 let pendingInlineImageMarkerId = null;
 let pendingInlineImageNodeId = null;
+let inlineRepoFilesAtEditStart = new Map();
+let inlineRepoFilesHandledInEdit = new Map();
 
 const CANVAS_REACTION_TYPES = ['THUMBS_UP', 'HEART', 'LAUGH', 'HOORAY', 'CONFUSED', 'MINUS_ONE', 'ROCKET', 'EYES'];
 const CANVAS_REACTION_EMOJIS = {
@@ -318,34 +320,64 @@ function extractCanvasUploadPathFromImageSrc(srcValue) {
     return '';
 }
 
-function getInlineImageRepoFilesFromTextNode(node) {
-    if (!node || node.type !== 'text' || !node.html) return [];
-
-    const tmp = document.createElement('div');
-    tmp.innerHTML = node.html;
-
+function getInlineImageRepoFilesFromRoot(rootEl) {
     const files = new Set();
-    tmp.querySelectorAll('.node-inline-image img, img[data-file], img').forEach(img => {
-        const dataFile = (img.getAttribute('data-file') || '').trim();
-        const resolved = dataFile || extractCanvasUploadPathFromImageSrc(img.getAttribute('src'));
+    if (!rootEl) return files;
+
+    rootEl.querySelectorAll('.node-inline-image img, img[data-file], img').forEach(img => {
+        let dataFile = (img.getAttribute('data-file') || '').trim();
+        if (dataFile) {
+            try {
+                dataFile = decodeURIComponent(dataFile);
+            } catch {
+                // Keep original value when decode fails
+            }
+            dataFile = dataFile.replace(/^\/+/, '');
+        }
+
+        const resolved = (dataFile && dataFile.startsWith('canvas_uploads/'))
+            ? dataFile
+            : extractCanvasUploadPathFromImageSrc(img.getAttribute('src'));
+
         if (resolved && resolved.startsWith('canvas_uploads/')) {
             files.add(resolved);
         }
     });
 
-    return Array.from(files);
+    return files;
+}
+
+function getInlineImageRepoFilesFromTextNode(node) {
+    if (!node || node.type !== 'text' || !node.html) return [];
+
+    const tmp = document.createElement('div');
+    tmp.innerHTML = node.html;
+    return Array.from(getInlineImageRepoFilesFromRoot(tmp));
+}
+
+function promptDeleteRepoFiles(imageFiles) {
+    const repoFiles = [...new Set((imageFiles || [])
+        .map(f => String(f || '').trim())
+        .filter(f => f.startsWith('canvas_uploads/'))
+    )];
+
+    if (repoFiles.length === 0) return;
+
+    const promptText = repoFiles.length === 1
+        ? `Delete the image file ${repoFiles[0]} from the repository as well?`
+        : `Delete ${repoFiles.length} image files from the repository as well?`;
+
+    if (confirm(promptText)) {
+        repoFiles.forEach(filePath => {
+            githubApi.deleteFile(filePath, `Delete unused canvas image ${filePath}`).catch(e => console.error(e));
+        });
+    }
 }
 
 function getInlineImageRepoFileFromFigure(figureEl) {
     if (!figureEl) return '';
-    const img = figureEl.querySelector('img');
-    if (!img) return '';
-
-    const dataFile = (img.getAttribute('data-file') || '').trim();
-    if (dataFile && dataFile.startsWith('canvas_uploads/')) return dataFile;
-
-    const fromSrc = extractCanvasUploadPathFromImageSrc(img.getAttribute('src'));
-    return fromSrc.startsWith('canvas_uploads/') ? fromSrc : '';
+    const files = Array.from(getInlineImageRepoFilesFromRoot(figureEl));
+    return files[0] || '';
 }
 
 function clearInlineImageSelection() {
@@ -441,9 +473,13 @@ function deleteSelectedInlineImage() {
         }
     }
 
-    if (removedRepoFile && confirm(`Delete the image file ${removedRepoFile} from the repository as well?`)) {
-        githubApi.deleteFile(removedRepoFile, `Delete unused canvas image ${removedRepoFile}`).catch(e => console.error(e));
+    if (removedRepoFile && editingNodeId === node.id) {
+        const handled = inlineRepoFilesHandledInEdit.get(node.id) || new Set();
+        handled.add(removedRepoFile);
+        inlineRepoFilesHandledInEdit.set(node.id, handled);
     }
+
+    promptDeleteRepoFiles([removedRepoFile]);
 
     return true;
 }
@@ -1627,6 +1663,9 @@ function setupNodeInteractions(el, node) {
             textContent.classList.add('editing');
             textContent.focus();
             setCaretAtEnd(textContent);
+
+            inlineRepoFilesAtEditStart.set(node.id, new Set(getInlineImageRepoFilesFromRoot(textContent)));
+            inlineRepoFilesHandledInEdit.set(node.id, new Set());
         }
 
         function finishRichEdit() {
@@ -1637,6 +1676,10 @@ function setupNodeInteractions(el, node) {
             const hasPendingMarker = !!findInlineMarker(textContent, pendingInlineImageMarkerId)
                 && pendingInlineImageNodeId === node.id;
             const hasRichContent = hasMeaningfulTextNodeHtml(html);
+            const filesBefore = inlineRepoFilesAtEditStart.get(node.id) || new Set();
+            const filesHandled = inlineRepoFilesHandledInEdit.get(node.id) || new Set();
+            const filesAfter = getInlineImageRepoFilesFromRoot(textContent);
+            const removedRepoFiles = Array.from(filesBefore).filter(filePath => !filesAfter.has(filePath) && !filesHandled.has(filePath));
 
             editingNodeId = null;
             textContent.contentEditable = 'false';
@@ -1656,8 +1699,12 @@ function setupNodeInteractions(el, node) {
 
             applyNodeTextAlignment(node, textContent);
 
+            inlineRepoFilesAtEditStart.delete(node.id);
+            inlineRepoFilesHandledInEdit.delete(node.id);
+
             markUnsaved();
             autoResizeNode(node, el);
+            promptDeleteRepoFiles(removedRepoFiles);
         }
 
         // Handle checkbox toggling in both markdown-rendered and rich-edit modes
@@ -2949,20 +2996,15 @@ function deleteSelected() {
             return [];
         }))];
 
+        nodesToDelete.forEach(n => {
+            inlineRepoFilesAtEditStart.delete(n.id);
+            inlineRepoFilesHandledInEdit.delete(n.id);
+        });
+
         // Delete nodes
         canvasData.nodes = canvasData.nodes.filter(n => !selectedNodeIds.has(n.id));
 
-        if (imageFiles.length > 0) {
-            const promptText = imageFiles.length === 1
-                ? `Delete the image file ${imageFiles[0]} from the repository as well?`
-                : `Delete ${imageFiles.length} image files from the repository as well?`;
-
-            if (confirm(promptText)) {
-                imageFiles.forEach(filePath => {
-                    githubApi.deleteFile(filePath, `Delete unused canvas image ${filePath}`).catch(e => console.error(e));
-                });
-            }
-        }
+        promptDeleteRepoFiles(imageFiles);
 
         markUnsaved();
         clearSelection();

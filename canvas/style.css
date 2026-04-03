@@ -577,11 +577,10 @@ body:not(.is-owner) .canvas-owner-only {
 
 .node-content-text .node-inline-image {
   position: relative;
-  display: inline-block;
-  vertical-align: middle;
+  display: block;
   width: min(240px, 100%);
   max-width: 100%;
-  margin: 4px 6px 4px 0;
+  margin: 8px 0;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 6px;
   overflow: hidden;
