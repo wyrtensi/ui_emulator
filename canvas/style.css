@@ -585,6 +585,16 @@ body:not(.is-owner) .canvas-owner-only {
   border-radius: 6px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.18);
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.node-content-text.editing .node-inline-image {
+  cursor: grab;
+}
+
+.node-content-text.editing .node-inline-image:active {
+  cursor: grabbing;
 }
 
 .node-content-text .node-inline-image.inline-selected {

@@ -49,6 +49,7 @@ let pendingInlineImageMarkerId = null;
 let pendingInlineImageNodeId = null;
 let inlineRepoFilesAtEditStart = new Map();
 let inlineRepoFilesHandledInEdit = new Map();
+let inlineRepoFilesLastSeenInEdit = new Map();
 
 const CANVAS_REACTION_TYPES = ['THUMBS_UP', 'HEART', 'LAUGH', 'HOORAY', 'CONFUSED', 'MINUS_ONE', 'ROCKET', 'EYES'];
 const CANVAS_REACTION_EMOJIS = {
@@ -283,11 +284,13 @@ function getOrAssignInlineImageId(figureEl) {
     return figureEl.dataset.inlineId;
 }
 
-function normalizeInlineImagesInTextElement(textEl) {
+function normalizeInlineImagesInTextElement(textEl, options = {}) {
+    const draggable = !!options.draggable;
     if (!textEl) return;
 
     textEl.querySelectorAll('.node-inline-image').forEach(fig => {
         fig.setAttribute('contenteditable', 'false');
+        fig.setAttribute('draggable', draggable ? 'true' : 'false');
         getOrAssignInlineImageId(fig);
         if (!fig.style.width) fig.style.width = '240px';
 
@@ -372,6 +375,23 @@ function promptDeleteRepoFiles(imageFiles) {
             githubApi.deleteFile(filePath, `Delete unused canvas image ${filePath}`).catch(e => console.error(e));
         });
     }
+}
+
+function handleInlineRepoFileRemovalsDuringEdit(nodeId, textContentEl) {
+    if (!nodeId || !textContentEl) return;
+
+    const prevSeen = inlineRepoFilesLastSeenInEdit.get(nodeId) || new Set(getInlineImageRepoFilesFromRoot(textContentEl));
+    const currentSeen = getInlineImageRepoFilesFromRoot(textContentEl);
+    const handled = inlineRepoFilesHandledInEdit.get(nodeId) || new Set();
+    const removed = Array.from(prevSeen).filter(filePath => !currentSeen.has(filePath) && !handled.has(filePath));
+
+    if (removed.length > 0) {
+        removed.forEach(filePath => handled.add(filePath));
+        inlineRepoFilesHandledInEdit.set(nodeId, handled);
+        promptDeleteRepoFiles(removed);
+    }
+
+    inlineRepoFilesLastSeenInEdit.set(nodeId, new Set(currentSeen));
 }
 
 function getInlineImageRepoFileFromFigure(figureEl) {
@@ -477,6 +497,9 @@ function deleteSelectedInlineImage() {
         const handled = inlineRepoFilesHandledInEdit.get(node.id) || new Set();
         handled.add(removedRepoFile);
         inlineRepoFilesHandledInEdit.set(node.id, handled);
+
+        const currentFiles = new Set(getInlineImageRepoFilesFromTextNode(node));
+        inlineRepoFilesLastSeenInEdit.set(node.id, currentFiles);
     }
 
     promptDeleteRepoFiles([removedRepoFile]);
@@ -1470,6 +1493,7 @@ function setupNodeInteractions(el, node) {
     let origWidth, origHeight;
     let textContentEl = null;
     let inlineImageResizeState = null;
+    let inlineImageDragState = null;
 
     el.addEventListener('mousedown', (e) => {
         if (e.button !== 0) return;
@@ -1622,7 +1646,7 @@ function setupNodeInteractions(el, node) {
         textContentEl = textContent;
 
         function ensureInlineImageControls() {
-            normalizeInlineImagesInTextElement(textContent);
+            normalizeInlineImagesInTextElement(textContent, { draggable: editingNodeId === node.id });
         }
 
         ensureInlineImageControls();
@@ -1645,6 +1669,24 @@ function setupNodeInteractions(el, node) {
             sel.addRange(range);
         }
 
+        function getCaretRangeFromPoint(x, y) {
+            if (document.caretRangeFromPoint) {
+                return document.caretRangeFromPoint(x, y);
+            }
+
+            if (document.caretPositionFromPoint) {
+                const pos = document.caretPositionFromPoint(x, y);
+                if (pos) {
+                    const r = document.createRange();
+                    r.setStart(pos.offsetNode, pos.offset);
+                    r.collapse(true);
+                    return r;
+                }
+            }
+
+            return null;
+        }
+
         function startRichEdit() {
             if (editingNodeId === node.id) return;
 
@@ -1664,8 +1706,11 @@ function setupNodeInteractions(el, node) {
             textContent.focus();
             setCaretAtEnd(textContent);
 
-            inlineRepoFilesAtEditStart.set(node.id, new Set(getInlineImageRepoFilesFromRoot(textContent)));
+            const filesAtStart = new Set(getInlineImageRepoFilesFromRoot(textContent));
+            inlineRepoFilesAtEditStart.set(node.id, filesAtStart);
             inlineRepoFilesHandledInEdit.set(node.id, new Set());
+            inlineRepoFilesLastSeenInEdit.set(node.id, new Set(filesAtStart));
+            ensureInlineImageControls();
         }
 
         function finishRichEdit() {
@@ -1701,11 +1746,17 @@ function setupNodeInteractions(el, node) {
 
             inlineRepoFilesAtEditStart.delete(node.id);
             inlineRepoFilesHandledInEdit.delete(node.id);
+            inlineRepoFilesLastSeenInEdit.delete(node.id);
 
             markUnsaved();
             autoResizeNode(node, el);
             promptDeleteRepoFiles(removedRepoFiles);
         }
+
+        textContent.addEventListener('input', () => {
+            if (editingNodeId !== node.id) return;
+            handleInlineRepoFileRemovalsDuringEdit(node.id, textContent);
+        });
 
         // Handle checkbox toggling in both markdown-rendered and rich-edit modes
         textContent.addEventListener('change', (e) => {
@@ -1776,13 +1827,8 @@ function setupNodeInteractions(el, node) {
                     selectNode(node);
                 }
                 selectInlineImage(node, inlineImage);
-                if (editingNodeId === node.id) {
+                if (editingNodeId !== node.id) {
                     me.preventDefault();
-                    const rect = inlineImage.getBoundingClientRect();
-                    const preferBefore = me.clientY < rect.top + rect.height * 0.35
-                        || me.clientX < rect.left + rect.width * 0.45;
-                    if (preferBefore) placeCaretBeforeElement(inlineImage);
-                    else placeCaretAfterElement(inlineImage);
                 }
                 return;
             }
@@ -1793,6 +1839,81 @@ function setupNodeInteractions(el, node) {
             if (editingNodeId === node.id) {
                 me.stopPropagation();
             }
+        });
+
+        textContent.addEventListener('dragstart', (de) => {
+            const inlineImage = de.target.closest('.node-inline-image');
+            if (!inlineImage || editingNodeId !== node.id) {
+                de.preventDefault();
+                return;
+            }
+
+            const inlineId = getOrAssignInlineImageId(inlineImage);
+            if (!inlineId) {
+                de.preventDefault();
+                return;
+            }
+
+            inlineImageDragState = { nodeId: node.id, inlineId };
+            if (selectedNode?.id !== node.id) {
+                selectNode(node);
+            }
+            selectInlineImage(node, inlineImage);
+
+            if (de.dataTransfer) {
+                de.dataTransfer.effectAllowed = 'move';
+                try {
+                    de.dataTransfer.setData('text/plain', inlineId);
+                } catch {
+                    // No-op for browsers that block custom drag payloads
+                }
+            }
+        });
+
+        textContent.addEventListener('dragover', (de) => {
+            if (!inlineImageDragState || inlineImageDragState.nodeId !== node.id || editingNodeId !== node.id) return;
+            de.preventDefault();
+            if (de.dataTransfer) de.dataTransfer.dropEffect = 'move';
+        });
+
+        textContent.addEventListener('drop', (de) => {
+            if (!inlineImageDragState || inlineImageDragState.nodeId !== node.id || editingNodeId !== node.id) return;
+            de.preventDefault();
+            de.stopPropagation();
+
+            const draggedFigure = textContent.querySelector(`.node-inline-image[data-inline-id="${inlineImageDragState.inlineId}"]`);
+            if (!draggedFigure) {
+                inlineImageDragState = null;
+                return;
+            }
+
+            const targetFigure = de.target.closest('.node-inline-image');
+            if (targetFigure && targetFigure !== draggedFigure && targetFigure.parentNode) {
+                const rect = targetFigure.getBoundingClientRect();
+                const placeAfter = de.clientY > rect.top + rect.height / 2;
+                if (placeAfter) targetFigure.parentNode.insertBefore(draggedFigure, targetFigure.nextSibling);
+                else targetFigure.parentNode.insertBefore(draggedFigure, targetFigure);
+            } else {
+                const range = getCaretRangeFromPoint(de.clientX, de.clientY);
+                if (range && textContent.contains(range.startContainer)) {
+                    range.collapse(true);
+                    range.insertNode(draggedFigure);
+                } else {
+                    textContent.appendChild(draggedFigure);
+                }
+            }
+
+            ensureInlineImageControls();
+            node.html = textContent.innerHTML.trim();
+            node.text = textContent.textContent || '';
+            markUnsaved();
+            autoResizeNode(node, el);
+            selectInlineImage(node, draggedFigure);
+            inlineImageDragState = null;
+        });
+
+        textContent.addEventListener('dragend', () => {
+            inlineImageDragState = null;
         });
 
         textContent.addEventListener('click', (ce) => {
@@ -2999,6 +3120,7 @@ function deleteSelected() {
         nodesToDelete.forEach(n => {
             inlineRepoFilesAtEditStart.delete(n.id);
             inlineRepoFilesHandledInEdit.delete(n.id);
+            inlineRepoFilesLastSeenInEdit.delete(n.id);
         });
 
         // Delete nodes
