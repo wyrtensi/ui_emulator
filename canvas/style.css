@@ -577,14 +577,20 @@ body:not(.is-owner) .canvas-owner-only {
 
 .node-content-text .node-inline-image {
   position: relative;
-  display: block;
+  display: inline-block;
+  vertical-align: middle;
   width: min(240px, 100%);
   max-width: 100%;
-  margin: 8px 0;
+  margin: 4px 6px 4px 0;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 6px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.18);
+}
+
+.node-content-text .node-inline-image.inline-selected {
+  border-color: var(--canvas-selected);
+  box-shadow: 0 0 0 1px var(--canvas-selected), 0 0 0 3px rgba(88, 166, 255, 0.25);
 }
 
 .node-content-text .node-inline-image img {
@@ -612,6 +618,15 @@ body:not(.is-owner) .canvas-owner-only {
 .node-content-text.editing .node-inline-image-resizer,
 .canvas-node.selected .node-content-text .node-inline-image-resizer {
   display: block;
+}
+
+.node-content-text .node-inline-image-marker {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  line-height: 0;
+  font-size: 0;
 }
 
 /* Textarea for editing nodes — matches preview layout exactly */

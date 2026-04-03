@@ -16,6 +16,7 @@ let selectedNode = null;
 let selectedEdge = null;
 let isDraggingNode = false;
 let multiSelectedNodes = new Set();
+let selectedInlineImage = null;
 let editingNodeId = null; // Track which node is currently being edited
 let preserveTextareaForFormat = false;
 
@@ -44,6 +45,8 @@ let autoSaveInterval = null;
 let isSaving = false;
 let viewStateSaveTimer = null;
 let pendingInitialViewportPolicy = false;
+let pendingInlineImageMarkerId = null;
+let pendingInlineImageNodeId = null;
 
 const CANVAS_REACTION_TYPES = ['THUMBS_UP', 'HEART', 'LAUGH', 'HOORAY', 'CONFUSED', 'MINUS_ONE', 'ROCKET', 'EYES'];
 const CANVAS_REACTION_EMOJIS = {
@@ -138,14 +141,6 @@ function stripMarkdownFormatting(text) {
         .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1');
 }
 
-function escapeHtmlAttr(value) {
-    return String(value || '')
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-}
-
 function getRepoRawUrl(filePath) {
     if (!filePath) return '';
     const [owner, repo] = (config.github?.repo || '').split('/');
@@ -154,23 +149,398 @@ function getRepoRawUrl(filePath) {
     return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
 }
 
-function buildInlineImageMarkup(filePath) {
-    const src = getRepoRawUrl(filePath);
-    const name = (filePath || '').split('/').pop() || 'embedded-image';
-    return `<figure class="node-inline-image" contenteditable="false" style="width:240px;"><img src="${escapeHtmlAttr(src)}" alt="${escapeHtmlAttr(name)}" data-file="${escapeHtmlAttr(filePath)}"><span class="node-inline-image-resizer" title="Resize image"></span></figure>`;
+function createInlineImageMarkerId() {
+    return `inline-image-marker-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function appendInlineImageToTextNode(node, filePath) {
-    if (!node || node.type !== 'text' || !filePath) return false;
+function createInlineImageMarkerElement(markerId) {
+    const marker = document.createElement('span');
+    marker.id = markerId;
+    marker.className = 'node-inline-image-marker';
+    marker.setAttribute('data-inline-image-marker', 'true');
+    marker.setAttribute('contenteditable', 'false');
+    marker.setAttribute('aria-hidden', 'true');
+    return marker;
+}
 
-    const baseHtml = (node.html || '').trim() || ((node.text || '').trim() ? renderMarkdown(node.text || '') : '');
-    const inlineHtml = buildInlineImageMarkup(filePath);
-    node.html = baseHtml ? `${baseHtml}<br>${inlineHtml}` : inlineHtml;
+function findInlineMarker(rootEl, markerId) {
+    if (!rootEl || !markerId) return null;
+    return rootEl.querySelector(`#${markerId}`);
+}
+
+function placeCaretAfterElement(target) {
+    if (!target || !target.parentNode) return;
+    const range = document.createRange();
+    range.setStartAfter(target);
+    range.collapse(true);
+    const sel = window.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
+function placeCaretBeforeElement(target) {
+    if (!target || !target.parentNode) return;
+    const range = document.createRange();
+    range.setStartBefore(target);
+    range.collapse(true);
+    const sel = window.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
+function placeInlineImageMarker(editorEl, nodeId = null) {
+    if (!editorEl) return null;
+
+    clearPendingInlineImageMarker();
+
+    const markerId = createInlineImageMarkerId();
+    const marker = createInlineImageMarkerElement(markerId);
+    let inserted = false;
+
+    editorEl.focus();
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0).cloneRange();
+        if (editorEl.contains(range.commonAncestorContainer)) {
+            range.collapse(true);
+            range.insertNode(marker);
+            placeCaretAfterElement(marker);
+            inserted = true;
+        }
+    }
+
+    if (!inserted) {
+        editorEl.appendChild(marker);
+        placeCaretAfterElement(marker);
+    }
+
+    pendingInlineImageMarkerId = markerId;
+    pendingInlineImageNodeId = nodeId;
+    return markerId;
+}
+
+function clearPendingInlineImageMarker(targetNode = null) {
+    const markerId = pendingInlineImageMarkerId;
+    const targetId = pendingInlineImageNodeId;
+
+    if (markerId && container) {
+        const markerInDom = container.querySelector(`#${markerId}`);
+        if (markerInDom) markerInDom.remove();
+    }
+
+    const node = targetNode || (targetId ? canvasData.nodes.find(n => n.id === targetId) : null);
+    if (markerId && node && node.type === 'text' && typeof node.html === 'string' && node.html.includes(markerId)) {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = node.html;
+        const markerInHtml = tmp.querySelector(`#${markerId}`);
+        if (markerInHtml) {
+            markerInHtml.remove();
+            node.html = tmp.innerHTML.trim();
+            node.text = tmp.textContent || '';
+        }
+    }
+
+    pendingInlineImageMarkerId = null;
+    pendingInlineImageNodeId = null;
+}
+
+function createInlineImageFigure(filePath, width = 240) {
+    if (!filePath) return null;
+    const src = getRepoRawUrl(filePath);
+    const name = (filePath || '').split('/').pop() || 'embedded-image';
+    const safeWidth = Math.max(80, Math.round(Number(width) || 240));
+
+    const figure = document.createElement('figure');
+    figure.className = 'node-inline-image';
+    figure.contentEditable = 'false';
+    figure.style.width = `${safeWidth}px`;
+    figure.dataset.inlineId = `inline-image-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = name;
+    img.setAttribute('data-file', filePath);
+    img.setAttribute('draggable', 'false');
+
+    const handle = document.createElement('span');
+    handle.className = 'node-inline-image-resizer';
+    handle.title = 'Resize image';
+
+    figure.appendChild(img);
+    figure.appendChild(handle);
+    return figure;
+}
+
+function getOrAssignInlineImageId(figureEl) {
+    if (!figureEl) return '';
+    if (!figureEl.dataset.inlineId) {
+        figureEl.dataset.inlineId = `inline-image-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+    return figureEl.dataset.inlineId;
+}
+
+function normalizeInlineImagesInTextElement(textEl) {
+    if (!textEl) return;
+
+    textEl.querySelectorAll('.node-inline-image').forEach(fig => {
+        fig.setAttribute('contenteditable', 'false');
+        getOrAssignInlineImageId(fig);
+        if (!fig.style.width) fig.style.width = '240px';
+
+        if (!fig.querySelector('.node-inline-image-resizer')) {
+            const handle = document.createElement('span');
+            handle.className = 'node-inline-image-resizer';
+            handle.title = 'Resize image';
+            fig.appendChild(handle);
+        }
+
+        const img = fig.querySelector('img');
+        if (img) img.setAttribute('draggable', 'false');
+    });
+}
+
+function extractCanvasUploadPathFromImageSrc(srcValue) {
+    const src = String(srcValue || '').trim();
+    if (!src) return '';
+    if (src.startsWith('canvas_uploads/')) {
+        return src.split(/[?#]/)[0];
+    }
+
+    const uploadToken = '/canvas_uploads/';
+    const tokenIndex = src.indexOf(uploadToken);
+    if (tokenIndex >= 0) {
+        const decoded = decodeURIComponent(src.substring(tokenIndex + 1));
+        return decoded.split(/[?#]/)[0];
+    }
+
+    return '';
+}
+
+function getInlineImageRepoFilesFromTextNode(node) {
+    if (!node || node.type !== 'text' || !node.html) return [];
 
     const tmp = document.createElement('div');
     tmp.innerHTML = node.html;
-    node.text = tmp.textContent || '';
+
+    const files = new Set();
+    tmp.querySelectorAll('.node-inline-image img, img[data-file], img').forEach(img => {
+        const dataFile = (img.getAttribute('data-file') || '').trim();
+        const resolved = dataFile || extractCanvasUploadPathFromImageSrc(img.getAttribute('src'));
+        if (resolved && resolved.startsWith('canvas_uploads/')) {
+            files.add(resolved);
+        }
+    });
+
+    return Array.from(files);
+}
+
+function getInlineImageRepoFileFromFigure(figureEl) {
+    if (!figureEl) return '';
+    const img = figureEl.querySelector('img');
+    if (!img) return '';
+
+    const dataFile = (img.getAttribute('data-file') || '').trim();
+    if (dataFile && dataFile.startsWith('canvas_uploads/')) return dataFile;
+
+    const fromSrc = extractCanvasUploadPathFromImageSrc(img.getAttribute('src'));
+    return fromSrc.startsWith('canvas_uploads/') ? fromSrc : '';
+}
+
+function clearInlineImageSelection() {
+    if (selectedInlineImage?.nodeId && selectedInlineImage?.inlineId && nodesLayer) {
+        const nodeEl = nodesLayer.querySelector(`[data-id="${selectedInlineImage.nodeId}"]`);
+        const fig = nodeEl?.querySelector(`.node-inline-image[data-inline-id="${selectedInlineImage.inlineId}"]`);
+        if (fig) fig.classList.remove('inline-selected');
+    }
+
+    if (nodesLayer) {
+        nodesLayer.querySelectorAll('.node-inline-image.inline-selected').forEach(fig => fig.classList.remove('inline-selected'));
+    }
+
+    selectedInlineImage = null;
+}
+
+function selectInlineImage(node, figureEl) {
+    if (!node || node.type !== 'text' || !figureEl) return;
+
+    const inlineId = getOrAssignInlineImageId(figureEl);
+    clearInlineImageSelection();
+    figureEl.classList.add('inline-selected');
+    selectedInlineImage = { nodeId: node.id, inlineId };
+    updateDeleteBtn();
+}
+
+function deleteSelectedInlineImage() {
+    if (!isOwner || !selectedInlineImage?.nodeId || !selectedInlineImage?.inlineId) return false;
+
+    const node = canvasData.nodes.find(n => n.id === selectedInlineImage.nodeId);
+    if (!node || node.type !== 'text') {
+        clearInlineImageSelection();
+        updateDeleteBtn();
+        return false;
+    }
+
+    pushHistory();
+
+    const inlineId = selectedInlineImage.inlineId;
+    let removedRepoFile = '';
+    let removed = false;
+
+    const textEl = nodesLayer?.querySelector(`[data-id="${node.id}"] .node-content-text`);
+    if (textEl) {
+        const figure = textEl.querySelector(`.node-inline-image[data-inline-id="${inlineId}"]`);
+        if (figure) {
+            removedRepoFile = getInlineImageRepoFileFromFigure(figure);
+            figure.remove();
+            removed = true;
+
+            node.html = textEl.innerHTML.trim();
+            node.text = textEl.textContent || '';
+
+            if (!hasMeaningfulTextNodeHtml(node.html) && !(node.text || '').trim()) {
+                node.html = '';
+                node.text = '';
+                textEl.innerHTML = '<span class="node-placeholder">Double-click to edit</span>';
+            } else {
+                normalizeInlineImagesInTextElement(textEl);
+            }
+        }
+    }
+
+    if (!removed) {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = node.html || '';
+        const figure = tmp.querySelector(`.node-inline-image[data-inline-id="${inlineId}"]`);
+        if (figure) {
+            removedRepoFile = getInlineImageRepoFileFromFigure(figure);
+            figure.remove();
+            removed = true;
+
+            node.html = tmp.innerHTML.trim();
+            node.text = tmp.textContent || '';
+            if (!hasMeaningfulTextNodeHtml(node.html) && !(node.text || '').trim()) {
+                node.html = '';
+                node.text = '';
+            }
+        }
+    }
+
+    clearInlineImageSelection();
+    updateDeleteBtn();
+    if (!removed) return false;
+
+    markUnsaved();
+
+    const nodeEl = nodesLayer?.querySelector(`[data-id="${node.id}"]`);
+    if (nodeEl) {
+        autoResizeNode(node, nodeEl);
+        if (selectedNode?.id === node.id) {
+            showNodeToolbar(node, nodeEl);
+        }
+    }
+
+    if (removedRepoFile && confirm(`Delete the image file ${removedRepoFile} from the repository as well?`)) {
+        githubApi.deleteFile(removedRepoFile, `Delete unused canvas image ${removedRepoFile}`).catch(e => console.error(e));
+    }
+
     return true;
+}
+
+function hasMeaningfulTextNodeHtml(html) {
+    const raw = String(html || '').trim();
+    if (!raw) return false;
+
+    const tmp = document.createElement('div');
+    tmp.innerHTML = raw;
+
+    if (tmp.querySelector('.node-inline-image, img, figure, video, iframe, table')) {
+        return true;
+    }
+
+    const textOnly = (tmp.textContent || '').replace(/\u200B/g, '').trim();
+    return textOnly.length > 0;
+}
+
+function insertInlineImageIntoTextNode(node, filePath, markerId = null) {
+    if (!node || node.type !== 'text' || !filePath) return false;
+
+    const liveTextEl = nodesLayer
+        ? nodesLayer.querySelector(`[data-id="${node.id}"] .node-content-text`)
+        : null;
+
+    if (liveTextEl) {
+        if (liveTextEl.querySelector('.node-placeholder')) {
+            liveTextEl.innerHTML = '';
+        }
+
+        let inserted = false;
+        let figure = createInlineImageFigure(filePath, 240);
+        if (!figure) return false;
+
+        const marker = markerId ? findInlineMarker(liveTextEl, markerId) : null;
+        if (marker && marker.parentNode) {
+            marker.parentNode.insertBefore(figure, marker);
+            marker.remove();
+            inserted = true;
+            if (editingNodeId === node.id) {
+                placeCaretAfterElement(figure);
+            }
+        }
+
+        if (!inserted && editingNodeId === node.id) {
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0).cloneRange();
+                if (liveTextEl.contains(range.commonAncestorContainer)) {
+                    range.collapse(true);
+                    range.insertNode(figure);
+                    placeCaretAfterElement(figure);
+                    inserted = true;
+                }
+            }
+        }
+
+        if (!inserted) {
+            figure = createInlineImageFigure(filePath, 240);
+            if (!figure) return false;
+            liveTextEl.appendChild(figure);
+            inserted = true;
+        }
+
+        node.html = liveTextEl.innerHTML.trim();
+        node.text = liveTextEl.textContent || '';
+        pendingInlineImageMarkerId = null;
+        pendingInlineImageNodeId = null;
+        return inserted;
+    }
+
+    const tmp = document.createElement('div');
+    const baseHtml = (node.html || '').trim() || ((node.text || '').trim() ? renderMarkdown(node.text || '') : '');
+    tmp.innerHTML = baseHtml;
+
+    let inserted = false;
+    const marker = markerId ? findInlineMarker(tmp, markerId) : null;
+    const figure = createInlineImageFigure(filePath, 240);
+    if (!figure) return false;
+
+    if (marker && marker.parentNode) {
+        marker.parentNode.insertBefore(figure, marker);
+        marker.remove();
+        inserted = true;
+    }
+
+    if (!inserted) {
+        tmp.appendChild(figure);
+        inserted = true;
+    }
+
+    node.html = tmp.innerHTML.trim();
+    node.text = tmp.textContent || '';
+    pendingInlineImageMarkerId = null;
+    pendingInlineImageNodeId = null;
+    return inserted;
 }
 
 export async function initCanvas(winContainer, config) {
@@ -890,6 +1260,14 @@ function renderCanvas() {
         renderNode(node);
     });
 
+    if (selectedInlineImage?.nodeId && selectedInlineImage?.inlineId) {
+        const selectedFigure = nodesLayer.querySelector(`[data-id="${selectedInlineImage.nodeId}"] .node-inline-image[data-inline-id="${selectedInlineImage.inlineId}"]`);
+        if (!selectedFigure) {
+            selectedInlineImage = null;
+            updateDeleteBtn();
+        }
+    }
+
     // Re-apply search highlights after DOM rebuild
     reapplySearchHighlights();
 
@@ -1004,6 +1382,14 @@ function renderNode(node) {
     if (textEl) {
         if (node.type === 'text') {
             applyNodeTextAlignment(node, textEl);
+            normalizeInlineImagesInTextElement(textEl);
+
+            if (selectedInlineImage?.nodeId === node.id && selectedInlineImage?.inlineId) {
+                const selectedFigure = textEl.querySelector(`.node-inline-image[data-inline-id="${selectedInlineImage.inlineId}"]`);
+                if (selectedFigure) {
+                    selectedFigure.classList.add('inline-selected');
+                }
+            }
         }
 
         textEl.addEventListener('click', (e) => {
@@ -1027,7 +1413,7 @@ function renderNode(node) {
 
     // Auto-resize text nodes on initial render if content overflows
     // Double-rAF ensures the browser has completed layout before measuring
-    if (node.type === 'text' && node.text) {
+    if (node.type === 'text' && (node.text || node.html)) {
         requestAnimationFrame(() => requestAnimationFrame(() => autoResizeNode(node, el)));
     }
 }
@@ -1200,17 +1586,7 @@ function setupNodeInteractions(el, node) {
         textContentEl = textContent;
 
         function ensureInlineImageControls() {
-            textContent.querySelectorAll('.node-inline-image').forEach(fig => {
-                if (!fig.style.width) fig.style.width = '240px';
-                if (!fig.querySelector('.node-inline-image-resizer')) {
-                    const handle = document.createElement('span');
-                    handle.className = 'node-inline-image-resizer';
-                    handle.title = 'Resize image';
-                    fig.appendChild(handle);
-                }
-                const img = fig.querySelector('img');
-                if (img) img.setAttribute('draggable', 'false');
-            });
+            normalizeInlineImagesInTextElement(textContent);
         }
 
         ensureInlineImageControls();
@@ -1258,12 +1634,15 @@ function setupNodeInteractions(el, node) {
 
             const html = textContent.innerHTML.trim();
             const plain = textContent.textContent || '';
+            const hasPendingMarker = !!findInlineMarker(textContent, pendingInlineImageMarkerId)
+                && pendingInlineImageNodeId === node.id;
+            const hasRichContent = hasMeaningfulTextNodeHtml(html);
 
             editingNodeId = null;
             textContent.contentEditable = 'false';
             textContent.classList.remove('editing');
 
-            if (!plain.trim()) {
+            if (!plain.trim() && !hasRichContent && !hasPendingMarker) {
                 node.text = '';
                 node.html = '';
                 textContent.innerHTML = '<span class="node-placeholder">Double-click to edit</span>';
@@ -1330,6 +1709,10 @@ function setupNodeInteractions(el, node) {
             if (resizer && inlineImage) {
                 me.preventDefault();
                 me.stopPropagation();
+                if (selectedNode?.id !== node.id) {
+                    selectNode(node);
+                }
+                selectInlineImage(node, inlineImage);
 
                 const startWidth = inlineImage.getBoundingClientRect().width || parseFloat(inlineImage.style.width) || 240;
                 inlineImageResizeState = {
@@ -1342,8 +1725,23 @@ function setupNodeInteractions(el, node) {
 
             if (inlineImage) {
                 me.stopPropagation();
+                if (selectedNode?.id !== node.id) {
+                    selectNode(node);
+                }
+                selectInlineImage(node, inlineImage);
+                if (editingNodeId === node.id) {
+                    me.preventDefault();
+                    const rect = inlineImage.getBoundingClientRect();
+                    const preferBefore = me.clientY < rect.top + rect.height * 0.35
+                        || me.clientX < rect.left + rect.width * 0.45;
+                    if (preferBefore) placeCaretBeforeElement(inlineImage);
+                    else placeCaretAfterElement(inlineImage);
+                }
                 return;
             }
+
+            clearInlineImageSelection();
+            updateDeleteBtn();
 
             if (editingNodeId === node.id) {
                 me.stopPropagation();
@@ -1382,6 +1780,14 @@ function setupNodeInteractions(el, node) {
             if (ke.key === 'Escape') {
                 ke.preventDefault();
                 finishRichEdit();
+                return;
+            }
+
+            if ((ke.key === 'Backspace' || ke.key === 'Delete')
+                && selectedInlineImage?.nodeId === node.id
+                && selectedInlineImage?.inlineId) {
+                ke.preventDefault();
+                deleteSelectedInlineImage();
                 return;
             }
 
@@ -1455,7 +1861,6 @@ function setupNodeInteractions(el, node) {
             const maxWidth = Math.max(80, node.width - 24);
             const newWidth = Math.max(80, Math.min(maxWidth, Math.round(inlineImageResizeState.startWidth + dx)));
             inlineImageResizeState.figure.style.width = `${newWidth}px`;
-            autoResizeNode(node, el);
             return;
         }
 
@@ -1550,11 +1955,11 @@ function setupNodeInteractions(el, node) {
 
     const onMouseUp = () => {
         if (inlineImageResizeState && textContentEl) {
-            inlineImageResizeState = null;
             node.html = textContentEl.innerHTML.trim();
             node.text = textContentEl.textContent || '';
             markUnsaved();
             autoResizeNode(node, el);
+            inlineImageResizeState = null;
         }
 
         if (isDragging) {
@@ -1812,6 +2217,8 @@ function selectEdge(edge) {
 }
 
 function clearSelection() {
+    clearInlineImageSelection();
+
     if (selectedNode) {
         const el = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
         if (el) el.classList.remove('selected');
@@ -1955,8 +2362,32 @@ function setupNodeToolbar() {
         if (!isOwner) return;
         if (!selectedNode) return;
         const input = container.querySelector('#canvas-upload-image');
+        clearPendingInlineImageMarker();
+
         window._targetImageNode = selectedNode.id;
-        window._targetImageMode = selectedNode.type === 'text' ? 'inline-text' : 'file-node';
+
+        if (selectedNode.type === 'text') {
+            const nodeEl = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
+            const textContent = nodeEl?.querySelector('.node-content-text');
+            if (nodeEl && textContent && editingNodeId !== selectedNode.id) {
+                nodeEl.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+            }
+
+            const activeText = nodeEl?.querySelector('.node-content-text');
+            if (activeText) {
+                activeText.focus();
+                placeInlineImageMarker(activeText, selectedNode.id);
+            }
+
+            window._targetImageMode = 'inline-text';
+            preserveTextareaForFormat = true;
+            window.addEventListener('focus', () => {
+                preserveTextareaForFormat = false;
+            }, { once: true });
+        } else {
+            window._targetImageMode = 'file-node';
+        }
+
         input.click();
     });
 
@@ -2261,8 +2692,14 @@ function setupOwnerTools() {
     // Image Upload Logic
     const uploadInput = container.querySelector('#canvas-upload-image');
     uploadInput.addEventListener('change', async (e) => {
+        preserveTextareaForFormat = false;
         const file = e.target.files[0];
-        if (!file) return;
+        if (!file) {
+            clearPendingInlineImageMarker();
+            window._targetImageNode = null;
+            window._targetImageMode = null;
+            return;
+        }
 
         let filename = file.name;
 
@@ -2294,7 +2731,10 @@ async function handleGlobalPaste(e) {
         return;
     }
 
-    // Image clipboard paste should always upload to canvas, even when a node editor is active.
+    const activeTextEditor = e.target?.closest?.('.node-content-text.editing');
+    const activeTextNodeId = activeTextEditor?.dataset?.id || null;
+
+    // Clipboard image paste inserts inline when editing a text node.
     const imageItem = items.find(item => item.kind === 'file' && item.type.startsWith('image/'));
     if (imageItem) {
         e.preventDefault();
@@ -2305,6 +2745,20 @@ async function handleGlobalPaste(e) {
 
         const ext = blob.type.split('/')[1] || 'png';
         const filename = getUniqueCanvasUploadFilename(`pasted_image_${Date.now()}.${ext}`);
+
+        if (activeTextEditor && activeTextNodeId) {
+            window._targetImageNode = activeTextNodeId;
+            window._targetImageMode = 'inline-text';
+            activeTextEditor.focus();
+            placeInlineImageMarker(activeTextEditor, activeTextNodeId);
+            const activeNode = canvasData.nodes.find(n => n.id === activeTextNodeId);
+            if (activeNode) selectedNode = activeNode;
+        } else {
+            clearPendingInlineImageMarker();
+            window._targetImageNode = null;
+            window._targetImageMode = null;
+        }
+
         await uploadAndAddImage(blob, filename);
         return;
     }
@@ -2354,21 +2808,35 @@ async function uploadAndAddImage(file, filename, dropPos = null) {
                 const repoPath = `canvas_uploads/${filename}`;
                 await githubApi.saveFile(repoPath, base64Data, `Upload ${filename} to canvas`, true);
 
+                const targetNodeId = window._targetImageNode;
+                const targetMode = window._targetImageMode || 'file-node';
+                const targetMarkerId = pendingInlineImageMarkerId;
+
                 let node;
-                if (window._targetImageNode) {
-                    const targetMode = window._targetImageMode || 'file-node';
-                    node = canvasData.nodes.find(n => n.id === window._targetImageNode);
+                if (targetNodeId) {
+                    node = canvasData.nodes.find(n => n.id === targetNodeId);
                     if (node) {
                         pushHistory();
+                        let needsRender = false;
 
                         if (targetMode === 'inline-text' && node.type === 'text') {
-                            const inserted = appendInlineImageToTextNode(node, repoPath);
+                            const inserted = insertInlineImageIntoTextNode(node, repoPath, targetMarkerId);
                             if (!inserted) {
                                 node.type = 'file';
                                 delete node.text;
                                 delete node.html;
                                 node.file = repoPath;
                                 node._tempBase64 = reader.result;
+                                needsRender = true;
+                            } else {
+                                markUnsaved();
+                                const nodeEl = nodesLayer?.querySelector(`[data-id="${node.id}"]`);
+                                if (nodeEl) {
+                                    autoResizeNode(node, nodeEl);
+                                    if (selectedNode?.id === node.id) {
+                                        showNodeToolbar(node, nodeEl);
+                                    }
+                                }
                             }
                         } else {
                             // Convert text node to file node if needed
@@ -2379,17 +2847,23 @@ async function uploadAndAddImage(file, filename, dropPos = null) {
                             }
                             node.file = repoPath;
                             node._tempBase64 = reader.result; // Set BEFORE render for immediate preview
+                            needsRender = true;
                         }
 
-                        markUnsaved();
-                        renderCanvas();
+                        if (needsRender) {
+                            markUnsaved();
+                            renderCanvas();
 
-                        const refreshed = canvasData.nodes.find(n => n.id === node.id);
-                        if (refreshed) selectNode(refreshed);
+                            const refreshed = canvasData.nodes.find(n => n.id === node.id);
+                            if (refreshed) selectNode(refreshed);
+                        }
                     }
+                    clearPendingInlineImageMarker(node || null);
                     window._targetImageNode = null;
                     window._targetImageMode = null;
                 } else {
+                    clearPendingInlineImageMarker();
+
                     // Add to drop point when available, otherwise at center of viewport.
                     let x;
                     let y;
@@ -2418,6 +2892,9 @@ async function uploadAndAddImage(file, filename, dropPos = null) {
                 window.uiToast('Image uploaded and added', 'success');
             } catch (err) {
                 console.error("Upload failed", err);
+                clearPendingInlineImageMarker();
+                window._targetImageNode = null;
+                window._targetImageMode = null;
                 window.uiToast('Failed to upload image to repo', 'error');
             } finally {
                 hideOverlay();
@@ -2446,6 +2923,10 @@ function setTool(toolName) {
 function deleteSelected() {
     if (!isOwner) return;
 
+    if (selectedInlineImage) {
+        if (deleteSelectedInlineImage()) return;
+    }
+
     const selectedNodeIds = multiSelectedNodes.size > 0
         ? new Set(multiSelectedNodes)
         : (selectedNode ? new Set([selectedNode.id]) : null);
@@ -2458,9 +2939,15 @@ function deleteSelected() {
         canvasData.edges = canvasData.edges.filter(e => !selectedNodeIds.has(e.fromNode) && !selectedNodeIds.has(e.toNode));
 
         const nodesToDelete = canvasData.nodes.filter(n => selectedNodeIds.has(n.id));
-        const imageFiles = [...new Set(nodesToDelete
-            .filter(n => n.type === 'file' && typeof n.file === 'string' && n.file.startsWith('canvas_uploads/'))
-            .map(n => n.file))];
+        const imageFiles = [...new Set(nodesToDelete.flatMap(n => {
+            if (n.type === 'file' && typeof n.file === 'string' && n.file.startsWith('canvas_uploads/')) {
+                return [n.file];
+            }
+            if (n.type === 'text') {
+                return getInlineImageRepoFilesFromTextNode(n);
+            }
+            return [];
+        }))];
 
         // Delete nodes
         canvasData.nodes = canvasData.nodes.filter(n => !selectedNodeIds.has(n.id));
@@ -2511,7 +2998,7 @@ function disconnectSelectedNodeEdges() {
 
 function updateDeleteBtn() {
     const btn = container.querySelector('#canvas-delete-selected');
-    if (btn) btn.disabled = (!selectedNode && !selectedEdge && multiSelectedNodes.size === 0);
+    if (btn) btn.disabled = (!selectedNode && !selectedEdge && multiSelectedNodes.size === 0 && !selectedInlineImage);
 }
 
 // -----------------------------------------------------------------
