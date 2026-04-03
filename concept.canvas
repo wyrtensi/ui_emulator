@@ -6,7 +6,7 @@
       "x": -6170.726387606747,
       "y": -5365,
       "width": 250,
-      "height": 166,
+      "height": 168,
       "text": "Armors Concept",
       "textAlign": "center",
       "verticalAlign": "center",
@@ -18,11 +18,11 @@
       "x": -6170.726387606747,
       "y": -5164,
       "width": 250,
-      "height": 154,
+      "height": 160,
       "text": "Bellato",
-      "textAlign": "left",
-      "verticalAlign": "top",
-      "html": "Bellato"
+      "textAlign": "center",
+      "verticalAlign": "center",
+      "html": "<h1>Bellato</h1>"
     },
     {
       "id": "n_1775178355046",
@@ -30,22 +30,32 @@
       "x": -6443,
       "y": -5164,
       "width": 250,
-      "height": 154,
+      "height": 160,
       "text": "Accretia",
-      "textAlign": "left",
-      "verticalAlign": "top",
-      "html": "Accretia"
+      "textAlign": "center",
+      "verticalAlign": "center",
+      "html": "<h1>Accretia</h1>"
     },
     {
       "id": "n_1775178376708",
       "type": "text",
-      "x": -5791.2921775452105,
-      "y": -5105.883334766362,
+      "x": -5902,
+      "y": -5164,
       "width": 250,
-      "height": 150,
-      "text": "",
-      "textAlign": "left",
-      "verticalAlign": "top"
+      "height": 156,
+      "text": "Cora",
+      "textAlign": "center",
+      "verticalAlign": "center",
+      "html": "<h1>Cora</h1>"
+    },
+    {
+      "id": "n_1775178416711",
+      "type": "file",
+      "file": "",
+      "x": -6318.263397537283,
+      "y": -4900.549039000806,
+      "width": 250,
+      "height": 250
     }
   ],
   "edges": [
@@ -54,6 +64,27 @@
       "fromNode": "n_1775178260035",
       "fromSide": "bottom",
       "toNode": "n_1775178287674",
+      "toSide": "top"
+    },
+    {
+      "id": "0qi74pq5qrai",
+      "fromNode": "n_1775178260035",
+      "fromSide": "right",
+      "toNode": "n_1775178376708",
+      "toSide": "top"
+    },
+    {
+      "id": "4b942r40m2u",
+      "fromNode": "n_1775178260035",
+      "fromSide": "left",
+      "toNode": "n_1775178355046",
+      "toSide": "top"
+    },
+    {
+      "id": "93ce27dyasn",
+      "fromNode": "n_1775178355046",
+      "fromSide": "bottom",
+      "toNode": "n_1775178416711",
       "toSide": "top"
     }
   ]
