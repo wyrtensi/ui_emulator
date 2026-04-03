@@ -4266,6 +4266,162 @@ function setupNodeToolbar() {
         return editor;
     }
 
+    function selectionRangeBelongsToEditor(editor, range) {
+        if (!editor || !range) return false;
+        return editor.contains(range.commonAncestorContainer)
+            || editor.contains(range.startContainer)
+            || editor.contains(range.endContainer);
+    }
+
+    function rangeIntersectsNode(range, node) {
+        if (!range || !node) return false;
+
+        const nodeRange = document.createRange();
+        try {
+            nodeRange.selectNode(node);
+        } catch {
+            nodeRange.selectNodeContents(node);
+        }
+
+        return range.compareBoundaryPoints(Range.END_TO_START, nodeRange) < 0
+            && range.compareBoundaryPoints(Range.START_TO_END, nodeRange) > 0;
+    }
+
+    function getElementDepthWithinRoot(el, root) {
+        let depth = 0;
+        let current = el;
+        while (current && current !== root) {
+            depth += 1;
+            current = current.parentElement;
+        }
+        return depth;
+    }
+
+    function unwrapElement(el) {
+        if (!el || !el.parentNode) return;
+        const parent = el.parentNode;
+        while (el.firstChild) {
+            parent.insertBefore(el.firstChild, el);
+        }
+        el.remove();
+    }
+
+    function replaceElementTag(el, tagName) {
+        if (!el || !el.parentNode) return null;
+
+        const replacement = document.createElement(tagName);
+        while (el.firstChild) {
+            replacement.appendChild(el.firstChild);
+        }
+        el.parentNode.replaceChild(replacement, el);
+        return replacement;
+    }
+
+    function clearListItemFormatting(el) {
+        if (!el || !el.parentNode) return null;
+
+        const replacement = document.createElement('div');
+        Array.from(el.childNodes).forEach(child => {
+            if (child.nodeType === Node.ELEMENT_NODE && child.matches('input[type="checkbox"]')) {
+                return;
+            }
+
+            if (child.nodeType === Node.ELEMENT_NODE && child.classList?.contains('task-item-text')) {
+                while (child.firstChild) {
+                    replacement.appendChild(child.firstChild);
+                }
+                child.remove();
+                return;
+            }
+
+            replacement.appendChild(child);
+        });
+
+        el.parentNode.replaceChild(replacement, el);
+        return replacement;
+    }
+
+    function clearFormattingElement(el) {
+        if (!el || !el.isConnected) return;
+        if (el.matches('.node-placeholder, [data-inline-image-marker], .node-inline-image-resizer')) return;
+
+        const tag = el.tagName;
+        if (tag === 'H1' || tag === 'H2' || tag === 'H3' || tag === 'BLOCKQUOTE' || tag === 'PRE') {
+            replaceElementTag(el, 'div');
+            return;
+        }
+
+        if (tag === 'LI') {
+            clearListItemFormatting(el);
+            return;
+        }
+
+        if (
+            tag === 'UL'
+            || tag === 'OL'
+            || tag === 'A'
+            || tag === 'B'
+            || tag === 'STRONG'
+            || tag === 'I'
+            || tag === 'EM'
+            || tag === 'U'
+            || tag === 'S'
+            || tag === 'STRIKE'
+            || tag === 'CODE'
+            || tag === 'SPAN'
+            || tag === 'FONT'
+            || tag === 'MARK'
+            || tag === 'SUB'
+            || tag === 'SUP'
+        ) {
+            unwrapElement(el);
+        }
+    }
+
+    function collectFormattingElementsInRange(editor, range) {
+        if (!editor || !range) return [];
+
+        const selector = 'h1, h2, h3, blockquote, pre, ul, ol, li, a, b, strong, i, em, u, s, strike, code, span, font, mark, sub, sup';
+        const matches = new Set();
+
+        [range.startContainer, range.endContainer].forEach(node => {
+            let current = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+            while (current && current !== editor) {
+                if (current.matches?.(selector)) {
+                    matches.add(current);
+                }
+                current = current.parentElement;
+            }
+        });
+
+        editor.querySelectorAll(selector).forEach(el => {
+            if (rangeIntersectsNode(range, el)) {
+                matches.add(el);
+            }
+        });
+
+        return Array.from(matches)
+            .sort((a, b) => getElementDepthWithinRoot(b, editor) - getElementDepthWithinRoot(a, editor));
+    }
+
+    function clearFormattingInEditorSelection(editor) {
+        const sel = window.getSelection();
+        if (!editor || !sel || sel.rangeCount === 0) return false;
+
+        const range = sel.getRangeAt(0);
+        if (!selectionRangeBelongsToEditor(editor, range)) return false;
+
+        // removeFormat handles inline styles, but not block wrappers like H1/blockquote or list markup.
+        document.execCommand('removeFormat', false, null);
+        document.execCommand('unlink', false, null);
+
+        collectFormattingElementsInRange(editor, range).forEach(clearFormattingElement);
+
+        editor.normalize();
+        normalizeInlineImagesInTextElement(editor, { draggable: editingNodeId === selectedNode?.id });
+        return true;
+    }
+
     function applyFormatToRichEditor(editor, fmt) {
         if (!selectedNode || selectedNode.type !== 'text') return;
         if (isNodeLocked(selectedNode)) return;
@@ -4286,10 +4442,9 @@ function setupNodeToolbar() {
         const selectedText = sel ? sel.toString() : '';
 
         if (fmt === 'clear') {
-            if (sel && !sel.isCollapsed) {
+            if (!clearFormattingInEditorSelection(editor)) {
                 document.execCommand('removeFormat', false, null);
-            } else {
-                editor.innerText = editor.innerText;
+                document.execCommand('unlink', false, null);
             }
             return;
         }
