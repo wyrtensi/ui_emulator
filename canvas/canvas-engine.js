@@ -582,6 +582,118 @@ function updateGroupMembershipForNodeIds(nodeIds, options = {}) {
     return changed;
 }
 
+const ALIGN_COLLISION_GAP = 24;
+
+function nodesOverlap(a, b) {
+    if (!a || !b || a.id === b.id) return false;
+    return a.x < (b.x + b.width)
+        && (a.x + a.width) > b.x
+        && a.y < (b.y + b.height)
+        && (a.y + a.height) > b.y;
+}
+
+function selectionHasOverlaps(nodes) {
+    const list = Array.isArray(nodes) ? nodes.filter(Boolean) : [];
+    for (let i = 0; i < list.length; i += 1) {
+        for (let j = i + 1; j < list.length; j += 1) {
+            if (nodesOverlap(list[i], list[j])) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function getConnectedLayoutOrder(nodes, axis = 'x') {
+    const list = Array.isArray(nodes) ? nodes.filter(Boolean) : [];
+    if (list.length < 2) return list;
+
+    const ids = new Set(list.map(n => n.id));
+    const byId = new Map(list.map(n => [n.id, n]));
+    const fallbackSort = (aId, bId) => {
+        const a = byId.get(aId);
+        const b = byId.get(bId);
+        if (!a || !b) return 0;
+        const primary = (Number(a[axis]) || 0) - (Number(b[axis]) || 0);
+        if (primary !== 0) return primary;
+        return String(aId).localeCompare(String(bId));
+    };
+
+    const linkedEdges = canvasData.edges.filter(edge => (
+        ids.has(edge.fromNode)
+        && ids.has(edge.toNode)
+        && edge.fromNode !== edge.toNode
+    ));
+
+    if (linkedEdges.length === 0) {
+        return list.slice().sort((a, b) => fallbackSort(a.id, b.id));
+    }
+
+    const indegree = new Map();
+    const outgoing = new Map();
+    ids.forEach(id => {
+        indegree.set(id, 0);
+        outgoing.set(id, new Set());
+    });
+
+    linkedEdges.forEach(edge => {
+        const out = outgoing.get(edge.fromNode);
+        if (!out || out.has(edge.toNode)) return;
+        out.add(edge.toNode);
+        indegree.set(edge.toNode, (indegree.get(edge.toNode) || 0) + 1);
+    });
+
+    const queue = Array.from(ids)
+        .filter(id => (indegree.get(id) || 0) === 0)
+        .sort(fallbackSort);
+    const orderedIds = [];
+
+    while (queue.length > 0) {
+        const id = queue.shift();
+        orderedIds.push(id);
+
+        const out = outgoing.get(id);
+        if (!out) continue;
+
+        Array.from(out).sort(fallbackSort).forEach(nextId => {
+            const next = (indegree.get(nextId) || 0) - 1;
+            indegree.set(nextId, next);
+            if (next === 0) {
+                queue.push(nextId);
+                queue.sort(fallbackSort);
+            }
+        });
+    }
+
+    // Cycles or disconnected graph shapes fall back to visual order.
+    if (orderedIds.length !== list.length) {
+        return list.slice().sort((a, b) => fallbackSort(a.id, b.id));
+    }
+
+    return orderedIds.map(id => byId.get(id)).filter(Boolean);
+}
+
+function distributeNodesWithGap(nodes, axis = 'x', gap = ALIGN_COLLISION_GAP) {
+    const list = Array.isArray(nodes) ? nodes.filter(Boolean) : [];
+    if (list.length < 2) return;
+
+    const posKey = axis === 'y' ? 'y' : 'x';
+    const sizeKey = axis === 'y' ? 'height' : 'width';
+    const ordered = getConnectedLayoutOrder(list, posKey);
+    if (ordered.length < 2) return;
+
+    const minPos = Math.min(...ordered.map(node => Number(node[posKey]) || 0));
+    const maxPos = Math.max(...ordered.map(node => (Number(node[posKey]) || 0) + (Number(node[sizeKey]) || 0)));
+    const totalSize = ordered.reduce((sum, node) => sum + (Number(node[sizeKey]) || 0), 0)
+        + (Math.max(0, ordered.length - 1) * gap);
+
+    let cursor = (minPos + maxPos - totalSize) / 2;
+    ordered.forEach(node => {
+        node[posKey] = Math.round(cursor);
+        cursor += (Number(node[sizeKey]) || 0) + gap;
+    });
+}
+
 function alignSelectedNodes(mode) {
     const selected = getSelectedNodes().filter(node => !isNodeLocked(node));
     if (selected.length < 2) {
@@ -622,6 +734,12 @@ function alignSelectedNodes(mode) {
                 break;
         }
     });
+
+    // If alignment causes overlap, spread along the free axis with small spacing.
+    if (selectionHasOverlaps(selected)) {
+        const distributeAxis = ['left', 'center', 'right'].includes(mode) ? 'y' : 'x';
+        distributeNodesWithGap(selected, distributeAxis);
+    }
 
     const movedNonGroupIds = selected.filter(n => n.type !== 'group').map(n => n.id);
     if (movedNonGroupIds.length > 0) {
