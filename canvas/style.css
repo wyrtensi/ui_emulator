@@ -145,8 +145,8 @@
 }
 
 .canvas-node-toolbar.has-format-row {
-  width: 340px !important;
-  max-width: 340px !important;
+  width: 252px !important;
+  max-width: 252px !important;
 }
 
 .node-toolbar-btn {
@@ -235,8 +235,8 @@
 
 @media (max-width: 680px) {
   .canvas-node-toolbar.has-format-row {
-    width: min(300px, calc(100vw - 20px));
-    max-width: min(300px, calc(100vw - 20px));
+    width: min(252px, calc(100vw - 20px)) !important;
+    max-width: min(252px, calc(100vw - 20px)) !important;
   }
 }
 

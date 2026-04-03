@@ -3961,8 +3961,8 @@ function showNodeToolbar(node, el) {
     }
     nodeToolbar.classList.toggle('has-format-row', showTextFormatControls);
     if (showTextFormatControls) {
-        nodeToolbar.style.width = '340px';
-        nodeToolbar.style.maxWidth = '340px';
+        nodeToolbar.style.width = '252px';
+        nodeToolbar.style.maxWidth = '252px';
         nodeToolbar.style.flexWrap = 'wrap';
         // Force compact button sizing
         quickFormatRow.querySelectorAll('.node-toolbar-format-btn').forEach(btn => {
