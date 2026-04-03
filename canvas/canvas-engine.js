@@ -1369,6 +1369,10 @@ export async function initCanvas(winContainer, config) {
     translateY = initialViewportHeight / 2;
 
     isOwner = githubAuth.isOwner;
+    const canvasWindowEl = container.querySelector('.canvas-window');
+    if (canvasWindowEl) {
+        canvasWindowEl.classList.toggle('is-owner', isOwner);
+    }
     if (isOwner) {
         document.body.classList.add('is-owner');
     } else {
@@ -1909,6 +1913,33 @@ function setupViewport() {
     }
 
     function refreshContextMenuItems() {
+        if (!isOwner) {
+            [
+                cmAddText,
+                cmAddImg,
+                cmAddGroup,
+                cmGroupSelected,
+                cmAddSelectedToGroup,
+                cmAddSelectedToTargetGroup,
+                cmRemoveTargetFromGroup,
+                cmRemoveSelectedFromGroup,
+                cmRenameGroup,
+                cmUngroupKeep,
+                cmDeleteGroupWithMembers,
+                cmOpenFormat,
+                cmAlignLeft,
+                cmAlignCenter,
+                cmAlignRight,
+                cmAlignTop,
+                cmAlignMiddle,
+                cmAlignBottom,
+                cmLockSelected,
+                cmUnlockSelected,
+                cmToggleCollapseSelectedGroups
+            ].forEach(item => setMenuItemVisible(item, false));
+            return;
+        }
+
         const targetNode = getContextTargetNode();
         const isBackgroundMenu = !targetNode;
         const selectedIds = getCurrentSelectionNodeIds();
@@ -1966,6 +1997,7 @@ function setupViewport() {
 
     function openContextMenu(clientX, clientY, targetNode = null) {
         if (!ctxMenu) return;
+        if (!isOwner) return;
 
         closeGroupPicker();
 
@@ -2636,8 +2668,10 @@ function renderNode(node) {
         const rawText = (node.text || '').trim();
         const isEmpty = !htmlText && !rawText;
         let renderedHtml = htmlText || renderMarkdown(node.text || '');
-        // Enable checkbox interaction
-        renderedHtml = renderedHtml.replace(/disabled=""/g, '').replace(/disabled/g, '');
+        // Allow checkbox interaction only for owner; viewers stay read-only.
+        if (isOwner) {
+            renderedHtml = renderedHtml.replace(/disabled=""/g, '').replace(/disabled/g, '');
+        }
         if (isEmpty) {
             renderedHtml = '<span class="node-placeholder">Double-click to edit</span>';
         }
@@ -2699,6 +2733,10 @@ function renderNode(node) {
         if (node.type === 'text') {
             applyNodeTextAlignment(node, textEl);
             normalizeInlineImagesInTextElement(textEl);
+
+            if (!isOwner) {
+                textEl.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.setAttribute('disabled', 'disabled'));
+            }
 
             if (selectedInlineImage?.nodeId === node.id && selectedInlineImage?.inlineId) {
                 const selectedFigure = textEl.querySelector(`.node-inline-image[data-inline-id="${selectedInlineImage.inlineId}"]`);
@@ -3966,6 +4004,14 @@ function clearSelection() {
 
 function showNodeToolbar(node, el) {
     if (!nodeToolbar) return;
+
+    nodeToolbar.querySelectorAll('.node-toolbar-btn').forEach(btn => {
+        const isLinkButton = btn.id === 'nt-link';
+        btn.hidden = !isOwner && !isLinkButton;
+    });
+    nodeToolbar.querySelectorAll('.node-toolbar-sep').forEach(sep => {
+        sep.hidden = !isOwner;
+    });
 
     const quickFormatRow = nodeToolbar.querySelector('#node-toolbar-format-row');
     const showTextFormatControls = !!isOwner && node?.type === 'text' && !isNodeLocked(node);

@@ -401,7 +401,15 @@
 }
 
 /* View permissions */
-body:not(.is-owner) .canvas-owner-only {
+.canvas-window:not(.is-owner) .canvas-owner-only {
+  display: none !important;
+}
+
+.canvas-window:not(.is-owner) #canvas-node-toolbar .node-toolbar-btn:not(#nt-link) {
+  display: none !important;
+}
+
+.canvas-window:not(.is-owner) #canvas-node-toolbar .node-toolbar-sep {
   display: none !important;
 }
 
