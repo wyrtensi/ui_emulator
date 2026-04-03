@@ -1860,7 +1860,7 @@ function setupViewport() {
         closeGroupPicker();
     });
 
-    function showFormatMenuForNode(node) {
+    function showFormatMenuForNode(node, options = {}) {
         if (!node || node.type !== 'text') return;
 
         const formatMenu = container.querySelector('#node-format-menu');
@@ -1875,12 +1875,50 @@ function setupViewport() {
             showNodeToolbar(node, nodeEl);
         }
 
-        formatMenu.style.position = 'absolute';
-        formatMenu.style.left = '100%';
-        formatMenu.style.top = '100%';
-        formatMenu.style.marginTop = '8px';
+        const clientX = Number(options.clientX);
+        const clientY = Number(options.clientY);
+        const useCursorAnchor = Number.isFinite(clientX) && Number.isFinite(clientY);
+
+        if (useCursorAnchor) {
+            formatMenu.style.position = 'fixed';
+            formatMenu.style.marginTop = '0';
+            formatMenu.style.transform = 'none';
+            formatMenu.style.zIndex = '10020';
+            formatMenu.style.left = `${Math.round(clientX + 8)}px`;
+            formatMenu.style.top = `${Math.round(clientY + 8)}px`;
+        } else {
+            formatMenu.style.position = 'absolute';
+            formatMenu.style.left = '100%';
+            formatMenu.style.top = '100%';
+            formatMenu.style.marginTop = '8px';
+            formatMenu.style.transform = '';
+            formatMenu.style.zIndex = '';
+        }
+
         formatMenu.style.display = 'flex';
         formatMenu.hidden = false;
+
+        if (useCursorAnchor) {
+            requestAnimationFrame(() => {
+                if (formatMenu.hidden) return;
+
+                const menuRect = formatMenu.getBoundingClientRect();
+                let nextLeft = Number.parseFloat(formatMenu.style.left) || (clientX + 8);
+                let nextTop = Number.parseFloat(formatMenu.style.top) || (clientY + 8);
+                const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+                const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+
+                if (nextLeft + menuRect.width > viewportWidth - 8) {
+                    nextLeft = Math.max(8, clientX - menuRect.width - 8);
+                }
+                if (nextTop + menuRect.height > viewportHeight - 8) {
+                    nextTop = Math.max(8, viewportHeight - menuRect.height - 8);
+                }
+
+                formatMenu.style.left = `${Math.round(nextLeft)}px`;
+                formatMenu.style.top = `${Math.round(nextTop)}px`;
+            });
+        }
     }
 
     function refreshContextMenuItems() {
@@ -2320,12 +2358,20 @@ function setupViewport() {
         deleteNodesByIds(ids);
     });
 
-    cmOpenFormat?.addEventListener('click', () => {
+    cmOpenFormat?.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
         if (ctxMenu) ctxMenu.hidden = true;
 
         const targetNode = getContextTargetNode();
         if (!targetNode || targetNode.type !== 'text') return;
-        showFormatMenuForNode(targetNode);
+
+        suppressCtxMenuCloseUntil = Date.now() + 180;
+        showFormatMenuForNode(targetNode, {
+            clientX: event.clientX,
+            clientY: event.clientY,
+        });
     });
 
     cmAlignLeft?.addEventListener('click', () => {
