@@ -178,10 +178,10 @@
 .node-toolbar-format-row {
   flex: 0 0 100%;
   width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-start;
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  align-items: stretch;
+  justify-items: stretch;
   gap: 3px;
   margin-top: 3px;
   padding-top: 3px;
@@ -197,8 +197,8 @@
   border: 1px solid transparent;
   color: var(--canvas-text);
   height: 22px !important;
-  min-width: 22px !important;
-  width: 22px !important;
+  min-width: 0 !important;
+  width: 100% !important;
   border-radius: 3px;
   cursor: pointer;
   font-size: 9px;
@@ -208,6 +208,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: background-color 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
 }
 
 .node-toolbar-format-btn:hover {
@@ -224,9 +225,9 @@
 .node-toolbar-format-text {
   font-weight: 700;
   letter-spacing: 0.02em;
-  width: auto !important;
-  min-width: 24px !important;
-  padding: 0 4px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 !important;
 }
 
 .node-toolbar-format-divider {

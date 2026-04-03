@@ -3956,7 +3956,7 @@ function showNodeToolbar(node, el) {
     if (quickFormatRow) {
         quickFormatRow.hidden = !showTextFormatControls;
         quickFormatRow.style.cssText = showTextFormatControls
-            ? 'display:flex;flex-wrap:wrap;gap:3px;width:100%;margin-top:3px;padding-top:3px;border-top:1px solid var(--canvas-node-border);align-items:center;'
+            ? 'display:grid;grid-template-columns:repeat(9, minmax(0, 1fr));gap:3px;width:100%;margin-top:3px;padding-top:3px;border-top:1px solid var(--canvas-node-border);align-items:stretch;justify-items:stretch;'
             : '';
     }
     nodeToolbar.classList.toggle('has-format-row', showTextFormatControls);
@@ -3964,13 +3964,14 @@ function showNodeToolbar(node, el) {
         nodeToolbar.style.width = '252px';
         nodeToolbar.style.maxWidth = '252px';
         nodeToolbar.style.flexWrap = 'wrap';
-        // Force compact button sizing
+        // Keep sizing enforced in JS, but leave visual states to CSS so hover still works.
         quickFormatRow.querySelectorAll('.node-toolbar-format-btn').forEach(btn => {
-            btn.style.cssText = 'height:22px;min-width:22px;width:22px;padding:0;border-radius:3px;font-size:9px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;color:var(--canvas-text);cursor:pointer;opacity:0.9;';
+            btn.style.cssText = 'height:22px;min-width:0;width:100%;padding:0;font-size:9px;line-height:1;';
             const svg = btn.querySelector('svg');
             if (svg) { svg.style.width = '12px'; svg.style.height = '12px'; }
             if (btn.classList.contains('node-toolbar-format-text')) {
-                btn.style.width = 'auto'; btn.style.minWidth = '24px'; btn.style.padding = '0 4px'; btn.style.fontWeight = '700';
+                btn.style.fontWeight = '700';
+                btn.style.letterSpacing = '0.02em';
             }
         });
     } else {
