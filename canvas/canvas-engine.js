@@ -38,9 +38,11 @@ let clipboardPasteCount = 0;
 let pendingClipboardNodePaste = false;
 
 const CANVAS_FILE = 'concept.canvas';
+const CANVAS_VIEW_STATE_KEY = 'ui-canvas-view-v1';
 let hasUnsavedChanges = false;
 let autoSaveInterval = null;
 let isSaving = false;
+let viewStateSaveTimer = null;
 
 const CANVAS_REACTION_TYPES = ['THUMBS_UP', 'HEART', 'LAUGH', 'HOORAY', 'CONFUSED', 'MINUS_ONE', 'ROCKET', 'EYES'];
 const CANVAS_REACTION_EMOJIS = {
@@ -219,8 +221,11 @@ export async function initCanvas(winContainer, config) {
     // Load data
     await loadCanvasData();
 
-    // Check URL hash for direct links
-    checkHashForDirectLink();
+    // Initial viewport policy runs after layout is measurable:
+    // 1) If opened via deep link, follow link target
+    // 2) Else restore cached viewport position
+    // 3) Else execute the same Fit command used by the Fit button
+    applyInitialViewportPolicy();
 
     // Listen for hash changes
     window.addEventListener('hashchange', checkHashForDirectLink);
@@ -807,6 +812,7 @@ function setupViewport() {
 function updateTransform() {
     content.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
     zoomLabel.textContent = `${Math.round(scale * 100)}%`;
+    queueSaveCanvasViewState();
     hideForeignNodeToolbars();
 
     // Keep toolbar anchored to selected node, and hard-hide any ghost toolbar
@@ -2422,32 +2428,81 @@ function setupZoomControls() {
         updateTransform();
     });
     container.querySelector('#canvas-fit').addEventListener('click', () => {
-        if (canvasData.nodes.length === 0) return;
-
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        canvasData.nodes.forEach(n => {
-            if (n.x < minX) minX = n.x;
-            if (n.y < minY) minY = n.y;
-            if (n.x + n.width > maxX) maxX = n.x + n.width;
-            if (n.y + n.height > maxY) maxY = n.y + n.height;
-        });
-
-        const padding = 100;
-        const width = maxX - minX + padding * 2;
-        const height = maxY - minY + padding * 2;
-
-        const rect = viewport.getBoundingClientRect();
-        const scaleX = rect.width / width;
-        const scaleY = rect.height / height;
-
-        const targetScale = Math.min(1, Math.min(scaleX, scaleY));
-        const centerX = (minX + maxX) / 2;
-        const centerY = (minY + maxY) / 2;
-        const targetTX = rect.width / 2 - centerX * targetScale;
-        const targetTY = rect.height / 2 - centerY * targetScale;
-
-        animateTo(targetScale, targetTX, targetTY);
+        fitCanvasToScreen(true);
     });
+}
+
+function fitCanvasToScreen(animate = true) {
+    if (canvasData.nodes.length === 0) {
+        if (!animate) updateTransform();
+        return false;
+    }
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    canvasData.nodes.forEach(n => {
+        if (n.x < minX) minX = n.x;
+        if (n.y < minY) minY = n.y;
+        if (n.x + n.width > maxX) maxX = n.x + n.width;
+        if (n.y + n.height > maxY) maxY = n.y + n.height;
+    });
+
+    const padding = 100;
+    const width = maxX - minX + padding * 2;
+    const height = maxY - minY + padding * 2;
+
+    const rect = viewport.getBoundingClientRect();
+    const scaleX = rect.width / width;
+    const scaleY = rect.height / height;
+
+    const targetScale = Math.min(1, Math.min(scaleX, scaleY));
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const targetTX = rect.width / 2 - centerX * targetScale;
+    const targetTY = rect.height / 2 - centerY * targetScale;
+
+    if (animate) {
+        animateTo(targetScale, targetTX, targetTY);
+    } else {
+        scale = targetScale;
+        translateX = targetTX;
+        translateY = targetTY;
+        updateTransform();
+    }
+    return true;
+}
+
+function applyInitialViewportPolicy() {
+    const maxAttempts = 40;
+    let attempts = 0;
+
+    const run = () => {
+        const rect = viewport.getBoundingClientRect();
+
+        // Canvas init can run before window is actually visible/opened.
+        // Wait until viewport has usable dimensions to get a correct fit.
+        if ((rect.width < 32 || rect.height < 32) && attempts < maxAttempts) {
+            attempts += 1;
+            requestAnimationFrame(run);
+            return;
+        }
+
+        if (hasCanvasLinkHash(window.location.hash)) {
+            const handled = checkHashForDirectLink();
+            if (handled) return;
+        }
+
+        if (loadCanvasViewState()) return;
+
+        // Use the exact same action path as manual "Fit to Screen".
+        const fitBtn = container?.querySelector('#canvas-fit');
+        if (fitBtn) {
+            fitBtn.click();
+        } else {
+            fitCanvasToScreen(true);
+        }
+    };
+
+    requestAnimationFrame(run);
 }
 
 function generateId() {
@@ -2614,10 +2669,52 @@ function checkHashForDirectLink() {
             const targetTY = -(targetNode.y + targetNode.height/2) * targetScale + (rect.height / 2);
             animateTo(targetScale, targetTX, targetTY);
             selectNode(targetNode);
+            return true;
         } else {
             console.warn("Target canvas node not found for hash:", hash);
+            return false;
         }
     }
+    return false;
+}
+
+function hasCanvasLinkHash(hash) {
+    return typeof hash === 'string' && (hash.startsWith('#canvas:') || hash.startsWith('#canvasid:'));
+}
+
+function loadCanvasViewState() {
+    try {
+        const raw = localStorage.getItem(CANVAS_VIEW_STATE_KEY);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        const nextScale = Number(parsed?.scale);
+        const nextTX = Number(parsed?.translateX);
+        const nextTY = Number(parsed?.translateY);
+        if (!Number.isFinite(nextScale) || !Number.isFinite(nextTX) || !Number.isFinite(nextTY)) return false;
+
+        scale = Math.min(5, Math.max(0.1, nextScale));
+        translateX = nextTX;
+        translateY = nextTY;
+        updateTransform();
+        return true;
+    } catch (err) {
+        return false;
+    }
+}
+
+function queueSaveCanvasViewState() {
+    clearTimeout(viewStateSaveTimer);
+    viewStateSaveTimer = setTimeout(() => {
+        try {
+            localStorage.setItem(CANVAS_VIEW_STATE_KEY, JSON.stringify({
+                scale,
+                translateX,
+                translateY,
+            }));
+        } catch (err) {
+            // Ignore storage failures (private mode/quota)
+        }
+    }, 120);
 }
 
 function findRootOfBranch(nodeId) {
