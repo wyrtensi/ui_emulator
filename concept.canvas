@@ -1,50 +1,13 @@
 {
   "nodes": [
     {
-      "id": "zzg1jmlmhy",
+      "id": "n_1775175413733",
       "type": "text",
-      "x": 1747,
-      "y": 951,
-      "width": 200,
-      "height": 114,
-      "text": "New node"
-    },
-    {
-      "id": "16q95i0ymqp",
-      "type": "text",
-      "x": 1740,
-      "y": 36,
-      "width": 200,
-      "height": 114,
-      "text": "New node"
-    },
-    {
-      "id": "n_1775079368011",
-      "type": "text",
-      "x": -375,
-      "y": -73,
-      "width": 250,
-      "height": 164,
-      "text": "jhjhjkhjl\n"
-    },
-    {
-      "id": "n_1775079423645",
-      "type": "text",
-      "x": -74,
-      "y": -379,
+      "x": -595.7806411085293,
+      "y": -30.555371244188613,
       "width": 250,
       "height": 150,
-      "text": "",
-      "color": "3"
-    },
-    {
-      "id": "o8y43rabdi",
-      "type": "text",
-      "x": 263,
-      "y": 236,
-      "width": 200,
-      "height": 114,
-      "text": "New node"
+      "text": ""
     }
   ],
   "edges": []
