@@ -6,27 +6,28 @@
       "x": -1545,
       "y": -1283,
       "width": 234,
-      "height": 88,
+      "height": 93,
       "text": "Armor concept",
       "html": "<h1>Armor concept</h1><div><br></div>"
     },
     {
       "id": "n_1775175543822",
       "type": "text",
-      "x": -1441.9619094072905,
-      "y": -1038.7179726190575,
+      "x": -1545,
+      "y": -1062,
       "width": 250,
-      "height": 150,
-      "text": ""
+      "height": 158,
+      "text": "Accretia",
+      "html": "Accretia<div><br></div>"
     }
   ],
   "edges": [
     {
-      "id": "e719tzs0e8b",
+      "id": "j79icwta5bk",
       "fromNode": "n_1775175413733",
       "fromSide": "bottom",
       "toNode": "n_1775175543822",
-      "toSide": "left"
+      "toSide": "top"
     }
   ]
 }
