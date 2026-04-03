@@ -6,25 +6,24 @@
       "x": -1545,
       "y": -1283,
       "width": 234,
-      "height": 95,
+      "height": 97,
       "text": "Armor concept",
       "html": "<h1>Armor concept</h1><div><br></div>"
     },
     {
-      "id": "n_1775175543822",
-      "type": "text",
-      "x": -1572,
-      "y": -1119,
-      "width": 288,
-      "height": 114,
-      "text": "A/B/Cgfdgfd",
-      "html": "<h1>A/B/C</h1><div><br></div><div>gfdgfd</div>"
-    },
-    {
       "id": "n_1775175768143",
       "type": "text",
-      "x": -1545,
-      "y": -904,
+      "x": -1926,
+      "y": -1143,
+      "width": 250,
+      "height": 150,
+      "text": ""
+    },
+    {
+      "id": "n_1775176603901",
+      "type": "text",
+      "x": -1446.612756618313,
+      "y": -1086.3891565320378,
       "width": 250,
       "height": 150,
       "text": ""
@@ -32,10 +31,10 @@
   ],
   "edges": [
     {
-      "id": "j79icwta5bk",
+      "id": "3cid1n1p3b2",
       "fromNode": "n_1775175413733",
-      "fromSide": "bottom",
-      "toNode": "n_1775175543822",
+      "fromSide": "left",
+      "toNode": "n_1775175768143",
       "toSide": "top"
     }
   ]
