@@ -303,6 +303,25 @@ function markUnsaved() {
     refreshCanvasDiscussionLinkLabels();
 }
 
+function getNodeTextAlign(node) {
+    return ['left', 'center', 'right'].includes(node?.textAlign) ? node.textAlign : 'left';
+}
+
+function getNodeVerticalAlign(node) {
+    return ['top', 'center', 'bottom'].includes(node?.verticalAlign) ? node.verticalAlign : 'top';
+}
+
+function applyNodeTextAlignment(node, textEl) {
+    if (!node || node.type !== 'text' || !textEl) return;
+
+    const textAlign = getNodeTextAlign(node);
+    const verticalAlign = getNodeVerticalAlign(node);
+    const justify = verticalAlign === 'center' ? 'center' : (verticalAlign === 'bottom' ? 'flex-end' : 'flex-start');
+
+    textEl.style.textAlign = textAlign;
+    textEl.style.justifyContent = justify;
+}
+
 // -----------------------------------------------------------------
 // VIEWPORT & RENDER LOGIC
 // -----------------------------------------------------------------
@@ -513,7 +532,7 @@ function setupViewport() {
 
             pushHistory();
             const id = 'n_' + Date.now();
-            canvasData.nodes.push({ id, type: 'text', x: mouseX, y: mouseY, width: 250, height: 150, text: '' });
+            canvasData.nodes.push({ id, type: 'text', x: mouseX, y: mouseY, width: 250, height: 150, text: '', textAlign: 'left', verticalAlign: 'top' });
             saveCanvasData(true);
             renderCanvas();
         }
@@ -556,6 +575,7 @@ function setupViewport() {
             e.preventDefault();
             if (!isOwner) return;
             lastRightClickedNode = null;
+            window._pendingEdgeConnect = null;
 
             const rect = viewport.getBoundingClientRect();
             ctxMenu.style.left = e.clientX + 'px';
@@ -572,6 +592,7 @@ function setupViewport() {
         hideForeignNodeToolbars();
         if (ctxMenu && !ctxMenu.hidden && !ctxMenu.contains(e.target)) {
             ctxMenu.hidden = true;
+            window._pendingEdgeConnect = null;
         }
         // Also close format menu and palette when clicking outside them
         const formatMenu = container.querySelector('#node-format-menu');
@@ -597,6 +618,7 @@ function setupViewport() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             ctxMenu.hidden = true;
+            window._pendingEdgeConnect = null;
             const formatMenu = container.querySelector('#node-format-menu');
             const palette = container.querySelector('#node-color-palette');
             if (formatMenu) formatMenu.hidden = true;
@@ -608,12 +630,10 @@ function setupViewport() {
     container.querySelector('#cm-add-text')?.addEventListener('click', () => {
         pushHistory();
         const id = 'n_' + Date.now();
-        canvasData.nodes.push({ id, type: 'text', x: ctxMenuX, y: ctxMenuY, width: 250, height: 150, text: '' });
+           const newNode = { id, type: 'text', x: ctxMenuX, y: ctxMenuY, width: 250, height: 150, text: '', textAlign: 'left', verticalAlign: 'top' };
+           canvasData.nodes.push(newNode);
 
-        if (window._pendingEdgeConnect) {
-             createEdge(window._pendingEdgeConnect.fromNode, window._pendingEdgeConnect.fromSide, id, 'left');
-             window._pendingEdgeConnect = null;
-        }
+           connectPendingEdgeToNode(newNode);
         saveCanvasData(true);
         renderCanvas();
     });
@@ -621,12 +641,10 @@ function setupViewport() {
     container.querySelector('#cm-add-img')?.addEventListener('click', () => {
         pushHistory();
         const id = 'n_' + Date.now();
-        canvasData.nodes.push({ id, type: 'file', file: '', x: ctxMenuX, y: ctxMenuY, width: 250, height: 250 });
+           const newNode = { id, type: 'file', file: '', x: ctxMenuX, y: ctxMenuY, width: 250, height: 250 };
+           canvasData.nodes.push(newNode);
 
-        if (window._pendingEdgeConnect) {
-             createEdge(window._pendingEdgeConnect.fromNode, window._pendingEdgeConnect.fromSide, id, 'left');
-             window._pendingEdgeConnect = null;
-        }
+           connectPendingEdgeToNode(newNode);
         saveCanvasData(true);
         renderCanvas();
 
@@ -662,11 +680,9 @@ function setupViewport() {
             minX -= 40; minY -= 60; maxX += 40; maxY += 40;
         }
 
-        canvasData.nodes.push({ id, type: 'group', label: 'New Group', x: minX, y: minY, width: maxX - minX, height: maxY - minY });
-        if (window._pendingEdgeConnect) {
-             createEdge(window._pendingEdgeConnect.fromNode, window._pendingEdgeConnect.fromSide, id, 'left');
-             window._pendingEdgeConnect = null;
-        }
+           const newNode = { id, type: 'group', label: 'New Group', x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+           canvasData.nodes.push(newNode);
+           connectPendingEdgeToNode(newNode);
         saveCanvasData(true);
         renderCanvas();
     });
@@ -854,7 +870,12 @@ function renderNode(node) {
     // Make links in node content clickable
     const textEl = el.querySelector('.node-content-text');
     if (textEl) {
+        if (node.type === 'text') {
+            applyNodeTextAlignment(node, textEl);
+        }
+
         textEl.addEventListener('click', (e) => {
+            if (e.detail >= 3) return;
             const link = e.target.closest('a');
             if (!link) return;
             e.preventDefault();
@@ -876,6 +897,14 @@ function renderNode(node) {
     if (node.type === 'text' && node.text) {
         requestAnimationFrame(() => requestAnimationFrame(() => autoResizeNode(node, el)));
     }
+}
+
+function selectAllNodeText(target) {
+    const range = document.createRange();
+    range.selectNodeContents(target);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
 }
 
 function setupNodeInteractions(el, node) {
@@ -1068,6 +1097,8 @@ function setupNodeInteractions(el, node) {
                 textContent.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.removeAttribute('disabled'));
             }
 
+            applyNodeTextAlignment(node, textContent);
+
             markUnsaved();
             autoResizeNode(node, el);
         }
@@ -1101,6 +1132,7 @@ function setupNodeInteractions(el, node) {
                     markUnsaved();
                     textContent.innerHTML = renderMarkdown(node.text);
                     textContent.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.removeAttribute('disabled'));
+                    applyNodeTextAlignment(node, textContent);
                 }
             }
         });
@@ -1116,6 +1148,22 @@ function setupNodeInteractions(el, node) {
             if (editingNodeId === node.id) {
                 me.stopPropagation();
             }
+        });
+
+        textContent.addEventListener('click', (ce) => {
+            if (ce.detail !== 3) return;
+            if (ce.target && ce.target.tagName === 'INPUT') return;
+
+            ce.preventDefault();
+            ce.stopPropagation();
+
+            if (editingNodeId !== node.id) {
+                startRichEdit();
+                requestAnimationFrame(() => requestAnimationFrame(() => selectAllNodeText(textContent)));
+                return;
+            }
+
+            selectAllNodeText(textContent);
         });
 
         textContent.addEventListener('blur', () => {
@@ -1299,7 +1347,11 @@ function createNode(type, x, y, width, height, textOrFile) {
     const id = generateId();
     const node = { id, type, x: Math.round(x), y: Math.round(y), width, height };
 
-    if (type === 'text') node.text = textOrFile;
+    if (type === 'text') {
+        node.text = textOrFile;
+        node.textAlign = 'left';
+        node.verticalAlign = 'top';
+    }
     if (type === 'file') node.file = textOrFile;
 
     canvasData.nodes.push(node);
@@ -1436,6 +1488,41 @@ function createEdge(fromNodeId, fromSide, toNodeId, toSide) {
     canvasData.edges.push(edge);
     renderEdge(edge);
     markUnsaved();
+}
+
+function getOppositeSide(side) {
+    if (side === 'left') return 'right';
+    if (side === 'right') return 'left';
+    if (side === 'top') return 'bottom';
+    if (side === 'bottom') return 'top';
+    return 'left';
+}
+
+function getSmartTargetSideForPendingEdge(pending, newNode) {
+    if (!pending || !newNode) return 'left';
+
+    const fromNode = canvasData.nodes.find(n => n.id === pending.fromNode);
+    if (!fromNode) return getOppositeSide(pending.fromSide);
+
+    const fromPoint = getPortPoint(fromNode, pending.fromSide);
+    const targetCenterX = newNode.x + newNode.width / 2;
+    const targetCenterY = newNode.y + newNode.height / 2;
+    const dx = targetCenterX - fromPoint.x;
+    const dy = targetCenterY - fromPoint.y;
+
+    if (Math.abs(dx) >= Math.abs(dy)) {
+        return dx >= 0 ? 'left' : 'right';
+    }
+    return dy >= 0 ? 'top' : 'bottom';
+}
+
+function connectPendingEdgeToNode(newNode) {
+    const pending = window._pendingEdgeConnect;
+    if (!pending || !newNode) return;
+
+    const toSide = getSmartTargetSideForPendingEdge(pending, newNode);
+    createEdge(pending.fromNode, pending.fromSide, newNode.id, toSide);
+    window._pendingEdgeConnect = null;
 }
 
 function getPortPoint(node, side) {
@@ -1705,6 +1792,20 @@ function setupNodeToolbar() {
     }
 
     function applyFormatToRichEditor(editor, fmt) {
+        if (!selectedNode || selectedNode.type !== 'text') return;
+
+        if (fmt === 'align-left' || fmt === 'align-center' || fmt === 'align-right') {
+            selectedNode.textAlign = fmt.replace('align-', '');
+            applyNodeTextAlignment(selectedNode, editor);
+            return;
+        }
+
+        if (fmt === 'valign-top' || fmt === 'valign-center' || fmt === 'valign-bottom') {
+            selectedNode.verticalAlign = fmt.replace('valign-', '');
+            applyNodeTextAlignment(selectedNode, editor);
+            return;
+        }
+
         const sel = window.getSelection();
         const selectedText = sel ? sel.toString() : '';
 
@@ -1780,6 +1881,19 @@ function setupNodeToolbar() {
                 const fmt = e.target.closest('.format-item')?.dataset.format;
                 if (!fmt) {
                     preserveTextareaForFormat = false;
+                    return;
+                }
+
+                if (fmt.startsWith('align-') || fmt.startsWith('valign-')) {
+                    const nodeEl = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
+                    const textEl = nodeEl?.querySelector('.node-content-text');
+                    if (textEl) {
+                        applyFormatToRichEditor(textEl, fmt);
+                        markUnsaved();
+                    }
+
+                    preserveTextareaForFormat = false;
+                    if (formatMenu) formatMenu.hidden = true;
                     return;
                 }
 
