@@ -3,13 +3,30 @@
     {
       "id": "n_1775175413733",
       "type": "text",
-      "x": -1021,
-      "y": -499,
-      "width": 250,
-      "height": 80,
+      "x": -1545,
+      "y": -1283,
+      "width": 234,
+      "height": 88,
       "text": "Armor concept",
-      "html": "<div>Armor concept</div><div><br></div>"
+      "html": "<h1>Armor concept</h1><div><br></div>"
+    },
+    {
+      "id": "n_1775175543822",
+      "type": "text",
+      "x": -1441.9619094072905,
+      "y": -1038.7179726190575,
+      "width": 250,
+      "height": 150,
+      "text": ""
     }
   ],
-  "edges": []
+  "edges": [
+    {
+      "id": "e719tzs0e8b",
+      "fromNode": "n_1775175413733",
+      "fromSide": "bottom",
+      "toNode": "n_1775175543822",
+      "toSide": "left"
+    }
+  ]
 }
