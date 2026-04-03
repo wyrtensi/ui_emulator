@@ -6,9 +6,11 @@
       "x": -1545,
       "y": -1283,
       "width": 234,
-      "height": 109,
+      "height": 117,
       "text": "Armor concept",
-      "html": "<h1>Armor concept</h1><div><br></div>"
+      "html": "<h1>Armor concept</h1><div><br></div>",
+      "textAlign": "center",
+      "verticalAlign": "center"
     },
     {
       "id": "n_1775175768143",
@@ -16,9 +18,11 @@
       "x": -1926,
       "y": -1143,
       "width": 250,
-      "height": 162,
+      "height": 170,
       "text": "Accretia",
-      "html": "Accretia"
+      "html": "Accretia",
+      "textAlign": "center",
+      "verticalAlign": "center"
     },
     {
       "id": "n_1775176603901",
@@ -26,7 +30,7 @@
       "x": -1553,
       "y": -1115,
       "width": 250,
-      "height": 168,
+      "height": 176,
       "text": "Bellato",
       "html": "Bellato",
       "textAlign": "center",
@@ -38,10 +42,11 @@
       "x": -1197,
       "y": -1143,
       "width": 250,
-      "height": 160,
+      "height": 168,
       "text": "Cora",
       "html": "Cora",
-      "verticalAlign": "top"
+      "verticalAlign": "center",
+      "textAlign": "center"
     }
   ],
   "edges": [
