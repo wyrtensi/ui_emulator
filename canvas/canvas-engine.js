@@ -33,6 +33,9 @@ let drawEdgeStartSide = null;
 let drawingArrow = null;
 let isMiddleButtonDown = false;
 let suppressCtxMenuCloseUntil = 0;
+let canvasClipboard = null;
+let clipboardPasteCount = 0;
+let pendingClipboardNodePaste = false;
 
 const CANVAS_FILE = 'concept.canvas';
 let hasUnsavedChanges = false;
@@ -175,10 +178,13 @@ export async function initCanvas(winContainer, config) {
     minimapCtx = minimapCanvas ? minimapCanvas.getContext('2d') : null;
     minimapViewportEl = container.querySelector('#canvas-minimap-viewport');
 
-    // Initialize translate so (0,0) starts at center of viewport
-    // This replaces the CSS left:50%;top:50% approach for consistent coordinate mapping
-    translateX = viewport.clientWidth / 2;
-    translateY = viewport.clientHeight / 2;
+    // Initialize translate so (0,0) starts at center of viewport.
+    // When the window is created while still hidden, clientWidth/Height can be 0,
+    // so fall back to the current window size.
+    const initialViewportWidth = viewport.clientWidth || window.innerWidth || 1920;
+    const initialViewportHeight = viewport.clientHeight || window.innerHeight || 1080;
+    translateX = initialViewportWidth / 2;
+    translateY = initialViewportHeight / 2;
 
     isOwner = githubAuth.isOwner;
     if (isOwner) {
@@ -253,6 +259,8 @@ export async function initCanvas(winContainer, config) {
 
 async function loadCanvasData() {
     showOverlay('Loading Canvas...');
+    let loaded = false;
+
     try {
         const file = await githubApi.getFile(CANVAS_FILE);
         if (file) {
@@ -260,12 +268,36 @@ async function loadCanvasData() {
             canvasSha = file.sha;
             if (!canvasData.nodes) canvasData.nodes = [];
             if (!canvasData.edges) canvasData.edges = [];
+            loaded = true;
         }
     } catch (err) {
-        console.error("No existing canvas found or error loading", err);
-        // Start fresh
+        console.error('Remote canvas load failed, trying local fallback', err);
+    }
+
+    if (!loaded) {
+        try {
+            const localResp = await fetch(CANVAS_FILE, { cache: 'no-store' });
+            if (localResp.ok) {
+                const localRaw = await localResp.text();
+                const localParsed = JSON.parse(localRaw);
+                canvasData = {
+                    nodes: Array.isArray(localParsed.nodes) ? localParsed.nodes : [],
+                    edges: Array.isArray(localParsed.edges) ? localParsed.edges : []
+                };
+                canvasSha = null;
+                loaded = true;
+                window.uiToast?.('Loaded local canvas fallback', 'info');
+            }
+        } catch (err) {
+            console.error('Local canvas fallback failed', err);
+        }
+    }
+
+    if (!loaded) {
+        console.error('No existing canvas found or error loading');
         canvasData = { nodes: [], edges: [] };
     }
+
     renderCanvas();
     hideOverlay();
 }
@@ -863,8 +895,10 @@ function renderNode(node) {
         }
         contentHtml = `<div class="node-content-text" data-id="${node.id}">${renderedHtml}</div>`;
     } else if (node.type === 'file') {
+        const filePath = typeof node.file === 'string' ? node.file : '';
+
         // Handle images
-        const fileExt = node.file.split('.').pop().toLowerCase();
+        const fileExt = filePath.split('.').pop().toLowerCase();
         if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileExt)) {
             let imgSrc;
             if (node._tempBase64) {
@@ -872,17 +906,17 @@ function renderNode(node) {
             } else {
                 // Construct raw GitHub URL for reliable loading on GitHub Pages
                 const [owner, repo] = config.github.repo.split('/');
-                imgSrc = `https://raw.githubusercontent.com/${owner}/${repo}/main/${node.file}`;
+                imgSrc = `https://raw.githubusercontent.com/${owner}/${repo}/main/${filePath}`;
             }
 
             contentHtml = `
-                <div class="node-title">${node.file.split('/').pop()}</div>
+                <div class="node-title">${filePath.split('/').pop()}</div>
                 <div class="node-content-image">
-                    <img src="${imgSrc}" alt="${node.file}" />
+                    <img src="${imgSrc}" alt="${filePath}" />
                 </div>
             `;
         } else {
-            contentHtml = `<div class="node-content-text"> ${node.file}</div>`;
+            contentHtml = `<div class="node-content-text"> ${filePath}</div>`;
         }
     }
 
@@ -1982,10 +2016,12 @@ function setupOwnerTools() {
 
     // Keyboard shortcuts
     container.addEventListener('keydown', (e) => {
+        const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+
         // Ignore if typing in text box (except Ctrl shortcuts)
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
             // Allow Ctrl+F even in inputs
-            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            if (isCtrlOrCmd && e.key === 'f') {
                 e.preventDefault();
                 openSearch();
             }
@@ -1994,21 +2030,36 @@ function setupOwnerTools() {
 
         if (e.key === 'Delete' || e.key === 'Backspace') {
             deleteSelected();
+        } else if (isCtrlOrCmd && (e.key === 'c' || e.key === 'C')) {
+            e.preventDefault();
+            copySelectedToClipboard();
+        } else if (isCtrlOrCmd && (e.key === 'v' || e.key === 'V')) {
+            pendingClipboardNodePaste = !!(canvasClipboard && Array.isArray(canvasClipboard.nodes) && canvasClipboard.nodes.length > 0);
+
+            // Do not block native paste. The paste event handler decides whether to
+            // paste nodes, upload image clipboard content, or allow text paste.
+            if (pendingClipboardNodePaste) {
+                setTimeout(() => {
+                    if (!pendingClipboardNodePaste) return;
+                    pendingClipboardNodePaste = false;
+                    pasteFromClipboard();
+                }, 0);
+            }
+        } else if (isCtrlOrCmd && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            saveCanvasData(false);
+        } else if (isCtrlOrCmd && (e.key === 'd' || e.key === 'D')) {
+            e.preventDefault();
+            duplicateSelected();
+        } else if (isCtrlOrCmd && (e.key === 'f' || e.key === 'F')) {
+            e.preventDefault();
+            openSearch();
         } else if (e.key === 'v' || e.key === 'V') {
             setTool('select');
         } else if (e.key === 't' || e.key === 'T') {
             setTool('text');
         } else if (e.key === 'e' || e.key === 'E') {
             setTool('edge');
-        } else if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
-            e.preventDefault();
-            saveCanvasData(false);
-        } else if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
-            e.preventDefault();
-            duplicateSelected();
-        } else if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
-            e.preventDefault();
-            openSearch();
         } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
             if (selectedNode || multiSelectedNodes.size > 0) {
                 e.preventDefault();
@@ -2048,22 +2099,47 @@ function setupOwnerTools() {
 async function handleGlobalPaste(e) {
     if (!isOwner) return;
 
-    // Ignore if pasting into a text field (chat)
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+    const targetTag = e.target?.tagName;
+    const isInputLike = targetTag === 'INPUT' || targetTag === 'TEXTAREA';
+    const clipboard = e.clipboardData || e.originalEvent?.clipboardData;
+    const items = Array.from(clipboard?.items || []);
+
+    // Ignore if pasting into text inputs (chat, forms)
+    if (isInputLike) {
+        pendingClipboardNodePaste = false;
         return;
     }
 
-    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-    for (let index in items) {
-        const item = items[index];
-        if (item.kind === 'file' && item.type.startsWith('image/')) {
-            const blob = item.getAsFile();
-            const ext = blob.type.split('/')[1] || 'png';
-            const filename = `pasted_image_${Date.now()}.${ext}`;
-            await uploadAndAddImage(blob, filename);
-            break; // only handle first image
-        }
+    // Image clipboard paste should always upload to canvas, even when a node editor is active.
+    const imageItem = items.find(item => item.kind === 'file' && item.type.startsWith('image/'));
+    if (imageItem) {
+        e.preventDefault();
+        pendingClipboardNodePaste = false;
+
+        const blob = imageItem.getAsFile();
+        if (!blob) return;
+
+        const ext = blob.type.split('/')[1] || 'png';
+        const filename = getUniqueCanvasUploadFilename(`pasted_image_${Date.now()}.${ext}`);
+        await uploadAndAddImage(blob, filename);
+        return;
     }
+
+    // Let native paste flow for active rich-text node editing.
+    if (e.target.isContentEditable) {
+        pendingClipboardNodePaste = false;
+        return;
+    }
+
+    // If Ctrl+V was intended for node clipboard, consume this paste and paste nodes.
+    if (pendingClipboardNodePaste && canvasClipboard && Array.isArray(canvasClipboard.nodes) && canvasClipboard.nodes.length > 0) {
+        e.preventDefault();
+        pendingClipboardNodePaste = false;
+        pasteFromClipboard();
+        return;
+    }
+
+    pendingClipboardNodePaste = false;
 }
 
 function getUniqueCanvasUploadFilename(originalName) {
@@ -3130,6 +3206,98 @@ function clearGuides() {
 // -----------------------------------------------------------------
 // DUPLICATE
 // -----------------------------------------------------------------
+
+function getSelectedNodesForClone() {
+    return multiSelectedNodes.size > 0
+        ? canvasData.nodes.filter(n => multiSelectedNodes.has(n.id))
+        : (selectedNode ? [selectedNode] : []);
+}
+
+function copySelectedToClipboard() {
+    if (!isOwner) return;
+
+    const nodesToCopy = getSelectedNodesForClone();
+    if (nodesToCopy.length === 0) {
+        window.uiToast('Select node(s) to copy', 'info');
+        return;
+    }
+
+    const nodeIds = new Set(nodesToCopy.map(n => n.id));
+    const minX = Math.min(...nodesToCopy.map(n => Number(n.x) || 0));
+    const minY = Math.min(...nodesToCopy.map(n => Number(n.y) || 0));
+
+    canvasClipboard = {
+        baseX: minX,
+        baseY: minY,
+        nodes: nodesToCopy.map(n => {
+            const clone = JSON.parse(JSON.stringify(n));
+            clone.__sourceId = n.id;
+            clone.x = (Number(n.x) || 0) - minX;
+            clone.y = (Number(n.y) || 0) - minY;
+            if (clone._tempBase64) delete clone._tempBase64;
+            return clone;
+        }),
+        edges: canvasData.edges
+            .filter(e => nodeIds.has(e.fromNode) && nodeIds.has(e.toNode))
+            .map(e => JSON.parse(JSON.stringify(e)))
+    };
+
+    clipboardPasteCount = 0;
+    window.uiToast(`Copied ${nodesToCopy.length} node${nodesToCopy.length === 1 ? '' : 's'}`, 'success');
+}
+
+function pasteFromClipboard() {
+    if (!isOwner) return;
+    if (!canvasClipboard || !Array.isArray(canvasClipboard.nodes) || canvasClipboard.nodes.length === 0) {
+        window.uiToast('Clipboard is empty', 'info');
+        return;
+    }
+
+    pushHistory();
+
+    clipboardPasteCount += 1;
+    const offset = 32 * clipboardPasteCount;
+    const idMap = new Map();
+    const newNodes = [];
+
+    for (const sourceNode of canvasClipboard.nodes) {
+        const clone = JSON.parse(JSON.stringify(sourceNode));
+        const oldId = clone.__sourceId || clone.id;
+        delete clone.__sourceId;
+
+        clone.id = generateId();
+        clone.x = Math.round((canvasClipboard.baseX || 0) + (Number(sourceNode.x) || 0) + offset);
+        clone.y = Math.round((canvasClipboard.baseY || 0) + (Number(sourceNode.y) || 0) + offset);
+
+        if (clone._tempBase64) delete clone._tempBase64;
+
+        idMap.set(oldId, clone.id);
+        canvasData.nodes.push(clone);
+        newNodes.push(clone);
+    }
+
+    for (const sourceEdge of (canvasClipboard.edges || [])) {
+        if (!idMap.has(sourceEdge.fromNode) || !idMap.has(sourceEdge.toNode)) continue;
+        canvasData.edges.push({
+            ...sourceEdge,
+            id: generateId(),
+            fromNode: idMap.get(sourceEdge.fromNode),
+            toNode: idMap.get(sourceEdge.toNode),
+        });
+    }
+
+    clearSelection();
+    if (newNodes.length === 1) {
+        selectNode(newNodes[0]);
+    } else {
+        multiSelectedNodes = new Set(newNodes.map(n => n.id));
+        selectedNode = newNodes[0];
+    }
+
+    markUnsaved();
+    renderCanvas();
+    window.uiToast(`Pasted ${newNodes.length} node${newNodes.length === 1 ? '' : 's'}`, 'success');
+}
 
 function duplicateSelected() {
     if (!isOwner) return;
