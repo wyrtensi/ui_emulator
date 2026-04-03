@@ -37,6 +37,7 @@ let suppressCtxMenuCloseUntil = 0;
 let canvasClipboard = null;
 let clipboardPasteCount = 0;
 let pendingClipboardNodePaste = false;
+let undoRedoCaptureBound = false;
 
 const CANVAS_FILE = 'concept.canvas';
 const CANVAS_VIEW_STATE_KEY = 'ui-canvas-view-v1';
@@ -1569,6 +1570,35 @@ function applyNodeTextAlignment(node, textEl) {
 // -----------------------------------------------------------------
 
 function setupViewport() {
+    // Capture undo/redo before node-level handlers can stop propagation.
+    if (!undoRedoCaptureBound) {
+        window.addEventListener('keydown', (e) => {
+            if (!isOwner) return;
+
+            const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+            if (!isCtrlOrCmd) return;
+
+            const key = String(e.key || '').toLowerCase();
+            const isUndo = key === 'z' && !e.shiftKey;
+            const isRedo = key === 'y' || (key === 'z' && e.shiftKey);
+            if (!isUndo && !isRedo) return;
+
+            const target = e.target;
+            if (!container || !target || !container.contains(target)) return;
+
+            const tag = target.tagName;
+            const isTextInput = tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+            if (isTextInput) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (isRedo) redo();
+            else undo();
+        }, true);
+        undoRedoCaptureBound = true;
+    }
+
     viewport.addEventListener('mousedown', (e) => {
         cancelAnimation();
         const clickedOnNode = e.target.closest('.canvas-node');
@@ -2765,11 +2795,6 @@ function renderNode(node) {
     // Node interactions
     setupNodeInteractions(el, node);
 
-    // Auto-resize text nodes on initial render if content overflows
-    // Double-rAF ensures the browser has completed layout before measuring
-    if (node.type === 'text' && (node.text || node.html)) {
-        requestAnimationFrame(() => requestAnimationFrame(() => autoResizeNode(node, el)));
-    }
 }
 
 function selectAllNodeText(target) {
@@ -5030,6 +5055,11 @@ function deleteNodesByIds(nodeIds) {
         inlineRepoFilesLastSeenInEdit.delete(n.id);
     });
 
+    if (editingNodeId && ids.has(editingNodeId)) {
+        editingNodeId = null;
+        preserveTextareaForFormat = false;
+    }
+
     canvasData.nodes = canvasData.nodes.filter(n => !ids.has(n.id));
 
     sanitizeGroupMembership();
@@ -6158,10 +6188,20 @@ function getSnapGuides(dragNode) {
     const db = dragNode.y + dragNode.height;
     const dcy = dragNode.y + dragNode.height / 2;
 
+    const dragGroupId = (dragNode.type !== 'group' && typeof dragNode.groupId === 'string' && dragNode.groupId)
+        ? dragNode.groupId
+        : null;
+    const restrictToSameGroupMembers = !!dragGroupId;
+
     for (const other of canvasData.nodes) {
         if (other.id === dragNode.id) continue;
         if (multiSelectedNodes.has(other.id)) continue;
         if (!isNodeVisible(other)) continue;
+
+        if (restrictToSameGroupMembers) {
+            if (other.type === 'group') continue;
+            if (other.groupId !== dragGroupId) continue;
+        }
 
         const ol = other.x;
         const or_ = other.x + other.width;
@@ -6236,9 +6276,24 @@ function clearGuides() {
 // -----------------------------------------------------------------
 
 function getSelectedNodesForClone() {
-    return multiSelectedNodes.size > 0
+    const baseSelection = multiSelectedNodes.size > 0
         ? canvasData.nodes.filter(n => multiSelectedNodes.has(n.id))
         : (selectedNode ? [selectedNode] : []);
+
+    if (baseSelection.length === 0) return [];
+
+    const idsToClone = new Set(baseSelection.map(n => n.id));
+
+    // Copying a group should always include its members.
+    baseSelection
+        .filter(n => n.type === 'group')
+        .forEach(group => {
+            getGroupMemberNodes(group.id).forEach(member => {
+                idsToClone.add(member.id);
+            });
+        });
+
+    return canvasData.nodes.filter(n => idsToClone.has(n.id));
 }
 
 function copySelectedToClipboard() {
@@ -6344,15 +6399,12 @@ function pasteFromClipboard() {
 function duplicateSelected() {
     if (!isOwner) return;
 
+    const nodesToClone = getSelectedNodesForClone();
+    if (nodesToClone.length === 0) return;
+
     pushHistory();
     const idMap = new Map();
     const newNodes = [];
-
-    const nodesToClone = multiSelectedNodes.size > 0
-        ? canvasData.nodes.filter(n => multiSelectedNodes.has(n.id))
-        : (selectedNode ? [selectedNode] : []);
-
-    if (nodesToClone.length === 0) return;
 
     for (const n of nodesToClone) {
         const newId = generateId();
@@ -6378,20 +6430,17 @@ function duplicateSelected() {
         }
     }
 
-    // Duplicate edges between cloned nodes
-    if (nodesToClone.length > 1) {
-        canvasData.edges.forEach(edge => {
-            if (idMap.has(edge.fromNode) && idMap.has(edge.toNode)) {
-                canvasData.edges.push({
-                    id: generateId(),
-                    fromNode: idMap.get(edge.fromNode),
-                    fromSide: edge.fromSide,
-                    toNode: idMap.get(edge.toNode),
-                    toSide: edge.toSide,
-                });
-            }
+    // Duplicate only connections fully inside the copied set.
+    const sourceEdges = canvasData.edges.filter(edge => idMap.has(edge.fromNode) && idMap.has(edge.toNode));
+    sourceEdges.forEach(edge => {
+        canvasData.edges.push({
+            id: generateId(),
+            fromNode: idMap.get(edge.fromNode),
+            fromSide: edge.fromSide,
+            toNode: idMap.get(edge.toNode),
+            toSide: edge.toSide,
         });
-    }
+    });
 
     // Select newly created nodes
     clearSelection();
