@@ -3956,6 +3956,7 @@ function showNodeToolbar(node, el) {
     if (quickFormatRow) {
         quickFormatRow.hidden = !showTextFormatControls;
     }
+    nodeToolbar.classList.toggle('has-format-row', showTextFormatControls);
 
     // Viewers should still see non-edit actions (e.g., link), while owner actions stay hidden.
     const hasVisibleAction = Array.from(nodeToolbar.querySelectorAll('.node-toolbar-btn'))
@@ -3989,6 +3990,7 @@ function hideNodeToolbar() {
         hideForeignNodeToolbars();
         nodeToolbar.hidden = true;
         nodeToolbar.style.display = 'none';
+        nodeToolbar.classList.remove('has-format-row');
         nodeToolbar.querySelector('#node-color-palette').hidden = true;
         const quickFormatRow = nodeToolbar.querySelector('#node-toolbar-format-row');
         if (quickFormatRow) quickFormatRow.hidden = true;
