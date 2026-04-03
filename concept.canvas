@@ -18,16 +18,29 @@
       "x": -6170.726387606747,
       "y": -5164,
       "width": 250,
-      "height": 150,
-      "text": "",
+      "height": 154,
+      "text": "Bellato",
       "textAlign": "left",
-      "verticalAlign": "top"
+      "verticalAlign": "top",
+      "html": "Bellato"
     },
     {
       "id": "n_1775178355046",
       "type": "text",
-      "x": -6444,
+      "x": -6443,
       "y": -5164,
+      "width": 250,
+      "height": 154,
+      "text": "Accretia",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Accretia"
+    },
+    {
+      "id": "n_1775178376708",
+      "type": "text",
+      "x": -5791.2921775452105,
+      "y": -5105.883334766362,
       "width": 250,
       "height": 150,
       "text": "",
