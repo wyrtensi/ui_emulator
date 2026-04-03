@@ -2024,7 +2024,7 @@ function setupViewport() {
         if (!e.target.closest('.node-format-menu')) {
             preserveTextareaForFormat = false;
         }
-        if (formatMenu && !formatMenu.hidden && !formatMenu.contains(e.target) && !e.target.closest('#nt-edit') && !e.target.closest('#nt-format')) {
+        if (formatMenu && !formatMenu.hidden && !formatMenu.contains(e.target) && !e.target.closest('#nt-edit')) {
             formatMenu.hidden = true;
         }
         if (palette && !palette.hidden && !palette.contains(e.target) && !e.target.closest('#nt-color')) {
@@ -3951,14 +3951,10 @@ function clearSelection() {
 function showNodeToolbar(node, el) {
     if (!nodeToolbar) return;
 
-    const formatBtn = nodeToolbar.querySelector('#nt-format');
-    const formatSep = nodeToolbar.querySelector('#nt-format-sep');
-    const showTextFormatControls = !!isOwner && node?.type === 'text';
-    if (formatBtn) {
-        formatBtn.hidden = !showTextFormatControls;
-    }
-    if (formatSep) {
-        formatSep.hidden = !showTextFormatControls;
+    const quickFormatRow = nodeToolbar.querySelector('#node-toolbar-format-row');
+    const showTextFormatControls = !!isOwner && node?.type === 'text' && !isNodeLocked(node);
+    if (quickFormatRow) {
+        quickFormatRow.hidden = !showTextFormatControls;
     }
 
     // Viewers should still see non-edit actions (e.g., link), while owner actions stay hidden.
@@ -3980,7 +3976,7 @@ function showNodeToolbar(node, el) {
     nodeToolbar.hidden = false;
 
     const locked = !!node?.locked;
-    ['#nt-color', '#nt-edit', '#nt-format', '#nt-image', '#nt-disconnect'].forEach(sel => {
+    ['#nt-color', '#nt-edit', '#nt-image', '#nt-disconnect'].forEach(sel => {
         const btn = nodeToolbar.querySelector(sel);
         if (btn) {
             btn.disabled = locked;
@@ -3994,12 +3990,14 @@ function hideNodeToolbar() {
         nodeToolbar.hidden = true;
         nodeToolbar.style.display = 'none';
         nodeToolbar.querySelector('#node-color-palette').hidden = true;
+        const quickFormatRow = nodeToolbar.querySelector('#node-toolbar-format-row');
+        if (quickFormatRow) quickFormatRow.hidden = true;
         const formatMenu = container.querySelector('#node-format-menu');
         const linkMenu = container.querySelector('#node-link-menu');
         if (formatMenu) formatMenu.hidden = true;
         if (linkMenu) linkMenu.hidden = true;
 
-        ['#nt-color', '#nt-edit', '#nt-format', '#nt-image', '#nt-disconnect'].forEach(sel => {
+        ['#nt-color', '#nt-edit', '#nt-image', '#nt-disconnect'].forEach(sel => {
             const btn = nodeToolbar.querySelector(sel);
             if (btn) btn.disabled = false;
         });
@@ -4034,6 +4032,7 @@ function setupNodeToolbar() {
 
     const palette = nodeToolbar.querySelector('#node-color-palette');
     const formatMenu = nodeToolbar.querySelector('#node-format-menu');
+    const quickFormatRow = nodeToolbar.querySelector('#node-toolbar-format-row');
     const linkMenu = nodeToolbar.querySelector('#node-link-menu');
     const linkShareBtn = nodeToolbar.querySelector('#nt-link-share-chat');
     const linkCopyBtn = nodeToolbar.querySelector('#nt-link-copy-url');
@@ -4099,39 +4098,6 @@ function setupNodeToolbar() {
                 }
             });
         }
-    });
-
-    nodeToolbar.querySelector('#nt-format')?.addEventListener('click', () => {
-        if (!isOwner) return;
-        if (!selectedNode || selectedNode.type !== 'text') return;
-        if (isNodeLocked(selectedNode)) {
-            window.uiToast?.('Unlock node to format text', 'info');
-            return;
-        }
-
-        if (palette) palette.hidden = true;
-        if (linkMenu) linkMenu.hidden = true;
-
-        if (!formatMenu) return;
-
-        if (!formatMenu.hidden) {
-            formatMenu.hidden = true;
-            return;
-        }
-
-        const nodeEl = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
-        if (nodeEl) {
-            showNodeToolbar(selectedNode, nodeEl);
-        }
-
-        formatMenu.style.position = 'absolute';
-        formatMenu.style.left = '50%';
-        formatMenu.style.top = '100%';
-        formatMenu.style.marginTop = '8px';
-        formatMenu.style.transform = 'translateX(-50%)';
-        formatMenu.style.zIndex = '120';
-        formatMenu.style.display = 'flex';
-        formatMenu.hidden = false;
     });
 
     // Import image button — open file picker for selected node
@@ -4350,56 +4316,89 @@ function setupNodeToolbar() {
         }
     }
 
-    // Handle format actions
-    if (formatMenu) {
-        formatMenu.querySelectorAll('.format-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                if (!isOwner) {
-                    preserveTextareaForFormat = false;
-                    return;
-                }
-                if (!selectedNode || selectedNode.type !== 'text') {
-                    preserveTextareaForFormat = false;
-                    return;
-                }
+    function applyTextFormatAction(fmt, options = {}) {
+        if (!isOwner) {
+            preserveTextareaForFormat = false;
+            return false;
+        }
+        if (!selectedNode || selectedNode.type !== 'text') {
+            preserveTextareaForFormat = false;
+            return false;
+        }
 
-                const fmt = e.target.closest('.format-item')?.dataset.format;
+        const closeMenu = options.closeMenu !== false;
+
+        if (fmt.startsWith('align-') || fmt.startsWith('valign-')) {
+            const nodeEl = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
+            const textEl = nodeEl?.querySelector('.node-content-text');
+            if (textEl) {
+                applyFormatToRichEditor(textEl, fmt);
+                markUnsaved();
+            }
+
+            preserveTextareaForFormat = false;
+            if (closeMenu && formatMenu) formatMenu.hidden = true;
+            return !!textEl;
+        }
+
+        const editor = ensureActiveRichEditor();
+        if (!editor) {
+            preserveTextareaForFormat = false;
+            if (closeMenu && formatMenu) formatMenu.hidden = true;
+            return false;
+        }
+
+        applyFormatToRichEditor(editor, fmt);
+
+        selectedNode.html = editor.innerHTML;
+        selectedNode.text = editor.textContent || '';
+
+        const nodeEl = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
+        if (nodeEl) autoResizeNode(selectedNode, nodeEl);
+
+        preserveTextareaForFormat = false;
+        if (closeMenu && formatMenu) formatMenu.hidden = true;
+        markUnsaved();
+        return true;
+    }
+
+    if (quickFormatRow) {
+        quickFormatRow.addEventListener('mousedown', (e) => {
+            const quickBtn = e.target.closest('.node-toolbar-format-btn');
+            if (!quickBtn) return;
+
+            // Keep text selection active while clicking quick formatting controls.
+            preserveTextareaForFormat = true;
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        quickFormatRow.querySelectorAll('.node-toolbar-format-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const fmt = btn.dataset.quickFormat;
                 if (!fmt) {
                     preserveTextareaForFormat = false;
                     return;
                 }
 
-                if (fmt.startsWith('align-') || fmt.startsWith('valign-')) {
-                    const nodeEl = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
-                    const textEl = nodeEl?.querySelector('.node-content-text');
-                    if (textEl) {
-                        applyFormatToRichEditor(textEl, fmt);
-                        markUnsaved();
-                    }
+                applyTextFormatAction(fmt, { closeMenu: false });
+            });
+        });
+    }
 
+    // Handle format actions
+    if (formatMenu) {
+        formatMenu.querySelectorAll('.format-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const fmt = e.target.closest('.format-item')?.dataset.format;
+                if (!fmt) {
                     preserveTextareaForFormat = false;
-                    if (formatMenu) formatMenu.hidden = true;
                     return;
                 }
-
-                const editor = ensureActiveRichEditor();
-                if (!editor) {
-                    preserveTextareaForFormat = false;
-                    if (formatMenu) formatMenu.hidden = true;
-                    return;
-                }
-
-                applyFormatToRichEditor(editor, fmt);
-
-                selectedNode.html = editor.innerHTML;
-                selectedNode.text = editor.textContent || '';
-
-                const nodeEl = nodesLayer.querySelector(`[data-id="${selectedNode.id}"]`);
-                if (nodeEl) autoResizeNode(selectedNode, nodeEl);
-
-                preserveTextareaForFormat = false;
-                if (formatMenu) formatMenu.hidden = true;
-                markUnsaved();
+                applyTextFormatAction(fmt, { closeMenu: true });
             });
         });
     }
