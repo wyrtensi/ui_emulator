@@ -995,8 +995,10 @@ body:not(.is-owner) .canvas-owner-only {
 
 .canvas-minimap-viewport {
   position: absolute;
-  border: 1.5px solid var(--canvas-selected);
-  background: rgba(85, 153, 255, 0.12);
+  z-index: 2;
+  border: 2px solid var(--canvas-selected);
+  background: rgba(85, 153, 255, 0.18);
+  box-shadow: 0 0 0 1px rgba(10, 18, 32, 0.55) inset;
   pointer-events: none;
   border-radius: 1px;
 }

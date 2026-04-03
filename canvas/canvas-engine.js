@@ -3161,14 +3161,52 @@ function renderMinimap() {
 
     const vx = offsetX + (visLeft - minX + pad) * mScale;
     const vy = offsetY + (visTop - minY + pad) * mScale;
-    const vw = (visRight - visLeft) * mScale;
-    const vh = (visBottom - visTop) * mScale;
+    const vw = Math.max(6, (visRight - visLeft) * mScale);
+    const vh = Math.max(6, (visBottom - visTop) * mScale);
+
+    const rawLeft = vx;
+    const rawTop = vy;
+    const rawRight = vx + vw;
+    const rawBottom = vy + vh;
+
+    // Clamp viewport rectangle to minimap bounds, but keep a minimal visible marker
+    // when the viewport is mostly outside the represented graph area.
+    let left = Math.max(0, Math.min(w - 2, rawLeft));
+    let top = Math.max(0, Math.min(h - 2, rawTop));
+    let right = Math.max(2, Math.min(w, rawRight));
+    let bottom = Math.max(2, Math.min(h, rawBottom));
+
+    if (right <= left) {
+        if (rawRight < 0) {
+            left = 0;
+            right = 2;
+        } else if (rawLeft > w) {
+            left = w - 2;
+            right = w;
+        } else {
+            right = Math.min(w, left + 2);
+            left = Math.max(0, right - 2);
+        }
+    }
+
+    if (bottom <= top) {
+        if (rawBottom < 0) {
+            top = 0;
+            bottom = 2;
+        } else if (rawTop > h) {
+            top = h - 2;
+            bottom = h;
+        } else {
+            bottom = Math.min(h, top + 2);
+            top = Math.max(0, bottom - 2);
+        }
+    }
 
     minimapViewportEl.style.display = '';
-    minimapViewportEl.style.left = Math.max(0, vx) + 'px';
-    minimapViewportEl.style.top = Math.max(0, vy) + 'px';
-    minimapViewportEl.style.width = Math.min(w - Math.max(0, vx), Math.max(4, vw)) + 'px';
-    minimapViewportEl.style.height = Math.min(h - Math.max(0, vy), Math.max(4, vh)) + 'px';
+    minimapViewportEl.style.left = `${left}px`;
+    minimapViewportEl.style.top = `${top}px`;
+    minimapViewportEl.style.width = `${Math.max(2, right - left)}px`;
+    minimapViewportEl.style.height = `${Math.max(2, bottom - top)}px`;
 }
 
 // -----------------------------------------------------------------
