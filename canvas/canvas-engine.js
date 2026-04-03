@@ -632,6 +632,7 @@ function setupViewport() {
         // Also close format menu and palette when clicking outside them
         const formatMenu = container.querySelector('#node-format-menu');
         const palette = container.querySelector('#node-color-palette');
+        const linkMenu = container.querySelector('#node-link-menu');
         if (!e.target.closest('.node-format-menu')) {
             preserveTextareaForFormat = false;
         }
@@ -641,10 +642,13 @@ function setupViewport() {
         if (palette && !palette.hidden && !palette.contains(e.target) && !e.target.closest('#nt-color')) {
             palette.hidden = true;
         }
+        if (linkMenu && !linkMenu.hidden && !linkMenu.contains(e.target) && !e.target.closest('#nt-link')) {
+            linkMenu.hidden = true;
+        }
 
         // Belt-and-suspenders: deselect node when clicking on empty viewport area
         // This ensures toolbar always hides even if mousedown handler didn't catch it
-        if (selectedNode && e.target.closest && !e.target.closest('.canvas-node') && !e.target.closest('.canvas-node-toolbar') && !e.target.closest('.node-format-menu') && !e.target.closest('.node-color-palette') && !e.target.closest('.canvas-context-menu') && !e.target.closest('.ui-context-menu')) {
+        if (selectedNode && e.target.closest && !e.target.closest('.canvas-node') && !e.target.closest('.canvas-node-toolbar') && !e.target.closest('.node-format-menu') && !e.target.closest('.node-color-palette') && !e.target.closest('.node-link-menu') && !e.target.closest('.canvas-context-menu') && !e.target.closest('.ui-context-menu')) {
             clearSelection();
         }
     });
@@ -656,8 +660,10 @@ function setupViewport() {
             window._pendingEdgeConnect = null;
             const formatMenu = container.querySelector('#node-format-menu');
             const palette = container.querySelector('#node-color-palette');
+            const linkMenu = container.querySelector('#node-link-menu');
             if (formatMenu) formatMenu.hidden = true;
             if (palette) palette.hidden = true;
+            if (linkMenu) linkMenu.hidden = true;
             closeSearch();
         }
     });
@@ -961,8 +967,9 @@ function renderNode(node) {
             e.preventDefault();
             e.stopPropagation();
             const href = link.getAttribute('href');
-            if (href && href.startsWith('#canvas:')) {
-                window.location.hash = href.substring(1);
+            const canvasHash = getCanvasHashFromLink(href);
+            if (canvasHash) {
+                window.location.hash = canvasHash.substring(1);
             } else if (href) {
                 window.open(href, '_blank', 'noopener');
             }
@@ -1720,8 +1727,10 @@ function clearSelection() {
 
     const formatMenu = container.querySelector('#node-format-menu');
     const palette = container.querySelector('#node-color-palette');
+    const linkMenu = container.querySelector('#node-link-menu');
     if (formatMenu) formatMenu.hidden = true;
     if (palette) palette.hidden = true;
+    if (linkMenu) linkMenu.hidden = true;
 }
 
 function showNodeToolbar(node, el) {
@@ -1753,7 +1762,9 @@ function hideNodeToolbar() {
         nodeToolbar.style.display = 'none';
         nodeToolbar.querySelector('#node-color-palette').hidden = true;
         const formatMenu = container.querySelector('#node-format-menu');
+        const linkMenu = container.querySelector('#node-link-menu');
         if (formatMenu) formatMenu.hidden = true;
+        if (linkMenu) linkMenu.hidden = true;
     }
 }
 
@@ -1770,6 +1781,12 @@ function hideForeignNodeToolbars() {
             menu.style.display = 'none';
         }
     });
+    document.querySelectorAll('#node-link-menu').forEach(menu => {
+        if (!nodeToolbar || !nodeToolbar.contains(menu)) {
+            menu.hidden = true;
+            menu.style.display = 'none';
+        }
+    });
 }
 
 function setupNodeToolbar() {
@@ -1778,9 +1795,13 @@ function setupNodeToolbar() {
     nodeToolbar.querySelector('#nt-delete').addEventListener('click', deleteSelected);
 
     const palette = nodeToolbar.querySelector('#node-color-palette');
+    const linkMenu = nodeToolbar.querySelector('#node-link-menu');
+    const linkShareBtn = nodeToolbar.querySelector('#nt-link-share-chat');
+    const linkCopyBtn = nodeToolbar.querySelector('#nt-link-copy-url');
     nodeToolbar.querySelector('#nt-color').addEventListener('click', () => {
         if (!isOwner) return;
         palette.hidden = !palette.hidden;
+        if (linkMenu) linkMenu.hidden = true;
     });
 
     nodeToolbar.querySelector('#nt-zoom').addEventListener('click', () => {
@@ -1833,10 +1854,26 @@ function setupNodeToolbar() {
         input.click();
     });
 
-    // Link button — generate a canvas link for this node and copy to chat input
+    // Link button — open share menu
     nodeToolbar.querySelector('#nt-link')?.addEventListener('click', () => {
         if (!selectedNode) return;
+        if (!linkMenu) {
+            generateAndInsertNodeLink(selectedNode);
+            return;
+        }
+        linkMenu.hidden = !linkMenu.hidden;
+    });
+
+    linkShareBtn?.addEventListener('click', () => {
+        if (!selectedNode) return;
         generateAndInsertNodeLink(selectedNode);
+        if (linkMenu) linkMenu.hidden = true;
+    });
+
+    linkCopyBtn?.addEventListener('click', () => {
+        if (!selectedNode) return;
+        copyExternalNodeLink(selectedNode);
+        if (linkMenu) linkMenu.hidden = true;
     });
 
     // Disconnect button — remove all edges connected to selected node
@@ -1884,6 +1921,7 @@ function setupNodeToolbar() {
         if (e.button === 0 && !e.target.closest('.node-format-menu') && !e.target.closest('.node-color-palette') && !e.target.closest('.canvas-node')) {
             if (formatMenu) formatMenu.hidden = true;
             palette.hidden = true;
+            if (linkMenu) linkMenu.hidden = true;
         }
     });
 
@@ -2460,16 +2498,54 @@ function getNodeLinkMeta(node) {
     return { label, slug };
 }
 
-function resolveNodeFromCanvasLink(href) {
-    if (!href) return null;
+function getCanvasHashFromLink(href) {
+    if (!href) return '';
+    const raw = String(href).trim();
+    if (!raw) return '';
 
-    if (href.startsWith('#canvasid:')) {
-        const nodeId = decodeURIComponent(href.substring(10));
+    if (raw.startsWith('#canvas:') || raw.startsWith('#canvasid:')) {
+        return raw;
+    }
+
+    try {
+        const parsed = new URL(raw, window.location.href);
+        if (parsed.hash && (parsed.hash.startsWith('#canvas:') || parsed.hash.startsWith('#canvasid:'))) {
+            return parsed.hash;
+        }
+    } catch (e) {
+        // ignore URL parsing failures and try fallback below
+    }
+
+    const hashIndex = raw.indexOf('#canvas');
+    if (hashIndex >= 0) {
+        const tail = raw.substring(hashIndex);
+        if (tail.startsWith('#canvas:') || tail.startsWith('#canvasid:')) {
+            return tail;
+        }
+    }
+
+    return '';
+}
+
+function getNodeLinkHash(node) {
+    return `#canvasid:${encodeURIComponent(node.id)}`;
+}
+
+function getNodeExternalShareUrl(node) {
+    return `${window.location.origin}${window.location.pathname}${getNodeLinkHash(node)}`;
+}
+
+function resolveNodeFromCanvasLink(href) {
+    const canvasHash = getCanvasHashFromLink(href);
+    if (!canvasHash) return null;
+
+    if (canvasHash.startsWith('#canvasid:')) {
+        const nodeId = decodeURIComponent(canvasHash.substring(10));
         return canvasData.nodes.find(n => n.id === nodeId) || null;
     }
 
-    if (href.startsWith('#canvas:')) {
-        const targetDesc = decodeURIComponent(href.substring(8)).toLowerCase();
+    if (canvasHash.startsWith('#canvas:')) {
+        const targetDesc = decodeURIComponent(canvasHash.substring(8)).toLowerCase();
         for (const node of canvasData.nodes) {
             const nodeName = getNodeLinkName(node);
             if (nodeName === targetDesc || nodeName.includes(targetDesc) || targetDesc.includes(nodeName)) {
@@ -2502,16 +2578,22 @@ function generateAndInsertNodeLink(node) {
     const meta = getNodeLinkMeta(node);
     const chatInput = document.getElementById('chat-input') || document.getElementById('canvas-discussion-input');
     if (chatInput) {
-        const linkText = `[${meta.label}](#canvasid:${node.id})`;
+        const linkText = `[${meta.label}](${getNodeLinkHash(node)})`;
         chatInput.value = chatInput.value + (chatInput.value ? ' ' : '') + linkText;
         chatInput.focus();
         window.uiToast('Link inserted into chat', 'success');
     } else {
-        // Fallback: copy to clipboard
-        navigator.clipboard.writeText(`#canvasid:${node.id}`).then(() => {
-            window.uiToast('Canvas link copied to clipboard', 'success');
-        });
+        copyExternalNodeLink(node);
     }
+}
+
+function copyExternalNodeLink(node) {
+    const url = getNodeExternalShareUrl(node);
+    navigator.clipboard.writeText(url).then(() => {
+        window.uiToast('External canvas link copied', 'success');
+    }).catch(() => {
+        window.uiToast('Failed to copy canvas link', 'error');
+    });
 }
 
 // -----------------------------------------------------------------
@@ -2623,6 +2705,7 @@ function renderCanvasDiscussionMessages(messagesEl, comments) {
 
         const el = document.createElement('div');
         const isOwn = githubAuth.user?.login === msg.author.login;
+        const canDelete = !!(githubAuth.isLoggedIn && githubAuth.isOwner);
         el.className = 'canvas-discussion-msg' + (isOwn ? ' canvas-discussion-msg-own' : '');
 
         const time = new Date(msg.createdAt);
@@ -2649,9 +2732,21 @@ function renderCanvasDiscussionMessages(messagesEl, comments) {
             return addMdLink(`<a href="${href}" class="canvas-link">${escapeLabel(liveLabel)}</a>`);
         });
 
+        // Markdown links: [text](https://...#canvas:slug or #canvasid:nodeId)
+        bodyHtml = bodyHtml.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]*#canvas(?:id)?:[^)\s]+)\)/gi, (m, label, href) => {
+            const liveLabel = getLiveCanvasLabel(href, label);
+            return addMdLink(`<a href="${href}" class="canvas-link">${escapeLabel(liveLabel)}</a>`);
+        });
+
         // Markdown links: [text](https://...)
         bodyHtml = bodyHtml.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (m, label, href) => {
             return addMdLink(`<a href="${href}" target="_blank" rel="noopener" style="color:var(--canvas-accent)">${label}</a>`);
+        });
+
+        // Raw absolute canvas URLs should remain canvas links
+        bodyHtml = bodyHtml.replace(/(^|\s)(https?:\/\/[^\s<]*#canvas(?:id)?:[a-zA-Z0-9_.\-]+)/gi, (m, prefix, href) => {
+            const liveLabel = getLiveCanvasLabel(href, href);
+            return `${prefix}${addMdLink(`<a href="${href}" class="canvas-link">${escapeLabel(liveLabel)}</a>`)}`;
         });
 
         // Raw URLs (standalone)
@@ -2692,6 +2787,8 @@ function renderCanvasDiscussionMessages(messagesEl, comments) {
                 <div class="canvas-discussion-msg-header">
                     <span class="canvas-discussion-author">${escapeLabel(msg.author.login)}</span>
                     <span class="canvas-discussion-time" title="${escapeLabel(dateStr)}">${escapeLabel(timeStr)}</span>
+                    <span class="canvas-discussion-msg-spacer"></span>
+                    ${canDelete ? `<button class="canvas-discussion-msg-del" data-id="${msg.id}" title="Delete Message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>` : ''}
                 </div>
                 <div class="canvas-discussion-text">${bodyHtml}</div>
                 <div class="canvas-discussion-reactions">${reactionsHtml}</div>
@@ -2706,6 +2803,16 @@ function renderCanvasDiscussionMessages(messagesEl, comments) {
             const id = btn.getAttribute('data-id');
             const type = btn.getAttribute('data-type');
             toggleCanvasReaction(id, type, messagesEl);
+        });
+    });
+
+    messagesEl.querySelectorAll('.canvas-discussion-msg-del').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!githubAuth.isOwner) return;
+            const id = btn.getAttribute('data-id');
+            if (!id) return;
+            if (!confirm('Delete this message?')) return;
+            deleteCanvasDiscussionMessage(id, messagesEl);
         });
     });
 
@@ -2773,6 +2880,46 @@ async function toggleCanvasReaction(commentId, content, messagesEl) {
         if (json.errors) throw new Error(json.errors[0]?.message || 'Reaction mutation failed');
     } catch (err) {
         console.error('Canvas reaction failed', err);
+        fetchDiscussion(messagesEl);
+    }
+}
+
+async function deleteCanvasDiscussionMessage(commentId, messagesEl) {
+    if (!githubAuth.isOwner || !githubAuth.token) {
+        window.uiToast('Only owner can delete messages', 'info');
+        return;
+    }
+
+    try {
+        const query = `
+          mutation($id: ID!) {
+            deleteDiscussionComment(input: {id: $id}) {
+              clientMutationId
+            }
+          }
+        `;
+
+        const h = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `bearer ${githubAuth.token}`
+        };
+
+        const resp = await fetch('https://api.github.com/graphql', {
+            method: 'POST',
+            headers: h,
+            body: JSON.stringify({ query, variables: { id: commentId } })
+        });
+
+        if (!resp.ok) throw new Error('Delete request failed');
+        const json = await resp.json();
+        if (json.errors) throw new Error(json.errors[0]?.message || 'Delete mutation failed');
+
+        canvasDiscussionMessages = canvasDiscussionMessages.filter(m => m.id !== commentId);
+        renderCanvasDiscussionMessages(messagesEl, canvasDiscussionMessages);
+    } catch (err) {
+        console.error('Canvas message delete failed', err);
+        window.uiToast('Failed to delete message', 'error');
         fetchDiscussion(messagesEl);
     }
 }

@@ -1912,14 +1912,26 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .ui-discussion-msg-del {
   background: none;
   border: none;
-  color: #ff4c4c;
+  color: #ff7d7d;
   cursor: pointer;
-  font-size: 14px;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-left: 8px;
   padding: 0;
+  border-radius: 4px;
 }
+
+.ui-discussion-msg-del svg {
+  width: 12px;
+  height: 12px;
+}
+
 .ui-discussion-msg-del:hover {
-  color: #ff0000;
+  color: #ff4c4c;
+  background: rgba(255, 0, 0, 0.12);
 }
 
 .ui-discussion-reactions {

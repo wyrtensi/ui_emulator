@@ -401,7 +401,7 @@ class DiscussionManager {
           <div class="ui-discussion-msg-header">
             <span class="ui-discussion-author">${this._esc(msg.author.login)}</span>
             <span class="ui-discussion-time" title="${dateStr}">${timeStr}</span>
-            ${canDelete ? `<button class="ui-discussion-msg-del" data-id="${msg.id}" title="Delete Message">&times;</button>` : ''}
+            ${canDelete ? `<button class="ui-discussion-msg-del" data-id="${msg.id}" title="Delete Message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>` : ''}
           </div>
           <div class="ui-discussion-text">${this._escAndLinkify(msg.body)}</div>
           <div class="ui-discussion-reactions">
@@ -483,10 +483,22 @@ class DiscussionManager {
       (m, label, href) => addMdLink(`<a href="${href}" class="canvas-link" target="_self">${label}</a>`)
     );
 
+    // Markdown links: [label](https://...#canvas:slug or #canvasid:nodeId)
+    escaped = escaped.replace(
+      /\[([^\]]+)\]\(\s*(https?:\/\/[^)\s]*#canvas(?:id)?:[^)\s]+)\s*\)/gi,
+      (m, label, href) => addMdLink(`<a href="${href}" class="canvas-link" target="_self">${label}</a>`)
+    );
+
     // Markdown links: [label](https://...)
     escaped = escaped.replace(
       /\[([^\]]+)\]\(\s*(https?:\/\/[^)\s]+)\s*\)/g,
       (m, label, href) => addMdLink(`<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`)
+    );
+
+    // Absolute canvas URLs should stay as in-app canvas links
+    escaped = escaped.replace(
+      /(https?:\/\/[^\s<]*#canvas(?:id)?:[a-zA-Z0-9_\-\.]+)/gi,
+      (m, href) => addMdLink(`<a href="${href}" class="canvas-link" target="_self">${href}</a>`)
     );
 
     // Linkify URLs
