@@ -1441,14 +1441,31 @@ async function loadCanvasData() {
     showOverlay('Loading Canvas...');
     let loaded = false;
 
+    function parseCanvasPayload(raw, sourceLabel) {
+        const text = String(raw ?? '').trim();
+        if (!text) return null;
+
+        try {
+            const parsed = JSON.parse(text);
+            return {
+                nodes: Array.isArray(parsed?.nodes) ? parsed.nodes : [],
+                edges: Array.isArray(parsed?.edges) ? parsed.edges : []
+            };
+        } catch (err) {
+            console.warn(`Invalid canvas JSON from ${sourceLabel}; continuing fallback`, err);
+            return null;
+        }
+    }
+
     try {
         const file = await githubApi.getFile(CANVAS_FILE);
         if (file) {
-            canvasData = JSON.parse(file.content);
-            canvasSha = file.sha;
-            if (!canvasData.nodes) canvasData.nodes = [];
-            if (!canvasData.edges) canvasData.edges = [];
-            loaded = true;
+            const parsed = parseCanvasPayload(file.content, 'remote source');
+            if (parsed) {
+                canvasData = parsed;
+                canvasSha = file.sha;
+                loaded = true;
+            }
         }
     } catch (err) {
         console.error('Remote canvas load failed, trying local fallback', err);
@@ -1459,14 +1476,13 @@ async function loadCanvasData() {
             const localResp = await fetch(CANVAS_FILE, { cache: 'no-store' });
             if (localResp.ok) {
                 const localRaw = await localResp.text();
-                const localParsed = JSON.parse(localRaw);
-                canvasData = {
-                    nodes: Array.isArray(localParsed.nodes) ? localParsed.nodes : [],
-                    edges: Array.isArray(localParsed.edges) ? localParsed.edges : []
-                };
-                canvasSha = null;
-                loaded = true;
-                window.uiToast?.('Loaded local canvas fallback', 'info');
+                const localParsed = parseCanvasPayload(localRaw, 'local fallback');
+                if (localParsed) {
+                    canvasData = localParsed;
+                    canvasSha = null;
+                    loaded = true;
+                    window.uiToast?.('Loaded local canvas fallback', 'info');
+                }
             }
         } catch (err) {
             console.error('Local canvas fallback failed', err);
@@ -4283,8 +4299,8 @@ function setupNodeToolbar() {
             nodeRange.selectNodeContents(node);
         }
 
-        return range.compareBoundaryPoints(Range.END_TO_START, nodeRange) < 0
-            && range.compareBoundaryPoints(Range.START_TO_END, nodeRange) > 0;
+        return range.compareBoundaryPoints(Range.END_TO_START, nodeRange) > 0
+            && range.compareBoundaryPoints(Range.START_TO_END, nodeRange) < 0;
     }
 
     function getElementDepthWithinRoot(el, root) {
