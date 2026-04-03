@@ -33,6 +33,17 @@
       "text": "",
       "textAlign": "left",
       "verticalAlign": "top"
+    },
+    {
+      "id": "n_1775178209729",
+      "type": "text",
+      "x": 355.95537113780983,
+      "y": -228.49855311345124,
+      "width": 250,
+      "height": 150,
+      "text": "",
+      "textAlign": "left",
+      "verticalAlign": "top"
     }
   ],
   "edges": [
@@ -42,6 +53,13 @@
       "fromSide": "bottom",
       "toNode": "n_1775178206550",
       "toSide": "top"
+    },
+    {
+      "id": "0ey7aq4b6s9s",
+      "fromNode": "n_1775178194157",
+      "fromSide": "right",
+      "toNode": "n_1775178209729",
+      "toSide": "left"
     }
   ]
 }
