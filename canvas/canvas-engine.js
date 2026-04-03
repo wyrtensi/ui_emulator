@@ -32,6 +32,7 @@ let drawEdgeStartNode = null;
 let drawEdgeStartSide = null;
 let drawingArrow = null;
 let isMiddleButtonDown = false;
+let suppressCtxMenuCloseUntil = 0;
 
 const CANVAS_FILE = 'concept.canvas';
 let hasUnsavedChanges = false;
@@ -443,6 +444,7 @@ function setupViewport() {
                 ctxMenu.style.left = e.clientX + 'px';
                 ctxMenu.style.top = e.clientY + 'px';
                 ctxMenu.hidden = false;
+                suppressCtxMenuCloseUntil = Date.now() + 200;
 
                 ctxMenuX = (e.clientX - rect.left - translateX) / scale;
                 ctxMenuY = (e.clientY - rect.top - translateY) / scale;
@@ -590,6 +592,7 @@ function setupViewport() {
 
     document.addEventListener('click', (e) => {
         hideForeignNodeToolbars();
+        if (Date.now() < suppressCtxMenuCloseUntil) return;
         if (ctxMenu && !ctxMenu.hidden && !ctxMenu.contains(e.target)) {
             ctxMenu.hidden = true;
             window._pendingEdgeConnect = null;
@@ -685,6 +688,49 @@ function setupViewport() {
            connectPendingEdgeToNode(newNode);
         saveCanvasData(true);
         renderCanvas();
+    });
+
+    viewport.addEventListener('dragover', (e) => {
+        const dt = e.dataTransfer;
+        if (!dt) return;
+        if (!Array.from(dt.types || []).includes('Files')) return;
+
+        e.preventDefault();
+        dt.dropEffect = isOwner ? 'copy' : 'none';
+    });
+
+    viewport.addEventListener('drop', async (e) => {
+        const dt = e.dataTransfer;
+        if (!dt) return;
+
+        const files = Array.from(dt.files || []);
+        if (files.length === 0) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const imageFiles = files.filter(f => f && f.type && f.type.startsWith('image/'));
+        if (imageFiles.length === 0) {
+            window.uiToast('Only image files can be dropped on canvas', 'info');
+            return;
+        }
+
+        if (!isOwner) {
+            window.uiToast('Only owner can upload images to canvas', 'info');
+            return;
+        }
+
+        const rect = viewport.getBoundingClientRect();
+        const baseX = (e.clientX - rect.left - translateX) / scale;
+        const baseY = (e.clientY - rect.top - translateY) / scale;
+
+        // Stagger multiple dropped images slightly so they do not overlap perfectly.
+        let offset = 0;
+        for (const file of imageFiles) {
+            const filename = getUniqueCanvasUploadFilename(file.name || `dropped_image_${Date.now()}.png`);
+            await uploadAndAddImage(file, filename, { x: baseX + offset, y: baseY + offset });
+            offset += 24;
+        }
     });
 
 
@@ -2020,7 +2066,24 @@ async function handleGlobalPaste(e) {
     }
 }
 
-async function uploadAndAddImage(file, filename) {
+function getUniqueCanvasUploadFilename(originalName) {
+    const raw = (originalName || '').trim() || `image_${Date.now()}.png`;
+    const cleaned = raw.replace(/[\\/:*?"<>|]/g, '_');
+
+    const dot = cleaned.lastIndexOf('.');
+    const base = (dot > 0 ? cleaned.substring(0, dot) : cleaned) || `image_${Date.now()}`;
+    const ext = dot > 0 ? cleaned.substring(dot + 1).toLowerCase() : 'png';
+
+    let candidate = `${base}.${ext}`;
+    let i = 1;
+    while (canvasData.nodes.some(n => n.type === 'file' && n.file === `canvas_uploads/${candidate}`)) {
+        candidate = `${base}_${i}.${ext}`;
+        i += 1;
+    }
+    return candidate;
+}
+
+async function uploadAndAddImage(file, filename, dropPos = null) {
     // Convert to base64
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -2048,10 +2111,17 @@ async function uploadAndAddImage(file, filename) {
                     }
                     window._targetImageNode = null;
                 } else {
-                    // Add to canvas at center of viewport
-                    const rect = viewport.getBoundingClientRect();
-                    const x = (rect.width / 2 - translateX) / scale;
-                    const y = (rect.height / 2 - translateY) / scale;
+                    // Add to drop point when available, otherwise at center of viewport.
+                    let x;
+                    let y;
+                    if (dropPos && Number.isFinite(dropPos.x) && Number.isFinite(dropPos.y)) {
+                        x = dropPos.x;
+                        y = dropPos.y;
+                    } else {
+                        const rect = viewport.getBoundingClientRect();
+                        x = (rect.width / 2 - translateX) / scale;
+                        y = (rect.height / 2 - translateY) / scale;
+                    }
                     node = createNode('file', x - 150, y - 100, 300, 200, repoPath);
                     if (node) {
                         node._tempBase64 = reader.result;
