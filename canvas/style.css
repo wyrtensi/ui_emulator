@@ -754,6 +754,107 @@ body:not(.is-owner) .canvas-owner-only {
 }
 .canvas-link:hover { text-decoration: underline; }
 
+.canvas-discussion-msg {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.canvas-discussion-msg-own {
+  flex-direction: row-reverse;
+}
+
+.canvas-discussion-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.canvas-discussion-msg-body {
+  flex: 1;
+  min-width: 0;
+  background: var(--canvas-node-bg);
+  border: 1px solid var(--canvas-node-border);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.canvas-discussion-msg-own .canvas-discussion-msg-body {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.canvas-discussion-msg-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.canvas-discussion-author {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--canvas-accent);
+}
+
+.canvas-discussion-time {
+  font-size: 10px;
+  color: #9aa8b8;
+}
+
+.canvas-discussion-text {
+  font-size: 13px;
+  color: var(--canvas-text);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.canvas-discussion-reactions {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.canvas-discussion-reaction {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #d0d8e2;
+  cursor: pointer;
+  user-select: none;
+}
+
+.canvas-discussion-reaction:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.canvas-discussion-reaction.active {
+  background: rgba(56, 115, 255, 0.28);
+  border-color: rgba(100, 152, 255, 0.85);
+  color: #fff;
+}
+
+.canvas-discussion-reaction-add {
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #b6c0cc;
+  cursor: pointer;
+  user-select: none;
+}
+
+.canvas-discussion-reaction-add:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #e4ebf5;
+}
+
 /* ══ OVERLAY ══ */
 .canvas-overlay {
   position: absolute;

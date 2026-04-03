@@ -38,6 +38,19 @@ let hasUnsavedChanges = false;
 let autoSaveInterval = null;
 let isSaving = false;
 
+const CANVAS_REACTION_TYPES = ['THUMBS_UP', 'HEART', 'LAUGH', 'HOORAY', 'CONFUSED', 'MINUS_ONE', 'ROCKET', 'EYES'];
+const CANVAS_REACTION_EMOJIS = {
+    THUMBS_UP: '👍',
+    HEART: '❤️',
+    LAUGH: '😄',
+    HOORAY: '🎉',
+    CONFUSED: '😕',
+    MINUS_ONE: '👎',
+    ROCKET: '🚀',
+    EYES: '👀'
+};
+let canvasDiscussionMessages = [];
+
 // Search state
 let searchResults = [];
 let searchIndex = -1;
@@ -461,6 +474,7 @@ function setupViewport() {
             if (multiSelectedNodes.size > 0) {
                 renderCanvas(); // Render to show selection states
             }
+            updateDeleteBtn();
         }
     });
 
@@ -1968,26 +1982,44 @@ function setTool(toolName) {
 
 function deleteSelected() {
     if (!isOwner) return;
-    pushHistory();
 
-    if (selectedNode) {
+    const selectedNodeIds = multiSelectedNodes.size > 0
+        ? new Set(multiSelectedNodes)
+        : (selectedNode ? new Set([selectedNode.id]) : null);
+
+    if (selectedNodeIds && selectedNodeIds.size > 0) {
+        pushHistory();
         hideNodeToolbar();
-        // Delete associated edges first
-        canvasData.edges = canvasData.edges.filter(e => e.fromNode !== selectedNode.id && e.toNode !== selectedNode.id);
 
-        // Check if it's an image, if so delete from repo
-        if (selectedNode.type === 'file' && selectedNode.file.startsWith('canvas_uploads/')) {
-            if (confirm(`Delete the image file ${selectedNode.file} from the repository as well?`)) {
-                githubApi.deleteFile(selectedNode.file, `Delete unused canvas image ${selectedNode.file}`).catch(e => console.error(e));
+        // Delete associated edges for every selected node
+        canvasData.edges = canvasData.edges.filter(e => !selectedNodeIds.has(e.fromNode) && !selectedNodeIds.has(e.toNode));
+
+        const nodesToDelete = canvasData.nodes.filter(n => selectedNodeIds.has(n.id));
+        const imageFiles = [...new Set(nodesToDelete
+            .filter(n => n.type === 'file' && typeof n.file === 'string' && n.file.startsWith('canvas_uploads/'))
+            .map(n => n.file))];
+
+        // Delete nodes
+        canvasData.nodes = canvasData.nodes.filter(n => !selectedNodeIds.has(n.id));
+
+        if (imageFiles.length > 0) {
+            const promptText = imageFiles.length === 1
+                ? `Delete the image file ${imageFiles[0]} from the repository as well?`
+                : `Delete ${imageFiles.length} image files from the repository as well?`;
+
+            if (confirm(promptText)) {
+                imageFiles.forEach(filePath => {
+                    githubApi.deleteFile(filePath, `Delete unused canvas image ${filePath}`).catch(e => console.error(e));
+                });
             }
         }
 
-        // Delete node
-        canvasData.nodes = canvasData.nodes.filter(n => n.id !== selectedNode.id);
         markUnsaved();
         clearSelection();
         renderCanvas();
+        return;
     } else if (selectedEdge) {
+        pushHistory();
         canvasData.edges = canvasData.edges.filter(e => e.id !== selectedEdge.id);
         markUnsaved();
         clearSelection();
@@ -2016,7 +2048,7 @@ function disconnectSelectedNodeEdges() {
 
 function updateDeleteBtn() {
     const btn = container.querySelector('#canvas-delete-selected');
-    if (btn) btn.disabled = (!selectedNode && !selectedEdge);
+    if (btn) btn.disabled = (!selectedNode && !selectedEdge && multiSelectedNodes.size === 0);
 }
 
 // -----------------------------------------------------------------
@@ -2263,6 +2295,188 @@ function setupChat() {
 }
 
 // Minimal GraphQL implementation for canvas chat
+function renderCanvasDiscussionMessages(messagesEl, comments) {
+    if (!messagesEl) return;
+
+    const escapeLabel = (s) => (s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    const getLiveCanvasLabel = (href, fallbackLabel) => {
+        const node = resolveNodeFromCanvasLink(href);
+        if (!node) return fallbackLabel;
+        return getNodeLinkMeta(node).label;
+    };
+
+    messagesEl.innerHTML = '';
+
+    if (!comments || comments.length === 0) {
+        messagesEl.innerHTML = '<div class="canvas-discussion-loading">No messages yet.</div>';
+        return;
+    }
+
+    for (const msg of comments) {
+        if (!msg || !msg.author) continue;
+
+        const el = document.createElement('div');
+        const isOwn = githubAuth.user?.login === msg.author.login;
+        el.className = 'canvas-discussion-msg' + (isOwn ? ' canvas-discussion-msg-own' : '');
+
+        const time = new Date(msg.createdAt);
+        const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dateStr = time.toLocaleDateString();
+
+        // Escape HTML then linkify markdown links, raw URLs and #canvas links
+        let bodyHtml = (msg.body || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
+        const mdLinks = [];
+        const addMdLink = (html) => {
+            mdLinks.push(html);
+            return `__MDLINK_${mdLinks.length - 1}__`;
+        };
+
+        // Markdown links: [text](#canvas:slug) and [text](#canvasid:nodeId)
+        bodyHtml = bodyHtml.replace(/\[([^\]]+)\]\((#canvas(?:id)?:[^)\s]+)\)/g, (m, label, href) => {
+            const liveLabel = getLiveCanvasLabel(href, label);
+            return addMdLink(`<a href="${href}" class="canvas-link">${escapeLabel(liveLabel)}</a>`);
+        });
+
+        // Markdown links: [text](https://...)
+        bodyHtml = bodyHtml.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (m, label, href) => {
+            return addMdLink(`<a href="${href}" target="_blank" rel="noopener" style="color:var(--canvas-accent)">${label}</a>`);
+        });
+
+        // Raw URLs (standalone)
+        bodyHtml = bodyHtml.replace(/(^|\s)(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener" style="color:var(--canvas-accent)">$2</a>');
+
+        // Raw #canvas/#canvasid links (standalone)
+        bodyHtml = bodyHtml.replace(/(^|\s)(#canvas(?:id)?:[a-zA-Z0-9_.\-]+)/g, (m, prefix, href) => {
+            const liveLabel = getLiveCanvasLabel(href, href);
+            return `${prefix}<a href="${href}" class="canvas-link">${escapeLabel(liveLabel)}</a>`;
+        });
+
+        // Re-inject markdown links after URL/hash linkification
+        bodyHtml = bodyHtml.replace(/__MDLINK_(\d+)__/g, (m, idx) => mdLinks[Number(idx)] || m);
+
+        // Preserve line breaks
+        bodyHtml = bodyHtml.replace(/\n/g, '<br>');
+
+        const reactionCounts = {};
+        const reactions = msg.reactions?.nodes || [];
+        for (const r of reactions) {
+            if (!r?.content || !r?.user?.login) continue;
+            if (!reactionCounts[r.content]) reactionCounts[r.content] = [];
+            reactionCounts[r.content].push(r.user.login);
+        }
+
+        let reactionsHtml = '';
+        for (const rt of CANVAS_REACTION_TYPES) {
+            const users = reactionCounts[rt] || [];
+            if (users.length === 0) continue;
+            const reactedByMe = githubAuth.user && users.includes(githubAuth.user.login);
+            reactionsHtml += `<span class="canvas-discussion-reaction ${reactedByMe ? 'active' : ''}" data-type="${rt}" data-id="${msg.id}" title="${escapeLabel(users.join(', '))}">${CANVAS_REACTION_EMOJIS[rt]} ${users.length}</span>`;
+        }
+        reactionsHtml += `<span class="canvas-discussion-reaction-add" data-id="${msg.id}">+👍</span>`;
+
+        el.innerHTML = `
+            <img class="canvas-discussion-avatar" src="${msg.author.avatarUrl}" alt="" width="20" height="20">
+            <div class="canvas-discussion-msg-body">
+                <div class="canvas-discussion-msg-header">
+                    <span class="canvas-discussion-author">${escapeLabel(msg.author.login)}</span>
+                    <span class="canvas-discussion-time" title="${escapeLabel(dateStr)}">${escapeLabel(timeStr)}</span>
+                </div>
+                <div class="canvas-discussion-text">${bodyHtml}</div>
+                <div class="canvas-discussion-reactions">${reactionsHtml}</div>
+            </div>
+        `;
+
+        messagesEl.appendChild(el);
+    }
+
+    messagesEl.querySelectorAll('.canvas-discussion-reaction').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const type = btn.getAttribute('data-type');
+            toggleCanvasReaction(id, type, messagesEl);
+        });
+    });
+
+    messagesEl.querySelectorAll('.canvas-discussion-reaction-add').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            toggleCanvasReaction(id, 'THUMBS_UP', messagesEl);
+        });
+    });
+}
+
+async function toggleCanvasReaction(commentId, content, messagesEl) {
+    if (!githubAuth.isLoggedIn) {
+        window.uiToast('Sign in to react', 'info');
+        return;
+    }
+
+    const myLogin = githubAuth.user?.login;
+    if (!myLogin) return;
+
+    const msg = canvasDiscussionMessages.find(m => m.id === commentId);
+    if (!msg) return;
+
+    if (!msg.reactions) msg.reactions = { nodes: [] };
+    const currentReactions = msg.reactions.nodes || [];
+    const hasReacted = currentReactions.some(r => r.user?.login === myLogin && r.content === content);
+
+    // Optimistic update
+    if (hasReacted) {
+        msg.reactions.nodes = currentReactions.filter(r => !(r.user?.login === myLogin && r.content === content));
+    } else {
+        msg.reactions.nodes = [...currentReactions, { content, user: { login: myLogin } }];
+    }
+
+    const prevScroll = messagesEl.scrollTop;
+    renderCanvasDiscussionMessages(messagesEl, canvasDiscussionMessages);
+    messagesEl.scrollTop = prevScroll;
+
+    try {
+        const mutationName = hasReacted ? 'removeReaction' : 'addReaction';
+        const query = `
+          mutation($subjectId: ID!, $content: ReactionContent!) {
+            ${mutationName}(input: {subjectId: $subjectId, content: $content}) {
+              reaction {
+                content
+              }
+            }
+          }
+        `;
+
+        const h = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `bearer ${githubAuth.token}`
+        };
+
+        const resp = await fetch('https://api.github.com/graphql', {
+            method: 'POST',
+            headers: h,
+            body: JSON.stringify({ query, variables: { subjectId: commentId, content } })
+        });
+
+        if (!resp.ok) throw new Error('Reaction request failed');
+        const json = await resp.json();
+        if (json.errors) throw new Error(json.errors[0]?.message || 'Reaction mutation failed');
+    } catch (err) {
+        console.error('Canvas reaction failed', err);
+        fetchDiscussion(messagesEl);
+    }
+}
+
 async function fetchDiscussion(messagesEl) {
     if (!messagesEl) return;
 
@@ -2289,6 +2503,14 @@ async function fetchDiscussion(messagesEl) {
                       login
                       avatarUrl
                     }
+                                        reactions(first: 100) {
+                                            nodes {
+                                                content
+                                                user {
+                                                    login
+                                                }
+                                            }
+                                        }
                   }
                 }
               }
@@ -2320,82 +2542,9 @@ async function fetchDiscussion(messagesEl) {
         // Save ID for posting
         window.canvasDiscussionId = discussion.id;
 
-        const comments = discussion.comments.nodes || [];
-
-        messagesEl.innerHTML = '';
-        if (comments.length === 0) {
-            messagesEl.innerHTML = '<div class="canvas-discussion-loading">No messages yet.</div>';
-            return;
-        }
-
-        for (const msg of comments) {
-            const el = document.createElement('div');
-            el.style.fontSize = '13px';
-            el.style.padding = '8px';
-            el.style.borderBottom = '1px solid var(--canvas-node-border)';
-
-            const escapeLabel = (s) => (s || '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-
-            const getLiveCanvasLabel = (href, fallbackLabel) => {
-                const node = resolveNodeFromCanvasLink(href);
-                if (!node) return fallbackLabel;
-                return getNodeLinkMeta(node).label;
-            };
-
-            // Escape HTML then linkify markdown links, raw URLs and #canvas links
-            let bodyHtml = msg.body
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-
-            const mdLinks = [];
-            const addMdLink = (html) => {
-                mdLinks.push(html);
-                return `__MDLINK_${mdLinks.length - 1}__`;
-            };
-
-            // Markdown links: [text](#canvas:slug) and [text](#canvasid:nodeId)
-            bodyHtml = bodyHtml.replace(/\[([^\]]+)\]\((#canvas(?:id)?:[^)\s]+)\)/g, (m, label, href) => {
-                const liveLabel = getLiveCanvasLabel(href, label);
-                return addMdLink(`<a href="${href}" class="canvas-link">${escapeLabel(liveLabel)}</a>`);
-            });
-
-            // Markdown links: [text](https://...)
-            bodyHtml = bodyHtml.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (m, label, href) => {
-                return addMdLink(`<a href="${href}" target="_blank" rel="noopener" style="color:var(--canvas-accent)">${label}</a>`);
-            });
-
-            // Raw URLs (standalone)
-            bodyHtml = bodyHtml.replace(/(^|\s)(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener" style="color:var(--canvas-accent)">$2</a>');
-
-            // Raw #canvas/#canvasid links (standalone)
-            bodyHtml = bodyHtml.replace(/(^|\s)(#canvas(?:id)?:[a-zA-Z0-9_.\-]+)/g, (m, prefix, href) => {
-                const liveLabel = getLiveCanvasLabel(href, href);
-                return `${prefix}<a href="${href}" class="canvas-link">${escapeLabel(liveLabel)}</a>`;
-            });
-
-            // Re-inject markdown links after URL/hash linkification
-            bodyHtml = bodyHtml.replace(/__MDLINK_(\d+)__/g, (m, idx) => mdLinks[Number(idx)] || m);
-
-            // Preserve line breaks
-            bodyHtml = bodyHtml.replace(/\n/g, '<br>');
-
-            el.innerHTML = `
-                <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-                    <img src="${msg.author.avatarUrl}" width="16" height="16" style="border-radius:50%">
-                    <strong>${msg.author.login}</strong>
-                </div>
-                <div style="color:var(--canvas-text);word-break:break-word">${bodyHtml}</div>
-            `;
-            messagesEl.appendChild(el);
-        }
+        canvasDiscussionMessages = discussion.comments.nodes || [];
+        renderCanvasDiscussionMessages(messagesEl, canvasDiscussionMessages);
+        refreshCanvasDiscussionLinkLabels();
         messagesEl.scrollTop = messagesEl.scrollHeight;
 
     } catch (e) {
