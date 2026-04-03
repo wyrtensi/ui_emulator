@@ -4,7 +4,7 @@
       "id": "n_1775178260035",
       "type": "text",
       "x": -6170.726387606747,
-      "y": -5365.110569003119,
+      "y": -5365,
       "width": 250,
       "height": 164,
       "text": "Armors Concept",
@@ -22,7 +22,26 @@
       "text": "",
       "textAlign": "left",
       "verticalAlign": "top"
+    },
+    {
+      "id": "n_1775178355046",
+      "type": "text",
+      "x": -6509.160125631824,
+      "y": -5011.237057811926,
+      "width": 250,
+      "height": 150,
+      "text": "",
+      "textAlign": "left",
+      "verticalAlign": "top"
     }
   ],
-  "edges": []
+  "edges": [
+    {
+      "id": "krvy51me8si",
+      "fromNode": "n_1775178260035",
+      "fromSide": "bottom",
+      "toNode": "n_1775178287674",
+      "toSide": "top"
+    }
+  ]
 }
