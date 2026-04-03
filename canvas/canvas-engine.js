@@ -43,6 +43,7 @@ let hasUnsavedChanges = false;
 let autoSaveInterval = null;
 let isSaving = false;
 let viewStateSaveTimer = null;
+let pendingInitialViewportPolicy = false;
 
 const CANVAS_REACTION_TYPES = ['THUMBS_UP', 'HEART', 'LAUGH', 'HOORAY', 'CONFUSED', 'MINUS_ONE', 'ROCKET', 'EYES'];
 const CANVAS_REACTION_EMOJIS = {
@@ -219,13 +220,8 @@ export async function initCanvas(winContainer, config) {
     await ensureMarkedLoaded();
 
     // Load data
+    pendingInitialViewportPolicy = true;
     await loadCanvasData();
-
-    // Initial viewport policy runs after layout is measurable:
-    // 1) If opened via deep link, follow link target
-    // 2) Else restore cached viewport position
-    // 3) Else execute the same Fit command used by the Fit button
-    applyInitialViewportPolicy();
 
     // Listen for hash changes
     window.addEventListener('hashchange', checkHashForDirectLink);
@@ -305,6 +301,13 @@ async function loadCanvasData() {
 
     renderCanvas();
     hideOverlay();
+
+    // Apply initial viewport policy only after canvas load/overlay flow completes.
+    // This mirrors user expectation: run fit/restore after the canvas has finished loading.
+    if (pendingInitialViewportPolicy) {
+        pendingInitialViewportPolicy = false;
+        requestAnimationFrame(() => requestAnimationFrame(() => applyInitialViewportPolicy()));
+    }
 }
 
 async function saveCanvasData(isAuto = false) {
