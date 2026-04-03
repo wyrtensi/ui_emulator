@@ -434,6 +434,7 @@ body:not(.is-owner) .canvas-owner-only {
   display: flex;
   flex-direction: column;
   user-select: none;
+  z-index: 2;
   transform-origin: top left;
   transition: border-color 0.2s, box-shadow 0.2s;
   /* left/top/width/height set via JS */
@@ -1106,6 +1107,10 @@ body:not(.is-owner) .canvas-owner-only {
 .canvas-group {
   background-color: rgba(255, 255, 255, 0.06);
   border: 2px dashed rgba(255, 255, 255, 0.24);
+  z-index: 1;
+}
+
+.canvas-group.selected {
   z-index: 1;
 }
 .canvas-group:hover {

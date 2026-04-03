@@ -1648,6 +1648,7 @@ function setupViewport() {
     const cmGroupSelected = container.querySelector('#cm-group-selected');
     const cmAddSelectedToGroup = container.querySelector('#cm-add-selected-to-group');
     const cmAddSelectedToTargetGroup = container.querySelector('#cm-add-selected-to-target-group');
+    const cmRemoveTargetFromGroup = container.querySelector('#cm-remove-target-from-group');
     const cmRemoveSelectedFromGroup = container.querySelector('#cm-remove-selected-from-group');
     const cmRenameGroup = container.querySelector('#cm-rename-group');
     const cmUngroupKeep = container.querySelector('#cm-ungroup-keep');
@@ -1785,6 +1786,7 @@ function setupViewport() {
         const allSelectedGroupsCollapsed = hasSelectedGroups && selectedGroups.every(g => !!g.collapsed);
         const hasGroupedSelection = selectedEditableNonGroupNodes.some(n => !!n.groupId);
         const targetIsGroup = !!targetNode && targetNode.type === 'group';
+        const targetIsEditableGroupedNode = !!targetNode && targetNode.type !== 'group' && !isNodeLocked(targetNode) && !!targetNode.groupId;
         const canGroupSelection = selectedEditableNonGroupNodes.length > 1;
         const hasGroups = getGroupNodes().length > 0;
         const targetGroupCanAcceptSelection = targetIsGroup
@@ -1796,6 +1798,7 @@ function setupViewport() {
         setMenuItemVisible(cmGroupSelected, canGroupSelection);
         setMenuItemVisible(cmAddSelectedToGroup, !targetIsGroup && selectedEditableNonGroupNodes.length > 0 && hasGroups);
         setMenuItemVisible(cmAddSelectedToTargetGroup, targetGroupCanAcceptSelection);
+        setMenuItemVisible(cmRemoveTargetFromGroup, targetIsEditableGroupedNode);
         setMenuItemVisible(cmRemoveSelectedFromGroup, selectedEditableNonGroupNodes.length > 0 && hasGroupedSelection);
         setMenuItemVisible(cmRenameGroup, targetIsGroup && !isNodeLocked(targetNode));
         setMenuItemVisible(cmUngroupKeep, targetIsGroup);
@@ -2131,6 +2134,23 @@ function setupViewport() {
 
         pushHistory();
         removeNodesFromGroup(selectedIds);
+
+        markUnsaved();
+        renderCanvas();
+    });
+
+    cmRemoveTargetFromGroup?.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.hidden = true;
+
+        const targetNode = getContextTargetNode();
+        if (!targetNode || targetNode.type === 'group' || isNodeLocked(targetNode)) return;
+        if (!targetNode.groupId) {
+            window.uiToast?.('This node is not in a group', 'info');
+            return;
+        }
+
+        pushHistory();
+        removeNodesFromGroup([targetNode.id]);
 
         markUnsaved();
         renderCanvas();
