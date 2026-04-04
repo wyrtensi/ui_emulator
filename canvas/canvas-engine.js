@@ -253,10 +253,10 @@ function getBoundsFromNodes(nodes, padding = GROUP_PADDING) {
         bottom: Number(padding?.bottom) || 0,
     };
 
-    const minX = Math.min(...list.map(n => n.x)) - pad.left;
-    const minY = Math.min(...list.map(n => n.y)) - pad.top;
-    const maxX = Math.max(...list.map(n => n.x + n.width)) + pad.right;
-    const maxY = Math.max(...list.map(n => n.y + n.height)) + pad.bottom;
+    const minX = Math.min(...list.map(n => Number(n.x) || 0)) - pad.left;
+    const minY = Math.min(...list.map(n => Number(n.y) || 0)) - pad.top;
+    const maxX = Math.max(...list.map(n => (Number(n.x) || 0) + Math.max(0, Number(n.width) || 0))) + pad.right;
+    const maxY = Math.max(...list.map(n => (Number(n.y) || 0) + Math.max(0, Number(n.height) || 0))) + pad.bottom;
 
     return { minX, minY, maxX, maxY };
 }
@@ -272,6 +272,10 @@ function ensureGroupCoversMembers(groupId, options = {}) {
     const expandOnly = options.expandOnly === true;
     const minWidth = Math.max(120, Number(options.minWidth) || 200);
     const minHeight = Math.max(80, Number(options.minHeight) || 120);
+    const groupX = Number(group.x) || 0;
+    const groupY = Number(group.y) || 0;
+    const groupWidth = Math.max(0, Number(group.width) || 0);
+    const groupHeight = Math.max(0, Number(group.height) || 0);
 
     let nextMinX = bounds.minX;
     let nextMinY = bounds.minY;
@@ -279,10 +283,10 @@ function ensureGroupCoversMembers(groupId, options = {}) {
     let nextMaxY = bounds.maxY;
 
     if (expandOnly) {
-        const currentMaxX = group.x + group.width;
-        const currentMaxY = group.y + group.height;
-        nextMinX = Math.min(group.x, nextMinX);
-        nextMinY = Math.min(group.y, nextMinY);
+        const currentMaxX = groupX + groupWidth;
+        const currentMaxY = groupY + groupHeight;
+        nextMinX = Math.min(groupX, nextMinX);
+        nextMinY = Math.min(groupY, nextMinY);
         nextMaxX = Math.max(currentMaxX, nextMaxX);
         nextMaxY = Math.max(currentMaxY, nextMaxY);
     }
@@ -292,10 +296,10 @@ function ensureGroupCoversMembers(groupId, options = {}) {
     const roundedX = Math.round(nextMinX);
     const roundedY = Math.round(nextMinY);
 
-    const changed = group.x !== roundedX
-        || group.y !== roundedY
-        || group.width !== nextWidth
-        || group.height !== nextHeight;
+    const changed = groupX !== roundedX
+        || groupY !== roundedY
+        || groupWidth !== nextWidth
+        || groupHeight !== nextHeight;
 
     if (!changed) return false;
 
@@ -596,7 +600,7 @@ function getContainingGroupForNode(node, ignoreGroupIds = null) {
 function updateGroupMembershipForNodeIds(nodeIds, options = {}) {
     const ids = new Set(Array.isArray(nodeIds) ? nodeIds : []);
     const ignoreGroupIds = options.ignoreGroupIds instanceof Set ? options.ignoreGroupIds : new Set();
-    let changed = false;
+    let membershipChanged = false;
     const affectedGroupIds = new Set();
 
     ids.forEach(id => {
@@ -608,18 +612,19 @@ function updateGroupMembershipForNodeIds(nodeIds, options = {}) {
 
         const group = getContainingGroupForNode(node, ignoreGroupIds);
         if (setNodeGroupId(node, group ? group.id : null)) {
-            changed = true;
+            membershipChanged = true;
         }
 
         const nextGroupId = node.groupId || null;
         if (nextGroupId) affectedGroupIds.add(nextGroupId);
     });
 
+    let fitChanged = false;
     if (affectedGroupIds.size > 0) {
-        ensureGroupsCoverMembers(Array.from(affectedGroupIds));
+        fitChanged = ensureGroupsCoverMembers(Array.from(affectedGroupIds));
     }
 
-    return changed;
+    return membershipChanged || fitChanged;
 }
 
 const ALIGN_COLLISION_GAP = 24;
@@ -1745,6 +1750,13 @@ function captureActiveEditorSnapshot() {
 }
 
 function getActiveEditorDraft() {
+    if (editingNodeId && nodesLayer) {
+        const activeEditor = nodesLayer.querySelector(`[data-id="${editingNodeId}"] .node-content-text.editing`);
+        if (!activeEditor || !activeEditor.isConnected || !nodesLayer.contains(activeEditor)) {
+            editingNodeId = null;
+        }
+    }
+
     const snapshot = captureActiveEditorSnapshot();
     if (snapshot) return snapshot;
     if (!editingNodeId) return null;
@@ -4036,13 +4048,24 @@ function setupNodeInteractions(el, node) {
         }
 
         function startRichEdit() {
-            if (editingNodeId === node.id) return;
+            if (editingNodeId === node.id) {
+                const activeSelfEditor = nodesLayer?.querySelector(`[data-id="${node.id}"] .node-content-text.editing`);
+                if (activeSelfEditor === textContent && textContent.isContentEditable) {
+                    textContent.focus();
+                    return;
+                }
+                editingNodeId = null;
+            }
             if (isNodeLocked(node)) return;
 
             // Close any other active editor first
             if (editingNodeId && editingNodeId !== node.id) {
                 const prev = nodesLayer.querySelector(`[data-id="${editingNodeId}"] .node-content-text.editing`);
-                if (prev) prev.blur();
+                if (prev) {
+                    prev.blur();
+                } else {
+                    editingNodeId = null;
+                }
             }
 
             if (textContent.querySelector('.node-placeholder')) {
@@ -4658,6 +4681,8 @@ function setupNodeInteractions(el, node) {
     };
 
     const onMouseUp = () => {
+        const endedNodeGesture = isDragging || isResizing;
+
         if (inlineImageResizeState && textContentEl) {
             node.html = textContentEl.innerHTML.trim();
             node.text = textContentEl.textContent || '';
@@ -4689,13 +4714,10 @@ function setupNodeInteractions(el, node) {
 
                     return true;
                 });
-                const membershipChanged = movedNonGroupIds.length > 0
+                const groupLayoutChanged = movedNonGroupIds.length > 0
                     ? updateGroupMembershipForNodeIds(movedNonGroupIds)
                     : false;
-                const fitChanged = movedNonGroupIds.length > 0
-                    ? fitGroupsForNodeIds(movedNonGroupIds)
-                    : false;
-                if (membershipChanged || fitChanged) {
+                if (groupLayoutChanged) {
                     markUnsaved();
                     renderCanvas();
                 }
@@ -4717,6 +4739,10 @@ function setupNodeInteractions(el, node) {
                 markUnsaved();
                 renderCanvas();
             }
+        }
+
+        if (endedNodeGesture && isOwner) {
+            queueLiveSync();
         }
 
         isDragging = false;
