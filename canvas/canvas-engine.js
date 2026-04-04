@@ -38,7 +38,9 @@ let suppressCtxMenuCloseUntil = 0;
 let canvasClipboard = null;
 let clipboardPasteCount = 0;
 let pendingClipboardNodePaste = false;
+let canvasClipboardCopiedAtMs = 0;
 let undoRedoCaptureBound = false;
+let editorTabCaptureBound = false;
 let liveClient = null;
 let liveModeActive = false;
 let liveSyncTimer = null;
@@ -59,6 +61,7 @@ let resizeSnapEnabled = true;
 const CANVAS_FILE = 'concept.canvas';
 const CANVAS_VIEW_STATE_KEY = 'ui-canvas-view-v1';
 const SNAP_THRESHOLD = 8;
+const CANVAS_CLIPBOARD_PASTE_PRIORITY_WINDOW_MS = 2 * 60 * 1000;
 const LIVE_SYNC_DEBOUNCE_MS = Math.max(250, Number(config.live?.syncDebounceMs) || 1200);
 const LIVE_POLL_INTERVAL_MS = Math.max(1200, Number(config.live?.pollIntervalMs) || 2200);
 let hasUnsavedChanges = false;
@@ -2265,7 +2268,7 @@ async function pushLiveStateNow(options = {}) {
 
         if (payload?.state) {
             applyIncomingLiveState(payload.state, {
-                deferIfEditing: false,
+                deferIfEditing: true,
                 remoteVersion: Number(payload.version),
             });
         } else {
@@ -2523,6 +2526,28 @@ function setupViewport() {
             else undo();
         }, true);
         undoRedoCaptureBound = true;
+    }
+
+    if (!editorTabCaptureBound) {
+        window.addEventListener('keydown', (e) => {
+            if (e.key !== 'Tab' || !editingNodeId || !nodesLayer) return;
+
+            const activeEditor = nodesLayer.querySelector(`[data-id="${editingNodeId}"] .node-content-text.editing`);
+            if (!activeEditor || !activeEditor.isConnected) return;
+
+            const targetNode = e.target instanceof Node ? e.target : null;
+            const targetEl = targetNode
+                ? (targetNode.nodeType === Node.ELEMENT_NODE ? targetNode : targetNode.parentElement)
+                : null;
+
+            if (!targetEl || (targetEl !== activeEditor && !activeEditor.contains(targetEl))) return;
+
+            // Keep Tab inside active editor so it cannot blur and trigger finishRichEdit/autoResize.
+            e.preventDefault();
+            e.stopPropagation();
+        }, true);
+
+        editorTabCaptureBound = true;
     }
 
     viewport.addEventListener('mousedown', (e) => {
@@ -4770,13 +4795,17 @@ function setupNodeInteractions(el, node) {
             }
         }
 
-        if (endedNodeGesture && isOwner) {
-            queueLiveSync();
-        }
-
         isDragging = false;
         isResizing = false;
         isDraggingNode = false;
+
+        if (endedNodeGesture) {
+            flushPendingIncomingLiveState();
+        }
+
+        if (endedNodeGesture && isOwner) {
+            queueLiveSync();
+        }
     };
 
     window.addEventListener('mousemove', onMouseMove);
@@ -5899,16 +5928,22 @@ async function handleGlobalPaste(e) {
     const isInputLike = targetTag === 'INPUT' || targetTag === 'TEXTAREA';
     const clipboard = e.clipboardData || e.originalEvent?.clipboardData;
     const items = Array.from(clipboard?.items || []);
+    const hasCanvasClipboardNodes = !!(canvasClipboard && Array.isArray(canvasClipboard.nodes) && canvasClipboard.nodes.length > 0);
+    const recentCanvasCopy = hasCanvasClipboardNodes
+        && (Date.now() - canvasClipboardCopiedAtMs) <= CANVAS_CLIPBOARD_PASTE_PRIORITY_WINDOW_MS;
+    const allowSystemClipboardOverride = e.altKey || e.shiftKey;
 
     // Ignore if pasting into text inputs (chat, forms)
     if (isInputLike) {
-        pendingClipboardNodePaste = false;
         return;
     }
 
     // If the user copied canvas nodes and is pasting outside an editor,
     // prioritize the node paste over any residual clipboard image.
-    if (pendingClipboardNodePaste && canvasClipboard && Array.isArray(canvasClipboard.nodes) && canvasClipboard.nodes.length > 0 && !e.target.isContentEditable) {
+    if (!allowSystemClipboardOverride
+        && !e.target.isContentEditable
+        && hasCanvasClipboardNodes
+        && (pendingClipboardNodePaste || recentCanvasCopy)) {
         e.preventDefault();
         pendingClipboardNodePaste = false;
         pasteFromClipboard();
@@ -5954,7 +5989,7 @@ async function handleGlobalPaste(e) {
     }
 
     // If Ctrl+V was intended for node clipboard, consume this paste and paste nodes.
-    if (pendingClipboardNodePaste && canvasClipboard && Array.isArray(canvasClipboard.nodes) && canvasClipboard.nodes.length > 0) {
+    if (hasCanvasClipboardNodes && (pendingClipboardNodePaste || recentCanvasCopy)) {
         e.preventDefault();
         pendingClipboardNodePaste = false;
         pasteFromClipboard();
@@ -7545,6 +7580,8 @@ function copySelectedToClipboard() {
     };
 
     clipboardPasteCount = 0;
+    canvasClipboardCopiedAtMs = Date.now();
+    pendingClipboardNodePaste = true;
     window.uiToast(`Copied ${nodesToCopy.length} node${nodesToCopy.length === 1 ? '' : 's'}`, 'success');
 }
 
