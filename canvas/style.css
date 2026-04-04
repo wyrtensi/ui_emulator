@@ -458,6 +458,32 @@
 
 .canvas-toolbar-spacer { flex-grow: 1; }
 
+.canvas-live-status {
+  font-size: 11px;
+  line-height: 1;
+  border: 1px solid var(--canvas-node-border);
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: var(--canvas-text);
+  background: color-mix(in srgb, var(--canvas-btn-bg) 75%, transparent);
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+.canvas-live-status.live-ok {
+  border-color: #2e8b57;
+  color: #9de7bd;
+}
+
+.canvas-live-status.live-warn {
+  border-color: #9a7a3a;
+  color: #f3d488;
+}
+
+.canvas-live-status.live-off {
+  opacity: 0.85;
+}
+
 .canvas-save-btn {
   background: var(--canvas-accent);
   color: #fff;

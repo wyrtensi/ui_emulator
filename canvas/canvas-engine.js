@@ -1,5 +1,6 @@
 import { githubAuth } from '../js/core/github-auth.js';
 import { githubApi } from '../js/core/github-api.js';
+import { CanvasLiveClient } from '../js/core/canvas-live.js';
 import config from '../js/config.js';
 
 let canvasData = { nodes: [], edges: [] };
@@ -38,9 +39,13 @@ let canvasClipboard = null;
 let clipboardPasteCount = 0;
 let pendingClipboardNodePaste = false;
 let undoRedoCaptureBound = false;
+let liveClient = null;
+let liveModeActive = false;
+let liveSyncTimer = null;
 
 const CANVAS_FILE = 'concept.canvas';
 const CANVAS_VIEW_STATE_KEY = 'ui-canvas-view-v1';
+const LIVE_SYNC_DEBOUNCE_MS = 250;
 let hasUnsavedChanges = false;
 let autoSaveInterval = null;
 let isSaving = false;
@@ -88,7 +93,7 @@ let nodeCleanupFns = [];
 
 // DOM Elements
 let container, viewport, content, nodesLayer, edgesLayer, drawingLayer, drawingEdge;
-let zoomLabel, saveIndicator, nodeToolbar;
+let zoomLabel, saveIndicator, nodeToolbar, liveStatusIndicator;
 
 async function ensureMarkedLoaded() {
     if (typeof marked !== 'undefined' && typeof marked.parse === 'function') return;
@@ -1351,6 +1356,7 @@ export async function initCanvas(winContainer, config) {
     zoomLabel = container.querySelector('#canvas-zoom-level');
     selectionBox = container.querySelector('#canvas-selection-box');
     saveIndicator = container.querySelector('#canvas-saving-indicator');
+    liveStatusIndicator = container.querySelector('#canvas-live-status');
     nodeToolbar = container.querySelector('#canvas-node-toolbar');
     guidesLayer = container.querySelector('#canvas-guides-layer');
     hideForeignNodeToolbars();
@@ -1379,6 +1385,12 @@ export async function initCanvas(winContainer, config) {
     } else {
         document.body.classList.remove('is-owner');
     }
+
+    if (isOwner) {
+        setLiveStatus('Initializing...', 'live-off', 'Preparing owner live session');
+    }
+
+    await initializeOwnerLiveMode();
 
     setupNodeToolbar();
 
@@ -1412,10 +1424,6 @@ export async function initCanvas(winContainer, config) {
 
     // Setup auto-save
     if (isOwner) {
-        autoSaveInterval = setInterval(() => {
-            if (hasUnsavedChanges) saveCanvasData(true);
-        }, 60000); // 1 minute
-
         // Prevent tab close if unsaved
         window.addEventListener('beforeunload', (e) => {
             if (hasUnsavedChanges) {
@@ -1442,9 +1450,89 @@ export async function initCanvas(winContainer, config) {
     }
 }
 
+function buildLiveCanvasStatePayload() {
+    return {
+        nodes: Array.isArray(canvasData?.nodes) ? canvasData.nodes : [],
+        edges: Array.isArray(canvasData?.edges) ? canvasData.edges : [],
+    };
+}
+
+function setLiveStatus(text, className = 'live-off', title = '') {
+    if (!liveStatusIndicator || !isOwner) return;
+    liveStatusIndicator.hidden = false;
+    liveStatusIndicator.textContent = text;
+    liveStatusIndicator.classList.remove('live-ok', 'live-warn', 'live-off');
+    if (className) {
+        liveStatusIndicator.classList.add(className);
+    }
+    liveStatusIndicator.title = title || text;
+}
+
+async function initializeOwnerLiveMode() {
+    liveModeActive = false;
+    liveClient = null;
+
+    if (!isOwner) return false;
+
+    const roomId = (String(config.live?.roomId || 'global').trim() || 'global');
+    const workerBaseUrl = String(config.live?.workerUrl || config.github?.workerUrl || '').replace(/\/+$/, '');
+    const roomUrl = workerBaseUrl ? `${workerBaseUrl}/live/canvas/${encodeURIComponent(roomId)}` : '';
+
+    liveClient = new CanvasLiveClient({
+        enabled: config.live?.enabled !== false,
+        roomId,
+        roomUrl,
+    });
+
+    liveModeActive = liveClient.isReady();
+    if (!liveModeActive) {
+        liveClient = null;
+        if (isOwner) {
+            setLiveStatus('Live: disabled', 'live-off', 'Live sync disabled or unavailable');
+        }
+    } else {
+        setLiveStatus('Live: connecting', 'live-off', 'Connecting to owner live room');
+    }
+
+    return liveModeActive;
+}
+
+async function pushLiveStateNow(options = {}) {
+    const silent = options.silent === true;
+    if (!isOwner || !liveModeActive || !liveClient) return false;
+
+    try {
+        await liveClient.pushState(buildLiveCanvasStatePayload());
+        if (!silent) {
+            setLiveStatus('Live: synced', 'live-ok', 'Live room sync is healthy');
+        }
+        return true;
+    } catch (err) {
+        setLiveStatus('Live: retrying', 'live-warn', 'Live sync failed, will retry while editing');
+        if (!silent) {
+            console.warn('Live sync push failed', err);
+        }
+        return false;
+    }
+}
+
+function queueLiveSync() {
+    if (!isOwner || !liveModeActive || !liveClient) return;
+
+    if (liveSyncTimer) {
+        clearTimeout(liveSyncTimer);
+    }
+
+    liveSyncTimer = setTimeout(() => {
+        liveSyncTimer = null;
+        pushLiveStateNow({ silent: true });
+    }, LIVE_SYNC_DEBOUNCE_MS);
+}
+
 async function loadCanvasData() {
     showOverlay('Loading Canvas...');
     let loaded = false;
+    let loadedFromLive = false;
 
     function parseCanvasPayload(raw, sourceLabel) {
         const text = String(raw ?? '').trim();
@@ -1462,18 +1550,36 @@ async function loadCanvasData() {
         }
     }
 
-    try {
-        const file = await githubApi.getFile(CANVAS_FILE);
-        if (file) {
-            const parsed = parseCanvasPayload(file.content, 'remote source');
-            if (parsed) {
-                canvasData = parsed;
-                canvasSha = file.sha;
+    if (isOwner && liveModeActive && liveClient) {
+        try {
+            const liveState = await liveClient.fetchState();
+            if (liveState && ((liveState.nodes?.length || 0) > 0 || (liveState.edges?.length || 0) > 0)) {
+                canvasData = liveState;
+                canvasSha = null;
                 loaded = true;
+                loadedFromLive = true;
+                setLiveStatus('Live: connected', 'live-ok', 'Owner live room connected');
             }
+        } catch (err) {
+            setLiveStatus('Live: fallback', 'live-warn', 'Live room unavailable, using snapshot fallback');
+            console.warn('Live canvas load failed, trying snapshot fallback', err);
         }
-    } catch (err) {
-        console.error('Remote canvas load failed, trying local fallback', err);
+    }
+
+    if (!loaded) {
+        try {
+            const file = await githubApi.getFile(CANVAS_FILE);
+            if (file) {
+                const parsed = parseCanvasPayload(file.content, 'remote source');
+                if (parsed) {
+                    canvasData = parsed;
+                    canvasSha = file.sha;
+                    loaded = true;
+                }
+            }
+        } catch (err) {
+            console.error('Remote canvas load failed, trying local fallback', err);
+        }
     }
 
     if (!loaded) {
@@ -1499,6 +1605,13 @@ async function loadCanvasData() {
         canvasData = { nodes: [], edges: [] };
     }
 
+    if (isOwner && liveModeActive && liveClient && !loadedFromLive) {
+        await pushLiveStateNow({ silent: true });
+        setLiveStatus('Live: connected', 'live-ok', 'Owner live room connected');
+    } else if (isOwner && !liveModeActive) {
+        setLiveStatus('Live: snapshot', 'live-off', 'Owner is in snapshot-only mode');
+    }
+
     sanitizeGroupMembership();
 
     renderCanvas();
@@ -1515,24 +1628,31 @@ async function loadCanvasData() {
 async function saveCanvasData(isAuto = false) {
     if (!isOwner || isSaving) return;
 
+    if (isAuto) {
+        if (liveModeActive && liveClient) {
+            await pushLiveStateNow({ silent: true });
+        }
+        return;
+    }
+
     isSaving = true;
     saveIndicator.hidden = false;
-    saveIndicator.textContent = isAuto ? 'Auto-saving...' : 'Saving...';
+    saveIndicator.textContent = 'Publishing...';
 
     try {
         const content = JSON.stringify(canvasData, null, 2);
         const result = await githubApi.saveFile(
             CANVAS_FILE,
             content,
-            `Update concept.canvas (via UI Emulator)`
+            `Publish concept.canvas snapshot (via UI Emulator)`
         );
         canvasSha = result.content.sha;
         hasUnsavedChanges = false;
-        saveIndicator.textContent = 'Saved';
+        saveIndicator.textContent = 'Published';
         setTimeout(() => saveIndicator.hidden = true, 2000);
     } catch (err) {
-        console.error("Save failed", err);
-        saveIndicator.textContent = 'Save Failed!';
+        console.error("Publish failed", err);
+        saveIndicator.textContent = 'Publish Failed!';
         setTimeout(() => saveIndicator.hidden = true, 3000);
     } finally {
         isSaving = false;
@@ -1542,7 +1662,8 @@ async function saveCanvasData(isAuto = false) {
 function markUnsaved() {
     hasUnsavedChanges = true;
     saveIndicator.hidden = false;
-    saveIndicator.textContent = 'Unsaved changes';
+    saveIndicator.textContent = 'Unpublished changes';
+    queueLiveSync();
     refreshCanvasDiscussionLinkLabels();
 }
 

@@ -12,4 +12,9 @@ export default {
     pinLabel: 'ui-emulator-pin',
     discussionNumber: 35,
   },
+  live: {
+    enabled: true,
+    roomId: 'global',
+    workerUrl: 'https://ui-emulator-auth.wyrtensi.workers.dev',
+  },
 };
