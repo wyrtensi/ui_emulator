@@ -12,6 +12,7 @@
  *   CATBOX_USERHASH        — Optional: Your Catbox.moe user hash for permanent uploads
  *   GITHUB_REPO_OWNER      — Optional: explicit owner login for live owner verification
  *   GITHUB_REPO            — Optional fallback format: owner/repo (used if GITHUB_REPO_OWNER not set)
+ *   GITHUB_ALLOWED_EDITORS — Optional CSV of additional GitHub logins allowed for live edit
  */
 
 import { CanvasRoom } from './canvas-room.js';
@@ -37,6 +38,15 @@ function jsonResponse(env, status, payload) {
   });
 }
 
+function parseAllowedEditors(env) {
+  return new Set(
+    String(env.GITHUB_ALLOWED_EDITORS || '')
+      .split(',')
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
+
 async function verifyOwnerRequest(request, env) {
   const authHeader = request.headers.get('Authorization') || '';
   let token = '';
@@ -54,9 +64,14 @@ async function verifyOwnerRequest(request, env) {
   const configuredOwner = String(env.GITHUB_REPO_OWNER || '').trim();
   const configuredRepo = String(env.GITHUB_REPO || '').trim();
   const repoOwner = configuredOwner || (configuredRepo.includes('/') ? configuredRepo.split('/')[0] : '');
+  const allowedEditors = parseAllowedEditors(env);
 
-  if (!repoOwner) {
-    return { ok: false, status: 500, error: 'Worker missing GITHUB_REPO_OWNER or GITHUB_REPO' };
+  if (!repoOwner && allowedEditors.size === 0) {
+    return {
+      ok: false,
+      status: 500,
+      error: 'Worker missing GITHUB_REPO_OWNER or GITHUB_REPO or GITHUB_ALLOWED_EDITORS',
+    };
   }
 
   let userResp;
@@ -82,11 +97,19 @@ async function verifyOwnerRequest(request, env) {
     return { ok: false, status: 401, error: 'Unable to resolve GitHub user' };
   }
 
-  if (login !== repoOwner.toLowerCase()) {
-    return { ok: false, status: 403, error: 'Live canvas access is owner-only' };
+  const ownerLogin = repoOwner.toLowerCase();
+  const isRepoOwner = !!ownerLogin && login === ownerLogin;
+  const isAllowedEditor = allowedEditors.has(login);
+
+  if (!isRepoOwner && !isAllowedEditor) {
+    return { ok: false, status: 403, error: 'Live canvas access denied' };
   }
 
-  return { ok: true, login };
+  return {
+    ok: true,
+    login,
+    role: isRepoOwner ? 'owner' : 'editor',
+  };
 }
 
 async function proxyCanvasRoomRequest(request, env, roomName) {
