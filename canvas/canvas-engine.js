@@ -49,6 +49,7 @@ let livePendingIncomingState = null;
 let livePresenceUsers = [];
 let livePresenceByNode = new Map();
 let livePresenceSignature = '';
+let liveEditorRebinding = false;
 
 const CANVAS_FILE = 'concept.canvas';
 const CANVAS_VIEW_STATE_KEY = 'ui-canvas-view-v1';
@@ -1610,6 +1611,204 @@ function buildPresenceSignature(users, byNode) {
     return `${userPart}::${nodePart}`;
 }
 
+function captureSelectionOffsetsWithin(rootEl) {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+        return { start: null, end: null };
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!rootEl.contains(range.startContainer) || !rootEl.contains(range.endContainer)) {
+        return { start: null, end: null };
+    }
+
+    const startRange = range.cloneRange();
+    startRange.selectNodeContents(rootEl);
+    startRange.setEnd(range.startContainer, range.startOffset);
+
+    const endRange = range.cloneRange();
+    endRange.selectNodeContents(rootEl);
+    endRange.setEnd(range.endContainer, range.endOffset);
+
+    return {
+        start: startRange.toString().length,
+        end: endRange.toString().length,
+    };
+}
+
+function resolveTextOffsetPosition(rootEl, rawOffset) {
+    let remaining = Math.max(0, Number(rawOffset) || 0);
+    const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT, null);
+    let node = walker.nextNode();
+    let lastTextNode = null;
+
+    while (node) {
+        lastTextNode = node;
+        const len = node.textContent?.length || 0;
+        if (remaining <= len) {
+            return { node, offset: remaining };
+        }
+        remaining -= len;
+        node = walker.nextNode();
+    }
+
+    if (lastTextNode) {
+        const endOffset = lastTextNode.textContent?.length || 0;
+        return { node: lastTextNode, offset: endOffset };
+    }
+
+    return {
+        node: rootEl,
+        offset: rootEl.childNodes.length,
+    };
+}
+
+function restoreSelectionOffsetsWithin(rootEl, start, end) {
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return;
+
+    const startPos = resolveTextOffsetPosition(rootEl, start);
+    const endPos = resolveTextOffsetPosition(rootEl, end);
+    const range = document.createRange();
+    range.setStart(startPos.node, startPos.offset);
+    range.setEnd(endPos.node, endPos.offset);
+
+    const selection = window.getSelection();
+    if (!selection) return;
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
+
+function captureActiveEditorSnapshot() {
+    if (!editingNodeId || !nodesLayer) return null;
+
+    const editorEl = nodesLayer.querySelector(`[data-id="${editingNodeId}"] .node-content-text.editing`);
+    const node = canvasData.nodes.find(n => n.id === editingNodeId);
+    if (!node || node.type !== 'text') return null;
+
+    const html = editorEl ? editorEl.innerHTML : (node.html || '');
+    const text = editorEl
+        ? stripEditorZeroWidth(editorEl.textContent || '')
+        : stripEditorZeroWidth(node.text || '');
+    const caret = editorEl ? captureSelectionOffsetsWithin(editorEl) : { start: null, end: null };
+
+    return {
+        nodeId: node.id,
+        html,
+        text,
+        selectionStart: caret.start,
+        selectionEnd: caret.end,
+        textAlign: node.textAlign,
+        verticalAlign: node.verticalAlign,
+    };
+}
+
+function getActiveEditorDraft() {
+    const snapshot = captureActiveEditorSnapshot();
+    if (snapshot) return snapshot;
+    if (!editingNodeId) return null;
+
+    const node = canvasData.nodes.find(n => n.id === editingNodeId);
+    if (!node || node.type !== 'text') return null;
+
+    return {
+        nodeId: node.id,
+        html: node.html || '',
+        text: stripEditorZeroWidth(node.text || ''),
+        selectionStart: null,
+        selectionEnd: null,
+        textAlign: node.textAlign,
+        verticalAlign: node.verticalAlign,
+    };
+}
+
+function mergeRemoteStateWithActiveDraft(remoteState, draft) {
+    if (!draft?.nodeId) {
+        return buildPersistentCanvasState(remoteState);
+    }
+
+    const merged = buildPersistentCanvasState(remoteState);
+    const localNode = canvasData.nodes.find(n => n.id === draft.nodeId && n.type === 'text');
+    const remoteIndex = merged.nodes.findIndex(n => n.id === draft.nodeId);
+
+    if (remoteIndex >= 0) {
+        const remoteNode = merged.nodes[remoteIndex];
+        if (remoteNode && remoteNode.type === 'text') {
+            const nextNode = {
+                ...remoteNode,
+                text: draft.text,
+                html: draft.html,
+            };
+
+            if (localNode?.textAlign) nextNode.textAlign = localNode.textAlign;
+            if (localNode?.verticalAlign) nextNode.verticalAlign = localNode.verticalAlign;
+
+            merged.nodes[remoteIndex] = nextNode;
+        }
+        return merged;
+    }
+
+    if (localNode) {
+        const fallbackNode = JSON.parse(JSON.stringify(localNode));
+        if (fallbackNode && typeof fallbackNode === 'object' && fallbackNode._tempBase64) {
+            delete fallbackNode._tempBase64;
+        }
+        fallbackNode.text = draft.text;
+        fallbackNode.html = draft.html;
+        merged.nodes.push(fallbackNode);
+    }
+
+    return merged;
+}
+
+function restoreActiveEditorSnapshot(snapshot) {
+    if (!snapshot?.nodeId || !nodesLayer) return;
+
+    const node = canvasData.nodes.find(n => n.id === snapshot.nodeId && n.type === 'text');
+    if (!node) {
+        if (editingNodeId === snapshot.nodeId) {
+            editingNodeId = null;
+        }
+        return;
+    }
+
+    const editorEl = nodesLayer.querySelector(`[data-id="${snapshot.nodeId}"] .node-content-text`);
+    if (!editorEl) return;
+
+    editorEl.innerHTML = snapshot.html || '';
+    editorEl.contentEditable = 'true';
+    editorEl.classList.add('editing');
+    editorEl.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.removeAttribute('disabled'));
+    normalizeInlineImagesInTextElement(editorEl, { draggable: true });
+
+    node.html = (snapshot.html || '').trim();
+    node.text = stripEditorZeroWidth(editorEl.textContent || '');
+    if (snapshot.textAlign) node.textAlign = snapshot.textAlign;
+    if (snapshot.verticalAlign) node.verticalAlign = snapshot.verticalAlign;
+
+    editingNodeId = snapshot.nodeId;
+    applyNodeTextAlignment(node, editorEl);
+    editorEl.focus();
+    restoreSelectionOffsetsWithin(editorEl, snapshot.selectionStart, snapshot.selectionEnd);
+}
+
+function renderCanvasSmart() {
+    const snapshot = captureActiveEditorSnapshot();
+    if (!snapshot) {
+        renderCanvas();
+        return;
+    }
+
+    liveEditorRebinding = true;
+    try {
+        renderCanvas();
+        restoreActiveEditorSnapshot(snapshot);
+    } finally {
+        setTimeout(() => {
+            liveEditorRebinding = false;
+        }, 0);
+    }
+}
+
 function refreshLivePresenceIndicator() {
     if (!livePresenceIndicator) return;
 
@@ -1638,8 +1837,28 @@ function refreshLivePresenceIndicator() {
     livePresenceIndicator.title = `Online now: ${allOnline.join(', ')}`;
 }
 
+function clearLivePresenceState(options = {}) {
+    const shouldRerender = options.rerender === true;
+
+    const hadPresence = livePresenceUsers.length > 0 || livePresenceByNode.size > 0 || livePresenceSignature;
+    livePresenceUsers = [];
+    livePresenceByNode = new Map();
+    livePresenceSignature = '';
+    refreshLivePresenceIndicator();
+
+    if (shouldRerender && hadPresence && nodesLayer && nodesLayer.childElementCount > 0) {
+        renderCanvasSmart();
+    }
+}
+
 function applyLivePresence(presenceList) {
-    const selfLogin = String(liveClient?.actorLogin || githubAuth.user?.login || '').trim().toLowerCase();
+    const selfLogins = new Set(
+        [
+            String(liveClient?.actorLogin || '').trim().toLowerCase(),
+            String(githubAuth.user?.login || '').trim().toLowerCase(),
+        ].filter(Boolean)
+    );
+
     const normalizedUsers = Array.isArray(presenceList)
         ? presenceList
             .filter(entry => entry && typeof entry === 'object')
@@ -1653,7 +1872,7 @@ function applyLivePresence(presenceList) {
             .filter(entry => !!entry.login)
         : [];
 
-    const nextUsers = normalizedUsers.filter(entry => entry.login !== selfLogin);
+    const nextUsers = normalizedUsers.filter(entry => !selfLogins.has(entry.login));
     const nextByNode = new Map();
 
     nextUsers.forEach(entry => {
@@ -1674,13 +1893,13 @@ function applyLivePresence(presenceList) {
     livePresenceSignature = nextSignature;
     refreshLivePresenceIndicator();
 
-    if (changed && !editingNodeId && !isDraggingNode && nodesLayer && nodesLayer.childElementCount > 0) {
-        renderCanvas();
+    if (changed && nodesLayer && nodesLayer.childElementCount > 0) {
+        renderCanvasSmart();
     }
 }
 
 function shouldDeferIncomingLiveState() {
-    return !!liveSyncTimer || !!editingNodeId || !!isDraggingNode;
+    return !!liveSyncTimer || !!isDraggingNode;
 }
 
 function applyIncomingLiveState(nextState, options = {}) {
@@ -1693,18 +1912,23 @@ function applyIncomingLiveState(nextState, options = {}) {
     }
 
     livePendingIncomingState = null;
+    const activeDraft = getActiveEditorDraft();
+    const merged = activeDraft
+        ? mergeRemoteStateWithActiveDraft(normalized, activeDraft)
+        : normalized;
+
     const currentSerialized = JSON.stringify(buildPersistentCanvasState(canvasData));
-    const incomingSerialized = JSON.stringify(normalized);
+    const incomingSerialized = JSON.stringify(merged);
 
     liveLastSyncedState = normalized;
     if (currentSerialized === incomingSerialized) {
         return false;
     }
 
-    canvasData = normalized;
+    canvasData = merged;
     sanitizeGroupMembership();
     rebindSelectionToCurrentState();
-    renderCanvas();
+    renderCanvasSmart();
     return true;
 }
 
@@ -1739,10 +1963,7 @@ async function initializeOwnerLiveMode() {
     liveClient = null;
     liveLastSyncedState = { nodes: [], edges: [] };
     livePendingIncomingState = null;
-    livePresenceUsers = [];
-    livePresenceByNode = new Map();
-    livePresenceSignature = '';
-    refreshLivePresenceIndicator();
+    clearLivePresenceState({ rerender: true });
 
     if (!isOwner) return false;
 
@@ -1822,6 +2043,7 @@ async function runLivePoll() {
     } catch (err) {
         if (err?.status === 401 || err?.status === 403) {
             liveModeActive = false;
+            clearLivePresenceState({ rerender: true });
             setLiveStatus('Live: auth required', 'live-warn', 'Live auth failed. Please sign out and sign in again.');
             return;
         }
@@ -1871,6 +2093,7 @@ async function pushLiveStateNow(options = {}) {
     } catch (err) {
         if (err?.status === 401 || err?.status === 403) {
             liveModeActive = false;
+            clearLivePresenceState({ rerender: true });
             setLiveStatus('Live: auth required', 'live-warn', 'Live auth failed. Please sign out and sign in again.');
             if (!silent) {
                 window.uiToast?.('Live mode auth failed. Sign out and sign in again.', 'error');
@@ -3675,6 +3898,7 @@ function setupNodeInteractions(el, node) {
         }
 
         function finishRichEdit() {
+            if (liveEditorRebinding) return;
             if (editingNodeId !== node.id) return;
 
             const html = textContent.innerHTML.trim();
@@ -3924,6 +4148,9 @@ function setupNodeInteractions(el, node) {
             if (preserveTextareaForFormat) {
                 // Keep editor alive while interacting with format menu
                 textContent.focus();
+                return;
+            }
+            if (liveEditorRebinding) {
                 return;
             }
             finishRichEdit();

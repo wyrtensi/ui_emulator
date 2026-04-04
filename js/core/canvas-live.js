@@ -161,9 +161,7 @@ export class CanvasLiveClient {
     }
 
     const selectedNodeIds = normalizeIdList(options.selectedNodeIds);
-    if (selectedNodeIds.length > 0) {
-      url.searchParams.set('selected', selectedNodeIds.join(','));
-    }
+    url.searchParams.set('selected', selectedNodeIds.join(','));
 
     return url.toString();
   }
