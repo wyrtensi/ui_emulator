@@ -36,6 +36,23 @@ function normalizeIdList(list) {
   return ids;
 }
 
+function normalizeChangedFieldsMap(input) {
+  if (!input || typeof input !== 'object') return {};
+
+  const output = {};
+  Object.entries(input).forEach(([id, fields]) => {
+    const normalizedId = String(id || '').trim();
+    if (!normalizedId) return;
+
+    const normalizedFields = normalizeIdList(fields).filter((field) => field !== 'id');
+    if (normalizedFields.length > 0) {
+      output[normalizedId] = normalizedFields;
+    }
+  });
+
+  return output;
+}
+
 function normalizeCanvasPatch(patch) {
   const input = patch && typeof patch === 'object' ? patch : {};
   return {
@@ -43,6 +60,8 @@ function normalizeCanvasPatch(patch) {
     removeNodeIds: normalizeIdList(input.removeNodeIds),
     upsertEdges: normalizeEntityList(input.upsertEdges),
     removeEdgeIds: normalizeIdList(input.removeEdgeIds),
+    nodeChangedFields: normalizeChangedFieldsMap(input.nodeChangedFields),
+    edgeChangedFields: normalizeChangedFieldsMap(input.edgeChangedFields),
   };
 }
 

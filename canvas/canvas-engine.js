@@ -45,11 +45,13 @@ let liveSyncTimer = null;
 let livePollTimer = null;
 let livePollInFlight = false;
 let liveLastSyncedState = { nodes: [], edges: [] };
+let liveLastSyncedVersion = 0;
 let livePendingIncomingState = null;
+let livePendingIncomingVersion = null;
 let livePresenceUsers = [];
 let livePresenceByNode = new Map();
 let livePresenceSignature = '';
-let liveEditorRebinding = false;
+let liveEditorRebindingDepth = 0;
 
 const CANVAS_FILE = 'concept.canvas';
 const CANVAS_VIEW_STATE_KEY = 'ui-canvas-view-v1';
@@ -1520,6 +1522,23 @@ function mapEntitiesById(list) {
     return map;
 }
 
+function getChangedObjectFields(previous, next) {
+    const prev = previous && typeof previous === 'object' ? previous : {};
+    const nxt = next && typeof next === 'object' ? next : {};
+
+    const keys = new Set([...Object.keys(prev), ...Object.keys(nxt)]);
+    keys.delete('id');
+
+    const changed = [];
+    keys.forEach(key => {
+        if (JSON.stringify(prev[key]) !== JSON.stringify(nxt[key])) {
+            changed.push(key);
+        }
+    });
+
+    return changed.sort();
+}
+
 function buildCanvasPatch(baseState, nextState) {
     const base = buildPersistentCanvasState(baseState);
     const next = buildPersistentCanvasState(nextState);
@@ -1534,12 +1553,20 @@ function buildCanvasPatch(baseState, nextState) {
         removeNodeIds: [],
         upsertEdges: [],
         removeEdgeIds: [],
+        nodeChangedFields: {},
+        edgeChangedFields: {},
     };
 
     nextNodes.forEach((node, id) => {
         const previous = baseNodes.get(id);
         if (!previous || JSON.stringify(previous) !== JSON.stringify(node)) {
             patch.upsertNodes.push(node);
+            const changedFields = previous
+                ? getChangedObjectFields(previous, node)
+                : Object.keys(node).filter(key => key !== 'id').sort();
+            if (changedFields.length > 0) {
+                patch.nodeChangedFields[id] = changedFields;
+            }
         }
     });
 
@@ -1553,6 +1580,12 @@ function buildCanvasPatch(baseState, nextState) {
         const previous = baseEdges.get(id);
         if (!previous || JSON.stringify(previous) !== JSON.stringify(edge)) {
             patch.upsertEdges.push(edge);
+            const changedFields = previous
+                ? getChangedObjectFields(previous, edge)
+                : Object.keys(edge).filter(key => key !== 'id').sort();
+            if (changedFields.length > 0) {
+                patch.edgeChangedFields[id] = changedFields;
+            }
         }
     });
 
@@ -1791,6 +1824,10 @@ function restoreActiveEditorSnapshot(snapshot) {
     restoreSelectionOffsetsWithin(editorEl, snapshot.selectionStart, snapshot.selectionEnd);
 }
 
+function isLiveEditorRebinding() {
+    return liveEditorRebindingDepth > 0;
+}
+
 function renderCanvasSmart() {
     const snapshot = captureActiveEditorSnapshot();
     if (!snapshot) {
@@ -1798,13 +1835,13 @@ function renderCanvasSmart() {
         return;
     }
 
-    liveEditorRebinding = true;
+    liveEditorRebindingDepth += 1;
     try {
         renderCanvas();
         restoreActiveEditorSnapshot(snapshot);
     } finally {
         setTimeout(() => {
-            liveEditorRebinding = false;
+            liveEditorRebindingDepth = Math.max(0, liveEditorRebindingDepth - 1);
         }, 0);
     }
 }
@@ -1899,19 +1936,36 @@ function applyLivePresence(presenceList) {
 }
 
 function shouldDeferIncomingLiveState() {
-    return !!liveSyncTimer || !!isDraggingNode;
+    return !!isDraggingNode || isLiveEditorRebinding();
 }
 
 function applyIncomingLiveState(nextState, options = {}) {
     if (!nextState || typeof nextState !== 'object') return false;
 
     const normalized = buildPersistentCanvasState(nextState);
+    const incomingVersion = Number.isInteger(options.remoteVersion) ? options.remoteVersion : null;
+
     if (options.deferIfEditing && shouldDeferIncomingLiveState()) {
-        livePendingIncomingState = normalized;
+        const shouldReplacePending = (
+            !livePendingIncomingState
+            || !Number.isInteger(livePendingIncomingVersion)
+            || !Number.isInteger(incomingVersion)
+            || incomingVersion >= livePendingIncomingVersion
+        );
+
+        if (shouldReplacePending) {
+            livePendingIncomingState = normalized;
+            livePendingIncomingVersion = incomingVersion;
+        }
+        return false;
+    }
+
+    if (Number.isInteger(incomingVersion) && incomingVersion < liveLastSyncedVersion) {
         return false;
     }
 
     livePendingIncomingState = null;
+    livePendingIncomingVersion = null;
     const activeDraft = getActiveEditorDraft();
     const merged = activeDraft
         ? mergeRemoteStateWithActiveDraft(normalized, activeDraft)
@@ -1921,6 +1975,12 @@ function applyIncomingLiveState(nextState, options = {}) {
     const incomingSerialized = JSON.stringify(merged);
 
     liveLastSyncedState = normalized;
+    if (Number.isInteger(incomingVersion)) {
+        liveLastSyncedVersion = Math.max(liveLastSyncedVersion, incomingVersion);
+    } else {
+        liveLastSyncedVersion = Math.max(liveLastSyncedVersion, Number(liveClient?.version) || 0);
+    }
+
     if (currentSerialized === incomingSerialized) {
         return false;
     }
@@ -1936,9 +1996,44 @@ function flushPendingIncomingLiveState() {
     if (!livePendingIncomingState) return false;
     if (shouldDeferIncomingLiveState()) return false;
 
+    if (Number.isInteger(livePendingIncomingVersion) && livePendingIncomingVersion < liveLastSyncedVersion) {
+        livePendingIncomingState = null;
+        livePendingIncomingVersion = null;
+        return false;
+    }
+
     const pending = livePendingIncomingState;
+    const pendingVersion = livePendingIncomingVersion;
+    const draftSnapshot = getActiveEditorDraft();
     livePendingIncomingState = null;
-    return applyIncomingLiveState(pending, { deferIfEditing: false });
+    livePendingIncomingVersion = null;
+
+    const applied = applyIncomingLiveState(pending, {
+        deferIfEditing: false,
+        remoteVersion: pendingVersion,
+    });
+
+    if (applied && draftSnapshot?.nodeId && editingNodeId === draftSnapshot.nodeId) {
+        const node = canvasData.nodes.find(n => n.id === draftSnapshot.nodeId && n.type === 'text');
+        if (node) {
+            const needsRestore = (
+                (node.text || '') !== (draftSnapshot.text || '')
+                || (node.html || '') !== (draftSnapshot.html || '')
+                || (draftSnapshot.textAlign && node.textAlign !== draftSnapshot.textAlign)
+                || (draftSnapshot.verticalAlign && node.verticalAlign !== draftSnapshot.verticalAlign)
+            );
+
+            if (needsRestore) {
+                node.text = draftSnapshot.text;
+                node.html = draftSnapshot.html;
+                if (draftSnapshot.textAlign) node.textAlign = draftSnapshot.textAlign;
+                if (draftSnapshot.verticalAlign) node.verticalAlign = draftSnapshot.verticalAlign;
+                renderCanvasSmart();
+            }
+        }
+    }
+
+    return applied;
 }
 
 function setLiveStatus(text, className = 'live-off', title = '') {
@@ -1962,7 +2057,10 @@ async function initializeOwnerLiveMode() {
     liveModeActive = false;
     liveClient = null;
     liveLastSyncedState = { nodes: [], edges: [] };
+    liveLastSyncedVersion = 0;
     livePendingIncomingState = null;
+    livePendingIncomingVersion = null;
+    liveEditorRebindingDepth = 0;
     clearLivePresenceState({ rerender: true });
 
     if (!isOwner) return false;
@@ -2033,7 +2131,10 @@ async function runLivePoll() {
         }
 
         if (payload.changed && payload.state) {
-            applyIncomingLiveState(payload.state, { deferIfEditing: true });
+            applyIncomingLiveState(payload.state, {
+                deferIfEditing: true,
+                remoteVersion: Number(payload.version),
+            });
         }
 
         flushPendingIncomingLiveState();
@@ -2080,9 +2181,13 @@ async function pushLiveStateNow(options = {}) {
         }
 
         if (payload?.state) {
-            applyIncomingLiveState(payload.state, { deferIfEditing: false });
+            applyIncomingLiveState(payload.state, {
+                deferIfEditing: false,
+                remoteVersion: Number(payload.version),
+            });
         } else {
             liveLastSyncedState = nextState;
+            liveLastSyncedVersion = Math.max(liveLastSyncedVersion, Number(payload?.version) || 0);
         }
 
         scheduleLivePoll();
@@ -2159,6 +2264,7 @@ async function loadCanvasData() {
                 loaded = true;
                 loadedFromLive = true;
                 liveLastSyncedState = buildPersistentCanvasState(canvasData);
+                liveLastSyncedVersion = Number(livePayload?.version) || Number(liveClient.version) || 0;
                 setLiveStatus('Live: connected', 'live-ok', 'Live room connected');
             } else if (isFreshEmptyRoom) {
                 setLiveStatus('Live: seeding', 'live-off', 'Empty live room detected, seeding from GitHub snapshot');
@@ -2215,6 +2321,7 @@ async function loadCanvasData() {
 
     if (isOwner && liveModeActive && liveClient && !loadedFromLive) {
         liveLastSyncedState = { nodes: [], edges: [] };
+        liveLastSyncedVersion = 0;
         const synced = await pushLiveStateNow({ silent: true });
         if (synced) {
             setLiveStatus('Live: connected', 'live-ok', 'Live room connected');
@@ -3898,7 +4005,7 @@ function setupNodeInteractions(el, node) {
         }
 
         function finishRichEdit() {
-            if (liveEditorRebinding) return;
+            if (isLiveEditorRebinding()) return;
             if (editingNodeId !== node.id) return;
 
             const html = textContent.innerHTML.trim();
@@ -4150,7 +4257,7 @@ function setupNodeInteractions(el, node) {
                 textContent.focus();
                 return;
             }
-            if (liveEditorRebinding) {
+            if (isLiveEditorRebinding()) {
                 return;
             }
             finishRichEdit();

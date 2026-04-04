@@ -38,6 +38,23 @@ function normalizeIdList(list) {
   return ids;
 }
 
+function normalizeChangedFieldsMap(input) {
+  if (!input || typeof input !== 'object') return {};
+
+  const output = {};
+  Object.entries(input).forEach(([id, fields]) => {
+    const normalizedId = String(id || '').trim();
+    if (!normalizedId) return;
+
+    const normalizedFields = normalizeIdList(fields).filter((field) => field !== 'id');
+    if (normalizedFields.length > 0) {
+      output[normalizedId] = normalizedFields;
+    }
+  });
+
+  return output;
+}
+
 function normalizePatch(patch) {
   const input = patch && typeof patch === 'object' ? patch : {};
   return {
@@ -45,6 +62,8 @@ function normalizePatch(patch) {
     removeNodeIds: normalizeIdList(input.removeNodeIds),
     upsertEdges: normalizeEntityList(input.upsertEdges),
     removeEdgeIds: normalizeIdList(input.removeEdgeIds),
+    nodeChangedFields: normalizeChangedFieldsMap(input.nodeChangedFields),
+    edgeChangedFields: normalizeChangedFieldsMap(input.edgeChangedFields),
   };
 }
 
@@ -59,6 +78,25 @@ function isPatchEmpty(patch) {
 
 function mapById(entities) {
   return new Map(entities.map((entity) => [entity.id, entity]));
+}
+
+function mergeEntityByChangedFields(previous, incoming, changedFields) {
+  if (!previous || !Array.isArray(changedFields) || changedFields.length === 0) {
+    return incoming;
+  }
+
+  const merged = deepClone(previous);
+  changedFields.forEach((field) => {
+    if (field === 'id') return;
+    if (Object.prototype.hasOwnProperty.call(incoming, field)) {
+      merged[field] = deepClone(incoming[field]);
+      return;
+    }
+    delete merged[field];
+  });
+
+  merged.id = incoming.id;
+  return merged;
 }
 
 function applyPatchToState(state, patch) {
@@ -78,10 +116,12 @@ function applyPatchToState(state, patch) {
 
   normalizedPatch.upsertNodes.forEach((node) => {
     const previous = nodesById.get(node.id);
-    const nextSerialized = JSON.stringify(node);
+    const changedFields = normalizedPatch.nodeChangedFields[node.id];
+    const nextNode = mergeEntityByChangedFields(previous, node, changedFields);
+    const nextSerialized = JSON.stringify(nextNode);
     const previousSerialized = previous ? JSON.stringify(previous) : '';
     if (!previous || previousSerialized !== nextSerialized) {
-      nodesById.set(node.id, node);
+      nodesById.set(node.id, nextNode);
       changed = true;
     }
   });
@@ -94,10 +134,12 @@ function applyPatchToState(state, patch) {
 
   normalizedPatch.upsertEdges.forEach((edge) => {
     const previous = edgesById.get(edge.id);
-    const nextSerialized = JSON.stringify(edge);
+    const changedFields = normalizedPatch.edgeChangedFields[edge.id];
+    const nextEdge = mergeEntityByChangedFields(previous, edge, changedFields);
+    const nextSerialized = JSON.stringify(nextEdge);
     const previousSerialized = previous ? JSON.stringify(previous) : '';
     if (!previous || previousSerialized !== nextSerialized) {
-      edgesById.set(edge.id, edge);
+      edgesById.set(edge.id, nextEdge);
       changed = true;
     }
   });
