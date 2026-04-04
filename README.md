@@ -210,4 +210,4 @@ You can also test without committing by importing a ZIP from the Control Panel.
 
 ## License
 
-MIT
+PolyForm Noncommercial License 1.0.0
