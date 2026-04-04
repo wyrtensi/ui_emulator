@@ -2770,7 +2770,7 @@ function setupViewport() {
             clearPendingEdgeDrawingPreview();
 
             if (pendingEdge) {
-                schedulePendingEdgeCreateMenu(e.clientX, e.clientY, pendingEdge);
+                schedulePendingEdgeCreateMenu(e.clientX, e.clientY, pendingEdge, openContextMenu);
             }
         }
 
@@ -5060,7 +5060,7 @@ function clearPendingEdgeDrawingPreview() {
     drawingArrow.setAttribute('points', '');
 }
 
-function schedulePendingEdgeCreateMenu(clientX, clientY, pendingEdge) {
+function schedulePendingEdgeCreateMenu(clientX, clientY, pendingEdge, openContextMenuFn = null) {
     if (!pendingEdge) return;
 
     window._pendingEdgeConnect = pendingEdge;
@@ -5071,7 +5071,9 @@ function schedulePendingEdgeCreateMenu(clientX, clientY, pendingEdge) {
         if (!stillPending) return;
         if (stillPending.fromNode !== pendingEdge.fromNode || stillPending.fromSide !== pendingEdge.fromSide) return;
 
-        openContextMenu(clientX, clientY, null);
+        if (typeof openContextMenuFn === 'function') {
+            openContextMenuFn(clientX, clientY, null);
+        }
         suppressCtxMenuCloseUntil = Date.now() + 250;
     }, 0);
 }

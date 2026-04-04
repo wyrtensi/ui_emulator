@@ -1,5 +1,7 @@
 # UI Emulator
 
+![UI Emulator](readme_poster.jpg)
+
 UI Emulator is a static, browser-based RF Online HUD playground with two connected workspaces:
 
 - Window Emulator: arrange modular UI windows, export art slices, and share layouts.
@@ -208,4 +210,4 @@ You can also test without committing by importing a ZIP from the Control Panel.
 
 ## License
 
-PolyForm Noncommercial License
+MIT
