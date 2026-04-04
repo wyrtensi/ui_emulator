@@ -100,11 +100,11 @@
       "x": -4321.5,
       "y": -3848,
       "width": 229,
-      "height": 279,
-      "text": "Window design and styling:NPC IconTitle (NPC name)Text inside the cloud style (NPC message)Buttons under the cloudffffddddd",
+      "height": 281,
+      "text": "Window design and styling:NPC IconTitle (NPC name)Text inside the cloud style (NPC message)Buttons under the cloud",
       "textAlign": "left",
       "verticalAlign": "top",
-      "html": "<h3>Window design and styling:</h3><div><ul><li>NPC Icon</li><li>Title (NPC name)</li><li>Text inside the cloud style (NPC message)</li><li>Buttons under the cloudffffddddd</li><li><br></li></ul></div>"
+      "html": "<h3>Window design and styling:</h3><div><ul><li>NPC Icon</li><li>Title (NPC name)</li><li>Text inside the cloud style (NPC message)</li><li>Buttons under the cloud</li><li><br></li></ul></div>"
     },
     {
       "id": "n_1775218986373",
