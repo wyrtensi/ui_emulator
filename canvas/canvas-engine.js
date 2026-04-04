@@ -50,6 +50,7 @@ let liveLastSyncedState = { nodes: [], edges: [] };
 let liveLastSyncedVersion = 0;
 let livePendingIncomingState = null;
 let livePendingIncomingVersion = null;
+let livePendingLocalOverlay = null;
 let livePresenceUsers = [];
 let livePresenceByNode = new Map();
 let livePresenceSignature = '';
@@ -1486,13 +1487,7 @@ export async function initCanvas(winContainer, config) {
     const closeBtnTop = container.querySelector('#canvas-close-top-right');
     if (closeBtnTop) {
         closeBtnTop.addEventListener('click', () => {
-            import('../js/core/window-manager.js').then(m => {
-                m.windowManager.close('canvas');
-            }).catch(() => {
-                if (window.location.hash.startsWith('#canvas')) {
-                    window.location.hash = '';
-                }
-            });
+            closeCanvasWindow();
         });
     }
 }
@@ -2021,6 +2016,56 @@ function shouldDeferIncomingLiveState() {
     return !!isDraggingNode || isLiveEditorRebinding();
 }
 
+// Computes the diff of locally-changed entities vs the last synced server state.
+// Called when queueing a sync so we can protect in-flight local work.
+function captureLivePendingLocalOverlay() {
+    if (!liveLastSyncedState) { livePendingLocalOverlay = null; return; }
+
+    const syncedNodeMap = new Map((liveLastSyncedState.nodes || []).map(n => [n.id, n]));
+    const syncedEdgeMap = new Map((liveLastSyncedState.edges || []).map(e => [e.id, e]));
+    const currentNodeMap = new Map((canvasData.nodes || []).map(n => [n.id, n]));
+    const currentEdgeMap = new Map((canvasData.edges || []).map(e => [e.id, e]));
+
+    const dirtyNodes = new Map();
+    const deletedNodeIds = new Set();
+    const dirtyEdges = new Map();
+    const deletedEdgeIds = new Set();
+
+    for (const [id, node] of currentNodeMap) {
+        const synced = syncedNodeMap.get(id);
+        if (!synced || getChangedObjectFields(synced, node).length > 0) {
+            dirtyNodes.set(id, node);
+        }
+    }
+    for (const id of syncedNodeMap.keys()) {
+        if (!currentNodeMap.has(id)) deletedNodeIds.add(id);
+    }
+    for (const [id, edge] of currentEdgeMap) {
+        const synced = syncedEdgeMap.get(id);
+        if (!synced || getChangedObjectFields(synced, edge).length > 0) {
+            dirtyEdges.set(id, edge);
+        }
+    }
+    for (const id of syncedEdgeMap.keys()) {
+        if (!currentEdgeMap.has(id)) deletedEdgeIds.add(id);
+    }
+
+    livePendingLocalOverlay = { dirtyNodes, deletedNodeIds, dirtyEdges, deletedEdgeIds };
+}
+
+// Re-applies locally-changed entities on top of an incoming server state so that
+// a collaborator broadcast doesn't overwrite in-flight local mutations.
+function applyLocalOverlayToState(state, overlay) {
+    if (!overlay) return state;
+    const nodeMap = new Map((state.nodes || []).map(n => [n.id, n]));
+    for (const [id, node] of overlay.dirtyNodes) nodeMap.set(id, node);
+    for (const id of overlay.deletedNodeIds) nodeMap.delete(id);
+    const edgeMap = new Map((state.edges || []).map(e => [e.id, e]));
+    for (const [id, edge] of overlay.dirtyEdges) edgeMap.set(id, edge);
+    for (const id of overlay.deletedEdgeIds) edgeMap.delete(id);
+    return { ...state, nodes: [...nodeMap.values()], edges: [...edgeMap.values()] };
+}
+
 function applyIncomingLiveState(nextState, options = {}) {
     if (!nextState || typeof nextState !== 'object') return false;
 
@@ -2046,16 +2091,35 @@ function applyIncomingLiveState(nextState, options = {}) {
         return false;
     }
 
+    // Guard: if we have pending uncommitted local changes (liveSyncTimer active)
+    // and the incoming state is NOT a newer server version, it's a stale echo that
+    // would roll back in-flight work. Skip it entirely.
+    if (livePendingLocalOverlay && liveSyncTimer
+        && Number.isInteger(incomingVersion)
+        && incomingVersion <= liveLastSyncedVersion) {
+        return false;
+    }
+
     livePendingIncomingState = null;
     livePendingIncomingVersion = null;
+
+    // Re-apply locally-dirty entities on top of server state so a collaborator
+    // broadcast doesn't overwrite our in-flight changes to specific nodes/edges.
+    // Priority order: server baseline < local overlay < active editor draft.
+    const withOverlay = (livePendingLocalOverlay && liveSyncTimer)
+        ? applyLocalOverlayToState(normalized, livePendingLocalOverlay)
+        : normalized;
+
     const activeDraft = getActiveEditorDraft();
     const merged = activeDraft
-        ? mergeRemoteStateWithActiveDraft(normalized, activeDraft)
-        : normalized;
+        ? mergeRemoteStateWithActiveDraft(withOverlay, activeDraft)
+        : withOverlay;
 
     const currentSerialized = JSON.stringify(buildPersistentCanvasState(canvasData));
     const incomingSerialized = JSON.stringify(merged);
 
+    // Always track the actual server baseline (without overlay) so pushes compute
+    // the right diff against what the server truly has.
     liveLastSyncedState = normalized;
     if (Number.isInteger(incomingVersion)) {
         liveLastSyncedVersion = Math.max(liveLastSyncedVersion, incomingVersion);
@@ -2142,6 +2206,7 @@ async function initializeOwnerLiveMode() {
     liveLastSyncedVersion = 0;
     livePendingIncomingState = null;
     livePendingIncomingVersion = null;
+    livePendingLocalOverlay = null;
     liveEditorRebindingDepth = 0;
     if (liveEditorRebindingReleaseTimer) {
         clearTimeout(liveEditorRebindingReleaseTimer);
@@ -2280,6 +2345,9 @@ async function pushLiveStateNow(options = {}) {
         if (!silent) {
             setLiveStatus('Live: synced', 'live-ok', 'Live room sync is healthy');
         }
+        // Push confirmed — our local changes are now the server baseline.
+        // Clear the overlay so future incoming state applies freely.
+        livePendingLocalOverlay = null;
         return true;
     } catch (err) {
         if (err?.status === 401 || err?.status === 403) {
@@ -2302,6 +2370,10 @@ async function pushLiveStateNow(options = {}) {
 
 function queueLiveSync() {
     if (!isOwner || !liveModeActive || !liveClient) return;
+
+    // Capture the current local diff so incoming server broadcasts can't
+    // overwrite uncommitted in-flight changes during the debounce window.
+    captureLivePendingLocalOverlay();
 
     if (liveSyncTimer) {
         clearTimeout(liveSyncTimer);
@@ -6292,11 +6364,41 @@ function setupThemeToggle() {
     const closeBtn = container.querySelector('#canvas-close');
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
-            import('../js/core/window-manager.js').then(m => {
-                m.windowManager.close('canvas');
-            });
+            closeCanvasWindow();
         });
     }
+}
+
+async function closeCanvasWindow() {
+    const clearCanvasHash = () => {
+        if (!hasCanvasLinkHash(window.location.hash)) return;
+
+        try {
+            const nextUrl = `${window.location.pathname}${window.location.search}`;
+            window.history.replaceState(window.history.state, '', nextUrl);
+        } catch (_err) {
+            window.location.hash = '';
+        }
+    };
+
+    clearCanvasHash();
+
+    try {
+        const m = await import('../js/core/window-manager.js');
+        if (m?.windowManager) {
+            m.windowManager.close('canvas');
+            return true;
+        }
+    } catch (_err) {
+        // Fall through to direct DOM close.
+    }
+
+    const uiWindow = container?.closest('.ui-window');
+    if (uiWindow) {
+        uiWindow.classList.remove('open');
+    }
+    document.body.classList.remove('canvas-mode-active');
+    return false;
 }
 
 function setupZoomControls() {
