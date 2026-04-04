@@ -470,6 +470,18 @@
   white-space: nowrap;
 }
 
+.canvas-live-presence {
+  font-size: 11px;
+  line-height: 1;
+  border: 1px solid color-mix(in srgb, #5fa1ff 45%, var(--canvas-node-border));
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: #d4e5ff;
+  background: color-mix(in srgb, #2f4f7c 35%, transparent);
+  margin-right: 6px;
+  white-space: nowrap;
+}
+
 .canvas-live-status.live-ok {
   border-color: #2e8b57;
   color: #9de7bd;
@@ -554,6 +566,11 @@
   border-color: var(--canvas-selected);
   box-shadow: 0 0 0 2px var(--canvas-selected), 0 4px 12px rgba(0,0,0,0.3);
   z-index: 100;
+}
+
+.canvas-node.presence-selected:not(.selected) {
+  border-color: color-mix(in srgb, #7fb3ff 55%, var(--canvas-node-border));
+  box-shadow: 0 0 0 1px rgba(133, 183, 255, 0.55), 0 4px 12px rgba(0,0,0,0.24);
 }
 
 .canvas-node.node-locked {

@@ -25,6 +25,7 @@ function getCorsHeaders(env) {
     'Access-Control-Allow-Origin': allowed,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Expose-Headers': 'Content-Type, X-Live-Actor, X-Live-Role',
   };
 }
 
@@ -169,7 +170,7 @@ async function verifyOwnerRequest(request, env) {
   };
 }
 
-async function proxyCanvasRoomRequest(request, env, roomName) {
+async function proxyCanvasRoomRequest(request, env, roomName, actor) {
   if (!env.CANVAS_ROOM) {
     return jsonResponse(env, 500, { error: 'Canvas room binding is not configured' });
   }
@@ -178,10 +179,15 @@ async function proxyCanvasRoomRequest(request, env, roomName) {
     const roomId = env.CANVAS_ROOM.idFromName(roomName || 'global');
     const roomStub = env.CANVAS_ROOM.get(roomId);
 
+    const roomUrl = new URL(request.url);
+    const roomEndpoint = `https://canvas-room.internal/live${roomUrl.search}`;
+
     const init = {
       method: request.method,
       headers: {
         'Content-Type': 'application/json',
+        'X-Live-Actor': actor?.login || '',
+        'X-Live-Role': actor?.role || 'editor',
       },
     };
 
@@ -189,7 +195,7 @@ async function proxyCanvasRoomRequest(request, env, roomName) {
       init.body = await request.text();
     }
 
-    const roomResp = await roomStub.fetch('https://canvas-room.internal/live', init);
+    const roomResp = await roomStub.fetch(roomEndpoint, init);
     const responseText = await roomResp.text();
 
     return new Response(responseText, {
@@ -197,6 +203,8 @@ async function proxyCanvasRoomRequest(request, env, roomName) {
       headers: {
         ...getCorsHeaders(env),
         'Content-Type': roomResp.headers.get('Content-Type') || 'application/json',
+        'X-Live-Actor': actor?.login || '',
+        'X-Live-Role': actor?.role || 'editor',
       },
     });
   } catch (err) {
@@ -223,7 +231,7 @@ export default {
       }
 
       const roomName = decodeURIComponent(url.pathname.slice('/live/canvas/'.length) || 'global');
-      return proxyCanvasRoomRequest(request, env, roomName);
+      return proxyCanvasRoomRequest(request, env, roomName, auth);
     }
 
     if (url.pathname === '/catbox' && request.method === 'POST') {

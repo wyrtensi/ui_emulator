@@ -42,10 +42,18 @@ let undoRedoCaptureBound = false;
 let liveClient = null;
 let liveModeActive = false;
 let liveSyncTimer = null;
+let livePollTimer = null;
+let livePollInFlight = false;
+let liveLastSyncedState = { nodes: [], edges: [] };
+let livePendingIncomingState = null;
+let livePresenceUsers = [];
+let livePresenceByNode = new Map();
+let livePresenceSignature = '';
 
 const CANVAS_FILE = 'concept.canvas';
 const CANVAS_VIEW_STATE_KEY = 'ui-canvas-view-v1';
-const LIVE_SYNC_DEBOUNCE_MS = 250;
+const LIVE_SYNC_DEBOUNCE_MS = Math.max(250, Number(config.live?.syncDebounceMs) || 1200);
+const LIVE_POLL_INTERVAL_MS = Math.max(1200, Number(config.live?.pollIntervalMs) || 2200);
 let hasUnsavedChanges = false;
 let autoSaveInterval = null;
 let isSaving = false;
@@ -93,7 +101,7 @@ let nodeCleanupFns = [];
 
 // DOM Elements
 let container, viewport, content, nodesLayer, edgesLayer, drawingLayer, drawingEdge;
-let zoomLabel, saveIndicator, nodeToolbar, liveStatusIndicator;
+let zoomLabel, saveIndicator, nodeToolbar, liveStatusIndicator, livePresenceIndicator;
 
 async function ensureMarkedLoaded() {
     if (typeof marked !== 'undefined' && typeof marked.parse === 'function') return;
@@ -165,6 +173,24 @@ function escapeHtmlText(text) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+function getConfiguredLiveEditors() {
+    const configured = config.live?.allowedEditors;
+    if (!Array.isArray(configured)) return new Set();
+
+    return new Set(
+        configured
+            .map(value => String(value || '').trim().toLowerCase())
+            .filter(Boolean)
+    );
+}
+
+function canCurrentUserEditCanvas() {
+    if (githubAuth.isOwner) return true;
+    const login = String(githubAuth.user?.login || '').trim().toLowerCase();
+    if (!login) return false;
+    return getConfiguredLiveEditors().has(login);
 }
 
 function getCurrentSelectionNodeIds() {
@@ -1357,6 +1383,7 @@ export async function initCanvas(winContainer, config) {
     selectionBox = container.querySelector('#canvas-selection-box');
     saveIndicator = container.querySelector('#canvas-saving-indicator');
     liveStatusIndicator = container.querySelector('#canvas-live-status');
+    livePresenceIndicator = container.querySelector('#canvas-live-presence');
     nodeToolbar = container.querySelector('#canvas-node-toolbar');
     guidesLayer = container.querySelector('#canvas-guides-layer');
     hideForeignNodeToolbars();
@@ -1375,7 +1402,7 @@ export async function initCanvas(winContainer, config) {
     translateX = initialViewportWidth / 2;
     translateY = initialViewportHeight / 2;
 
-    isOwner = githubAuth.isOwner;
+    isOwner = canCurrentUserEditCanvas();
     const canvasWindowEl = container.querySelector('.canvas-window');
     if (canvasWindowEl) {
         canvasWindowEl.classList.toggle('is-owner', isOwner);
@@ -1478,6 +1505,218 @@ function isCanvasStateEmpty(state) {
     return nodes.length === 0 && edges.length === 0;
 }
 
+function mapEntitiesById(list) {
+    const map = new Map();
+    if (!Array.isArray(list)) return map;
+
+    list.forEach(item => {
+        if (!item || typeof item !== 'object') return;
+        const id = String(item.id || '').trim();
+        if (!id) return;
+        map.set(id, item);
+    });
+
+    return map;
+}
+
+function buildCanvasPatch(baseState, nextState) {
+    const base = buildPersistentCanvasState(baseState);
+    const next = buildPersistentCanvasState(nextState);
+
+    const baseNodes = mapEntitiesById(base.nodes);
+    const nextNodes = mapEntitiesById(next.nodes);
+    const baseEdges = mapEntitiesById(base.edges);
+    const nextEdges = mapEntitiesById(next.edges);
+
+    const patch = {
+        upsertNodes: [],
+        removeNodeIds: [],
+        upsertEdges: [],
+        removeEdgeIds: [],
+    };
+
+    nextNodes.forEach((node, id) => {
+        const previous = baseNodes.get(id);
+        if (!previous || JSON.stringify(previous) !== JSON.stringify(node)) {
+            patch.upsertNodes.push(node);
+        }
+    });
+
+    baseNodes.forEach((_node, id) => {
+        if (!nextNodes.has(id)) {
+            patch.removeNodeIds.push(id);
+        }
+    });
+
+    nextEdges.forEach((edge, id) => {
+        const previous = baseEdges.get(id);
+        if (!previous || JSON.stringify(previous) !== JSON.stringify(edge)) {
+            patch.upsertEdges.push(edge);
+        }
+    });
+
+    baseEdges.forEach((_edge, id) => {
+        if (!nextEdges.has(id)) {
+            patch.removeEdgeIds.push(id);
+        }
+    });
+
+    return patch;
+}
+
+function isCanvasPatchEmpty(patch) {
+    return (
+        (patch?.upsertNodes?.length || 0) === 0
+        && (patch?.removeNodeIds?.length || 0) === 0
+        && (patch?.upsertEdges?.length || 0) === 0
+        && (patch?.removeEdgeIds?.length || 0) === 0
+    );
+}
+
+function getLiveSelectionNodeIds() {
+    return Array.from(getCurrentSelectionNodeIds());
+}
+
+function rebindSelectionToCurrentState() {
+    if (selectedNode?.id) {
+        selectedNode = canvasData.nodes.find(n => n.id === selectedNode.id) || null;
+    }
+    if (selectedEdge?.id) {
+        selectedEdge = canvasData.edges.find(e => e.id === selectedEdge.id) || null;
+    }
+
+    if (multiSelectedNodes.size > 0) {
+        const refreshed = new Set();
+        multiSelectedNodes.forEach(id => {
+            if (canvasData.nodes.some(node => node.id === id)) {
+                refreshed.add(id);
+            }
+        });
+        multiSelectedNodes = refreshed;
+    }
+}
+
+function buildPresenceSignature(users, byNode) {
+    const userPart = users
+        .map(user => `${user.login}:${(user.selectedNodeIds || []).join(',')}`)
+        .sort()
+        .join('|');
+
+    const nodePart = Array.from(byNode.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([nodeId, logins]) => `${nodeId}:${logins.join(',')}`)
+        .join('|');
+
+    return `${userPart}::${nodePart}`;
+}
+
+function refreshLivePresenceIndicator() {
+    if (!livePresenceIndicator) return;
+
+    if (!isOwner || !liveModeActive || !liveClient) {
+        livePresenceIndicator.hidden = true;
+        return;
+    }
+
+    const selfLogin = String(liveClient.actorLogin || githubAuth.user?.login || '').trim().toLowerCase();
+    const peers = livePresenceUsers
+        .map(entry => String(entry.login || '').trim().toLowerCase())
+        .filter(Boolean);
+
+    const uniquePeers = Array.from(new Set(peers.filter(login => login !== selfLogin)));
+    const allOnline = selfLogin ? [selfLogin, ...uniquePeers] : uniquePeers;
+    if (allOnline.length === 0) {
+        livePresenceIndicator.hidden = true;
+        return;
+    }
+
+    const maxVisible = 3;
+    const visible = allOnline.slice(0, maxVisible).join(', ');
+    const overflow = allOnline.length > maxVisible ? ` +${allOnline.length - maxVisible}` : '';
+    livePresenceIndicator.hidden = false;
+    livePresenceIndicator.textContent = `Online: ${visible}${overflow}`;
+    livePresenceIndicator.title = `Online now: ${allOnline.join(', ')}`;
+}
+
+function applyLivePresence(presenceList) {
+    const selfLogin = String(liveClient?.actorLogin || githubAuth.user?.login || '').trim().toLowerCase();
+    const normalizedUsers = Array.isArray(presenceList)
+        ? presenceList
+            .filter(entry => entry && typeof entry === 'object')
+            .map(entry => ({
+                login: String(entry.login || '').trim().toLowerCase(),
+                role: entry.role === 'owner' ? 'owner' : 'editor',
+                selectedNodeIds: Array.isArray(entry.selectedNodeIds)
+                    ? entry.selectedNodeIds.map(id => String(id || '').trim()).filter(Boolean)
+                    : [],
+            }))
+            .filter(entry => !!entry.login)
+        : [];
+
+    const nextUsers = normalizedUsers.filter(entry => entry.login !== selfLogin);
+    const nextByNode = new Map();
+
+    nextUsers.forEach(entry => {
+        entry.selectedNodeIds.forEach(nodeId => {
+            const existing = nextByNode.get(nodeId) || [];
+            if (!existing.includes(entry.login)) {
+                existing.push(entry.login);
+            }
+            nextByNode.set(nodeId, existing);
+        });
+    });
+
+    const nextSignature = buildPresenceSignature(nextUsers, nextByNode);
+    const changed = nextSignature !== livePresenceSignature;
+
+    livePresenceUsers = nextUsers;
+    livePresenceByNode = nextByNode;
+    livePresenceSignature = nextSignature;
+    refreshLivePresenceIndicator();
+
+    if (changed && !editingNodeId && !isDraggingNode && nodesLayer && nodesLayer.childElementCount > 0) {
+        renderCanvas();
+    }
+}
+
+function shouldDeferIncomingLiveState() {
+    return !!liveSyncTimer || !!editingNodeId || !!isDraggingNode;
+}
+
+function applyIncomingLiveState(nextState, options = {}) {
+    if (!nextState || typeof nextState !== 'object') return false;
+
+    const normalized = buildPersistentCanvasState(nextState);
+    if (options.deferIfEditing && shouldDeferIncomingLiveState()) {
+        livePendingIncomingState = normalized;
+        return false;
+    }
+
+    livePendingIncomingState = null;
+    const currentSerialized = JSON.stringify(buildPersistentCanvasState(canvasData));
+    const incomingSerialized = JSON.stringify(normalized);
+
+    liveLastSyncedState = normalized;
+    if (currentSerialized === incomingSerialized) {
+        return false;
+    }
+
+    canvasData = normalized;
+    sanitizeGroupMembership();
+    rebindSelectionToCurrentState();
+    renderCanvas();
+    return true;
+}
+
+function flushPendingIncomingLiveState() {
+    if (!livePendingIncomingState) return false;
+    if (shouldDeferIncomingLiveState()) return false;
+
+    const pending = livePendingIncomingState;
+    livePendingIncomingState = null;
+    return applyIncomingLiveState(pending, { deferIfEditing: false });
+}
+
 function setLiveStatus(text, className = 'live-off', title = '') {
     if (!liveStatusIndicator || !isOwner) return;
     liveStatusIndicator.hidden = false;
@@ -1490,8 +1729,20 @@ function setLiveStatus(text, className = 'live-off', title = '') {
 }
 
 async function initializeOwnerLiveMode() {
+    if (livePollTimer) {
+        clearTimeout(livePollTimer);
+        livePollTimer = null;
+    }
+    livePollInFlight = false;
+
     liveModeActive = false;
     liveClient = null;
+    liveLastSyncedState = { nodes: [], edges: [] };
+    livePendingIncomingState = null;
+    livePresenceUsers = [];
+    livePresenceByNode = new Map();
+    livePresenceSignature = '';
+    refreshLivePresenceIndicator();
 
     if (!isOwner) return false;
 
@@ -1512,24 +1763,113 @@ async function initializeOwnerLiveMode() {
             setLiveStatus('Live: disabled', 'live-off', 'Live sync disabled or unavailable');
         }
     } else {
-        setLiveStatus('Live: connecting', 'live-off', 'Connecting to owner live room');
+        setLiveStatus('Live: connecting', 'live-off', 'Connecting to live room');
     }
 
     return liveModeActive;
+}
+
+function scheduleLivePoll(delayMs = LIVE_POLL_INTERVAL_MS) {
+    if (!isOwner || !liveModeActive || !liveClient) return;
+
+    if (livePollTimer) {
+        clearTimeout(livePollTimer);
+    }
+
+    livePollTimer = setTimeout(() => {
+        livePollTimer = null;
+        runLivePoll();
+    }, Math.max(800, delayMs));
+}
+
+function startLivePolling() {
+    if (!isOwner || !liveModeActive || !liveClient) return;
+    scheduleLivePoll(600);
+}
+
+async function runLivePoll() {
+    if (!isOwner || !liveModeActive || !liveClient) return;
+    if (livePollInFlight) {
+        scheduleLivePoll();
+        return;
+    }
+
+    livePollInFlight = true;
+    try {
+        const payload = await liveClient.fetchState({
+            sinceVersion: liveClient.version,
+            sincePresenceVersion: liveClient.presenceVersion,
+            selectedNodeIds: getLiveSelectionNodeIds(),
+        });
+
+        if (!payload) {
+            scheduleLivePoll();
+            return;
+        }
+
+        if (payload.presenceChanged) {
+            applyLivePresence(payload.presence);
+        }
+
+        if (payload.changed && payload.state) {
+            applyIncomingLiveState(payload.state, { deferIfEditing: true });
+        }
+
+        flushPendingIncomingLiveState();
+
+        setLiveStatus('Live: connected', 'live-ok', 'Live room connected');
+        scheduleLivePoll();
+    } catch (err) {
+        if (err?.status === 401 || err?.status === 403) {
+            liveModeActive = false;
+            setLiveStatus('Live: auth required', 'live-warn', 'Live auth failed. Please sign out and sign in again.');
+            return;
+        }
+
+        setLiveStatus('Live: retrying', 'live-warn', 'Polling failed, retrying shortly');
+        console.warn('Live poll failed', err);
+        scheduleLivePoll(LIVE_POLL_INTERVAL_MS * 2);
+    } finally {
+        livePollInFlight = false;
+    }
 }
 
 async function pushLiveStateNow(options = {}) {
     const silent = options.silent === true;
     if (!isOwner || !liveModeActive || !liveClient) return false;
 
+    const nextState = buildLiveCanvasStatePayload();
+    const patch = buildCanvasPatch(liveLastSyncedState, nextState);
+
     try {
-        await liveClient.pushState(buildLiveCanvasStatePayload());
+        const payload = isCanvasPatchEmpty(patch)
+            ? await liveClient.fetchState({
+                sinceVersion: liveClient.version,
+                sincePresenceVersion: liveClient.presenceVersion,
+                selectedNodeIds: getLiveSelectionNodeIds(),
+            })
+            : await liveClient.pushPatch(patch, {
+                baseVersion: liveClient.version,
+                selectedNodeIds: getLiveSelectionNodeIds(),
+            });
+
+        if (payload?.presenceChanged) {
+            applyLivePresence(payload.presence);
+        }
+
+        if (payload?.state) {
+            applyIncomingLiveState(payload.state, { deferIfEditing: false });
+        } else {
+            liveLastSyncedState = nextState;
+        }
+
+        scheduleLivePoll();
         if (!silent) {
             setLiveStatus('Live: synced', 'live-ok', 'Live room sync is healthy');
         }
         return true;
     } catch (err) {
-        if (err?.status === 401) {
+        if (err?.status === 401 || err?.status === 403) {
             liveModeActive = false;
             setLiveStatus('Live: auth required', 'live-warn', 'Live auth failed. Please sign out and sign in again.');
             if (!silent) {
@@ -1541,6 +1881,7 @@ async function pushLiveStateNow(options = {}) {
         if (!silent) {
             console.warn('Live sync push failed', err);
         }
+        scheduleLivePoll(LIVE_POLL_INTERVAL_MS * 2);
         return false;
     }
 }
@@ -1556,6 +1897,8 @@ function queueLiveSync() {
         liveSyncTimer = null;
         pushLiveStateNow({ silent: true });
     }, LIVE_SYNC_DEBOUNCE_MS);
+
+    scheduleLivePoll(Math.min(LIVE_POLL_INTERVAL_MS, LIVE_SYNC_DEBOUNCE_MS + 300));
 }
 
 async function loadCanvasData() {
@@ -1578,19 +1921,27 @@ async function loadCanvasData() {
 
     if (isOwner && liveModeActive && liveClient) {
         try {
-            const liveState = await liveClient.fetchState();
+            const livePayload = await liveClient.fetchState({
+                selectedNodeIds: getLiveSelectionNodeIds(),
+            });
+            if (livePayload?.presenceChanged) {
+                applyLivePresence(livePayload.presence);
+            }
+
+            const liveState = livePayload?.state;
             const isFreshEmptyRoom = liveClient.version === 0 && isCanvasStateEmpty(liveState);
             if (liveState && !isFreshEmptyRoom) {
                 canvasData = liveState;
                 canvasSha = null;
                 loaded = true;
                 loadedFromLive = true;
-                setLiveStatus('Live: connected', 'live-ok', 'Owner live room connected');
+                liveLastSyncedState = buildPersistentCanvasState(canvasData);
+                setLiveStatus('Live: connected', 'live-ok', 'Live room connected');
             } else if (isFreshEmptyRoom) {
                 setLiveStatus('Live: seeding', 'live-off', 'Empty live room detected, seeding from GitHub snapshot');
             }
         } catch (err) {
-            if (err?.status === 401) {
+            if (err?.status === 401 || err?.status === 403) {
                 liveModeActive = false;
                 setLiveStatus('Live: auth required', 'live-warn', 'Live auth failed. Please sign out and sign in again.');
             } else {
@@ -1640,12 +1991,17 @@ async function loadCanvasData() {
     }
 
     if (isOwner && liveModeActive && liveClient && !loadedFromLive) {
+        liveLastSyncedState = { nodes: [], edges: [] };
         const synced = await pushLiveStateNow({ silent: true });
         if (synced) {
-            setLiveStatus('Live: connected', 'live-ok', 'Owner live room connected');
+            setLiveStatus('Live: connected', 'live-ok', 'Live room connected');
         }
     } else if (isOwner && !liveModeActive) {
         setLiveStatus('Live: snapshot', 'live-off', 'Owner is in snapshot-only mode');
+    }
+
+    if (isOwner && liveModeActive && liveClient) {
+        startLivePolling();
     }
 
     sanitizeGroupMembership();
@@ -2914,6 +3270,12 @@ function renderNode(node) {
         el.classList.add('selected');
     }
 
+    const peerSelections = livePresenceByNode.get(node.id);
+    if (Array.isArray(peerSelections) && peerSelections.length > 0) {
+        el.classList.add('presence-selected');
+        el.title = `Selected by: ${peerSelections.join(', ')}`;
+    }
+
     // Make links in node content clickable
     const textEl = el.querySelector('.node-content-text');
     if (textEl) {
@@ -3028,6 +3390,7 @@ function setupNodeInteractions(el, node) {
         if (e.target.classList.contains('node-resize-handle')) {
             if (!isOwner) return;
             isResizing = true;
+            isDraggingNode = true;
             resizeDir = e.target.dataset.dir;
             startX = e.clientX;
             startY = e.clientY;
@@ -3094,6 +3457,7 @@ function setupNodeInteractions(el, node) {
         // Drag node (but NOT if currently editing this node)
         if (isOwner && currentTool === 'select' && editingNodeId !== node.id) {
             isDragging = true;
+            isDraggingNode = true;
             startX = e.clientX;
             startY = e.clientY;
             origLeft = node.x;
@@ -3897,6 +4261,7 @@ function setupNodeInteractions(el, node) {
 
         isDragging = false;
         isResizing = false;
+        isDraggingNode = false;
     };
 
     window.addEventListener('mousemove', onMouseMove);

@@ -16,5 +16,8 @@ export default {
     enabled: true,
     roomId: 'global',
     workerUrl: 'https://ui-emulator-auth.wyrtensi.workers.dev',
+    pollIntervalMs: 2200,
+    syncDebounceMs: 1200,
+    allowedEditors: [],
   },
 };
