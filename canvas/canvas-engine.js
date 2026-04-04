@@ -2660,20 +2660,19 @@ function setupViewport() {
         if (isDrawingEdge) {
             // Drop edge nowhere (or onto empty space)
             // Show context menu here so they can create a node!
-            const targetNode = e.target.closest('.canvas-node');
-            if (!targetNode && isOwner) {
-                openContextMenu(e.clientX, e.clientY, null);
-                suppressCtxMenuCloseUntil = Date.now() + 200;
-
-                // Save context so we can auto-connect after creation
-                window._pendingEdgeConnect = {
+            const targetNode = e.target?.closest?.('.canvas-node');
+            const pendingEdge = !targetNode && isOwner && drawEdgeStartNode && drawEdgeStartSide
+                ? {
                     fromNode: drawEdgeStartNode,
-                    fromSide: drawEdgeStartSide
-                };
+                    fromSide: drawEdgeStartSide,
+                }
+                : null;
+
+            clearPendingEdgeDrawingPreview();
+
+            if (pendingEdge) {
+                schedulePendingEdgeCreateMenu(e.clientX, e.clientY, pendingEdge);
             }
-            isDrawingEdge = false;
-            drawingEdge.setAttribute('d', '');
-            drawingArrow.setAttribute('points', '');
         }
 
         if (isMarqueeSelect) {
@@ -3920,9 +3919,7 @@ function setupNodeInteractions(el, node) {
             }
 
             createEdge(drawEdgeStartNode, drawEdgeStartSide, node.id, dropSide);
-            isDrawingEdge = false;
-            drawingEdge.setAttribute('d', '');
-            drawingArrow.setAttribute('points', '');
+            clearPendingEdgeDrawingPreview();
         }
     });
 
@@ -4954,6 +4951,30 @@ function updateDrawingEdge(mouseX, mouseY) {
     const tri = getArrowhead(p2, result.cp2, 8);
     drawingArrow.setAttribute('fill', '#8fa3c7');
     drawingArrow.setAttribute('points', tri.map(p => `${p.x},${p.y}`).join(' '));
+}
+
+function clearPendingEdgeDrawingPreview() {
+    isDrawingEdge = false;
+    drawEdgeStartNode = null;
+    drawEdgeStartSide = null;
+    drawingEdge.setAttribute('d', '');
+    drawingArrow.setAttribute('points', '');
+}
+
+function schedulePendingEdgeCreateMenu(clientX, clientY, pendingEdge) {
+    if (!pendingEdge) return;
+
+    window._pendingEdgeConnect = pendingEdge;
+    suppressCtxMenuCloseUntil = Date.now() + 250;
+
+    setTimeout(() => {
+        const stillPending = window._pendingEdgeConnect;
+        if (!stillPending) return;
+        if (stillPending.fromNode !== pendingEdge.fromNode || stillPending.fromSide !== pendingEdge.fromSide) return;
+
+        openContextMenu(clientX, clientY, null);
+        suppressCtxMenuCloseUntil = Date.now() + 250;
+    }, 0);
 }
 
 function createEdge(fromNodeId, fromSide, toNodeId, toSide) {
