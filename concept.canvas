@@ -100,11 +100,11 @@
       "x": -4971,
       "y": -4163,
       "width": 229,
-      "height": 281,
-      "text": "Window design and styling:NPC IconTitle (NPC name)Text inside the cloud style (NPC message)Buttons under the cloud",
+      "height": 287,
+      "text": "Window design and styling:NPC IconTitle (NPC name)Text frame (NPC message)Buttons under the text frameFloating elements design",
       "textAlign": "left",
       "verticalAlign": "top",
-      "html": "<h3>Window design and styling:</h3><div><ul><li>NPC Icon</li><li>Title (NPC name)</li><li>Text inside the cloud style (NPC message)</li><li>Buttons under the cloud</li><li><br></li></ul></div>"
+      "html": "<h3>Window design and styling:</h3><div><ul><li>NPC Icon</li><li>Title (NPC name)</li><li>Text frame (NPC message)</li><li>Buttons under the text frame</li><li>Floating elements design</li></ul></div>"
     },
     {
       "id": "n_1775218986373",
@@ -160,8 +160,8 @@
       "label": "v1 Concept #1",
       "x": -4551,
       "y": -4518,
-      "width": 1036,
-      "height": 560
+      "width": 1058,
+      "height": 549
     },
     {
       "id": "n_1775253836067",
@@ -201,16 +201,6 @@
       "verticalAlign": "top",
       "html": "Button 3",
       "groupId": "n_1775244389661018"
-    },
-    {
-      "id": "n2ftjh56mhg",
-      "type": "file",
-      "file": "canvas_uploads/NPC_a.png",
-      "x": -4511,
-      "y": -3828,
-      "width": 214,
-      "height": 219,
-      "groupId": "oej63v2hs4e"
     },
     {
       "id": "ralo0puv7jq",
@@ -315,7 +305,7 @@
       "id": "b5ww5ga49u7",
       "type": "text",
       "x": -4014,
-      "y": -4074,
+      "y": -4089,
       "width": 481,
       "height": 80,
       "text": "Button 4",
@@ -323,6 +313,170 @@
       "verticalAlign": "top",
       "html": "Button 4",
       "groupId": "n_1775244389661018"
+    },
+    {
+      "id": "9unu4xxftb",
+      "type": "file",
+      "x": -3189,
+      "y": -4853,
+      "width": 952,
+      "height": 535,
+      "file": "canvas_uploads/pasted_image_1775325772247.png"
+    },
+    {
+      "id": "a4fk20nyrpt",
+      "type": "file",
+      "x": -3175,
+      "y": -2627,
+      "width": 952,
+      "height": 530,
+      "file": "canvas_uploads/pasted_image_1775326079080.png"
+    },
+    {
+      "id": "z86h50lwxrl",
+      "type": "file",
+      "file": "canvas_uploads/NPC_a.png",
+      "x": -4621,
+      "y": -3022,
+      "width": 324,
+      "height": 328,
+      "groupId": "cs8qxm72l9"
+    },
+    {
+      "id": "ki8ry32j8n",
+      "type": "text",
+      "x": -4285,
+      "y": -3022,
+      "width": 660,
+      "height": 80,
+      "text": "   NPC NAME",
+      "textAlign": "left",
+      "verticalAlign": "center",
+      "html": "<h2>&nbsp; &nbsp;NPC NAME</h2>",
+      "groupId": "cs8qxm72l9"
+    },
+    {
+      "id": "u2klz8sxr7",
+      "type": "text",
+      "x": -4285,
+      "y": -2927,
+      "width": 660,
+      "height": 122,
+      "text": "NPC MESSAGE HERE...",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "<div>NPC MESSAGE HERE...</div>",
+      "groupId": "cs8qxm72l9"
+    },
+    {
+      "id": "cs8qxm72l9",
+      "type": "group",
+      "label": "v1 Concept #3",
+      "x": -4661,
+      "y": -3082,
+      "width": 1076,
+      "height": 696
+    },
+    {
+      "id": "fexqjrnng2c",
+      "type": "text",
+      "x": -4285,
+      "y": -2792,
+      "width": 660,
+      "height": 80,
+      "text": "Button 1",
+      "textAlign": "left",
+      "verticalAlign": "center",
+      "groupId": "cs8qxm72l9",
+      "html": "Button 1"
+    },
+    {
+      "id": "0w35qjzzh2eg",
+      "type": "text",
+      "x": -4285,
+      "y": -2698,
+      "width": 660,
+      "height": 80,
+      "text": "Button 2",
+      "textAlign": "left",
+      "verticalAlign": "center",
+      "html": "Button 2",
+      "groupId": "cs8qxm72l9"
+    },
+    {
+      "id": "33nhaysylw5",
+      "type": "text",
+      "x": -4285,
+      "y": -2603,
+      "width": 660,
+      "height": 80,
+      "text": "Button 3",
+      "textAlign": "left",
+      "verticalAlign": "center",
+      "html": "Button 3",
+      "groupId": "cs8qxm72l9"
+    },
+    {
+      "id": "uibxodgtgl",
+      "type": "text",
+      "x": -4285,
+      "y": -2506,
+      "width": 660,
+      "height": 80,
+      "text": "Button 4",
+      "textAlign": "left",
+      "verticalAlign": "center",
+      "html": "Button 4",
+      "groupId": "cs8qxm72l9"
+    },
+    {
+      "id": "ztfracthsk",
+      "type": "file",
+      "x": -3175,
+      "y": -3171,
+      "width": 952,
+      "height": 544,
+      "file": "canvas_uploads/ui5435345.png"
+    },
+    {
+      "id": "epgb4sh40e4",
+      "type": "file",
+      "x": -4511,
+      "y": -3828,
+      "width": 211,
+      "height": 219,
+      "file": "canvas_uploads/NPC_b.png",
+      "groupId": "oej63v2hs4e"
+    },
+    {
+      "id": "klr0wducdl",
+      "type": "file",
+      "x": -3175,
+      "y": -3852,
+      "width": 948,
+      "height": 562,
+      "file": "canvas_uploads/NPC_window_concept_202604042326.jpeg"
+    },
+    {
+      "id": "46p2m583xql",
+      "type": "file",
+      "x": -2177,
+      "y": -3163,
+      "width": 957,
+      "height": 536,
+      "file": "canvas_uploads/Change_interface_hue_202604042332.jpeg"
+    },
+    {
+      "id": "n_1775327901628",
+      "type": "text",
+      "x": -6769,
+      "y": -6535,
+      "width": 692,
+      "height": 453,
+      "text": "Regarding the schema creation, here is what I'm thinking so far:Window nameCurrent functionality or what should be included by defaultThe concept version to which you will be adding new featuresWhat to add to this concept — (for example, I added an NPC icon)Design and styling, including specific elements, etc.Concept drafts (rough sketches) branch out from here. You can just mock these up in an image format, even using Paint; there's no need to draw them out using blocks on the canvas.From each schema branch, final/ready-made designs are attached as images.Design changes/iterations based on the specified image.",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "<p data-path-to-node=\"1\"><b data-path-to-node=\"1\" data-index-in-node=\"0\">Regarding the schema creation, here is what I'm thinking so far:</b></p><ol start=\"1\" data-path-to-node=\"2\"><li><p data-path-to-node=\"2,0,0\"><b data-path-to-node=\"2,0,0\" data-index-in-node=\"0\">Window name</b></p></li><li><p data-path-to-node=\"2,1,0\"><b data-path-to-node=\"2,1,0\" data-index-in-node=\"0\">Current functionality</b> or what should be included by default</p></li><li><p data-path-to-node=\"2,2,0\"><b data-path-to-node=\"2,2,0\" data-index-in-node=\"0\">The concept version</b> to which you will be adding new features</p></li><li><p data-path-to-node=\"2,3,0\"><b data-path-to-node=\"2,3,0\" data-index-in-node=\"0\">What to add to this concept</b> — (for example, I added an NPC icon)</p></li><li><p data-path-to-node=\"2,4,0\"><b data-path-to-node=\"2,4,0\" data-index-in-node=\"0\">Design and styling</b>, including specific elements, etc.</p></li><li><p data-path-to-node=\"2,5,0\"><b data-path-to-node=\"2,5,0\" data-index-in-node=\"0\">Concept drafts (rough sketches)</b> branch out from here. You can just mock these up in an image format, even using Paint; there's no need to draw them out using blocks on the canvas.</p></li><li><p data-path-to-node=\"2,6,0\">From each schema branch, <b data-path-to-node=\"2,6,0\" data-index-in-node=\"25\">final/ready-made designs</b> are attached as images.</p></li><li><p data-path-to-node=\"2,7,0\"><b data-path-to-node=\"2,7,0\" data-index-in-node=\"0\">Design changes/iterations</b> based on the specified image.</p></li></ol>"
     }
   ],
   "edges": [
@@ -401,6 +555,48 @@
       "fromNode": "n_1775207743140",
       "fromSide": "right",
       "toNode": "n_1775207827493",
+      "toSide": "left"
+    },
+    {
+      "id": "ps124841a7l",
+      "fromNode": "n_1775244389661018",
+      "fromSide": "right",
+      "toNode": "9unu4xxftb",
+      "toSide": "left"
+    },
+    {
+      "id": "zbml6hdxin9",
+      "fromNode": "n_1775208468582",
+      "fromSide": "right",
+      "toNode": "cs8qxm72l9",
+      "toSide": "left"
+    },
+    {
+      "id": "4n022j4sldt",
+      "fromNode": "cs8qxm72l9",
+      "fromSide": "right",
+      "toNode": "a4fk20nyrpt",
+      "toSide": "left"
+    },
+    {
+      "id": "hd491tg3q4g",
+      "fromNode": "cs8qxm72l9",
+      "fromSide": "right",
+      "toNode": "ztfracthsk",
+      "toSide": "left"
+    },
+    {
+      "id": "4c5k9scd56p",
+      "fromNode": "oej63v2hs4e",
+      "fromSide": "right",
+      "toNode": "klr0wducdl",
+      "toSide": "left"
+    },
+    {
+      "id": "yozramd6lp",
+      "fromNode": "ztfracthsk",
+      "fromSide": "right",
+      "toNode": "46p2m583xql",
       "toSide": "left"
     }
   ]
