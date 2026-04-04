@@ -161,7 +161,7 @@
       "x": -4025,
       "y": -4412,
       "width": 1058,
-      "height": 578
+      "height": 553
     },
     {
       "id": "n_1775253836067",
@@ -169,7 +169,7 @@
       "x": -3985,
       "y": -4075,
       "width": 481,
-      "height": 92,
+      "height": 80,
       "text": "Button 1",
       "textAlign": "left",
       "verticalAlign": "top",
@@ -182,7 +182,7 @@
       "x": -3488,
       "y": -4075,
       "width": 481,
-      "height": 92,
+      "height": 80,
       "text": "Button 2",
       "textAlign": "left",
       "verticalAlign": "top",
@@ -193,9 +193,9 @@
       "id": "pgjzhj4j2t",
       "type": "text",
       "x": -3985,
-      "y": -3968,
+      "y": -3983,
       "width": 481,
-      "height": 92,
+      "height": 80,
       "text": "Button 3",
       "textAlign": "left",
       "verticalAlign": "top",
@@ -206,14 +206,111 @@
       "id": "b5ww5ga49u7",
       "type": "text",
       "x": -3488,
-      "y": -3968,
+      "y": -3983,
       "width": 481,
-      "height": 94,
+      "height": 80,
       "text": "Button 4",
       "textAlign": "left",
       "verticalAlign": "top",
       "html": "Button 4",
       "groupId": "n_1775244389661018"
+    },
+    {
+      "id": "n2ftjh56mhg",
+      "type": "file",
+      "file": "canvas_uploads/NPC_a.png",
+      "x": -2838,
+      "y": -4352,
+      "width": 214,
+      "height": 219,
+      "groupId": "oej63v2hs4e"
+    },
+    {
+      "id": "ralo0puv7jq",
+      "type": "text",
+      "x": -2612,
+      "y": -4352,
+      "width": 434,
+      "height": 82,
+      "text": "   NPC NAME",
+      "textAlign": "left",
+      "verticalAlign": "center",
+      "html": "<h2>&nbsp; &nbsp;NPC NAME</h2>",
+      "groupId": "oej63v2hs4e"
+    },
+    {
+      "id": "14bmymp7byqk",
+      "type": "text",
+      "x": -2612,
+      "y": -4257,
+      "width": 434,
+      "height": 124,
+      "text": "NPC MESSAGE HERE...",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "<div>NPC MESSAGE HERE...</div>",
+      "groupId": "oej63v2hs4e"
+    },
+    {
+      "id": "oej63v2hs4e",
+      "type": "group",
+      "label": "Concept #1",
+      "x": -2878,
+      "y": -4412,
+      "width": 740,
+      "height": 700
+    },
+    {
+      "id": "aeopf0rq8w",
+      "type": "text",
+      "x": -2838,
+      "y": -4118,
+      "width": 660,
+      "height": 80,
+      "text": "Button 1",
+      "textAlign": "left",
+      "verticalAlign": "center",
+      "groupId": "oej63v2hs4e",
+      "html": "Button 1"
+    },
+    {
+      "id": "4j52cnngoxi",
+      "type": "text",
+      "x": -2838,
+      "y": -4024,
+      "width": 660,
+      "height": 80,
+      "text": "Button 2",
+      "textAlign": "left",
+      "verticalAlign": "center",
+      "html": "Button 2",
+      "groupId": "oej63v2hs4e"
+    },
+    {
+      "id": "h052t14z8b4",
+      "type": "text",
+      "x": -2838,
+      "y": -3929,
+      "width": 660,
+      "height": 80,
+      "text": "Button 3",
+      "textAlign": "left",
+      "verticalAlign": "center",
+      "html": "Button 3",
+      "groupId": "oej63v2hs4e"
+    },
+    {
+      "id": "fxa1k5jyzwc",
+      "type": "text",
+      "x": -2838,
+      "y": -3832,
+      "width": 660,
+      "height": 80,
+      "text": "Button 4",
+      "textAlign": "left",
+      "verticalAlign": "center",
+      "html": "Button 4",
+      "groupId": "oej63v2hs4e"
     }
   ],
   "edges": [
@@ -285,6 +382,20 @@
       "fromNode": "n_1775208468582",
       "fromSide": "right",
       "toNode": "n_1775244389661018",
+      "toSide": "bottom"
+    },
+    {
+      "id": "nod27kn0q6",
+      "fromNode": "n_1775207743140",
+      "fromSide": "right",
+      "toNode": "oej63v2hs4e",
+      "toSide": "top"
+    },
+    {
+      "id": "zzaod2xmgt",
+      "fromNode": "n_1775208468582",
+      "fromSide": "right",
+      "toNode": "oej63v2hs4e",
       "toSide": "bottom"
     }
   ]
