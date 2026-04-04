@@ -1440,6 +1440,20 @@ export async function initCanvas(winContainer, config) {
 
     await initializeOwnerLiveMode();
 
+    // If the local config didn't recognize this user as an editor (not repo owner and not
+    // in config.live.allowedEditors), ask the server. Users added via the Worker's
+    // GITHUB_ALLOWED_EDITORS secret are authorised server-side and can be confirmed here.
+    if (!isOwner && liveClient?.isReady()) {
+        const serverRole = await probeServerEditorRole();
+        if (serverRole === 'editor' || serverRole === 'owner') {
+            isOwner = true;
+            const canvasWindowEl = container.querySelector('.canvas-window');
+            canvasWindowEl?.classList.add('is-owner');
+            document.body.classList.add('is-owner');
+            setLiveStatus('Initializing...', 'live-off', 'Preparing editor live session');
+        }
+    }
+
     setupNodeToolbar();
 
     // Toggle owner UI
@@ -2214,7 +2228,7 @@ async function initializeOwnerLiveMode() {
     }
     clearLivePresenceState({ rerender: true });
 
-    if (!isOwner) return false;
+    if (!githubAuth.isLoggedIn) return false;
 
     const roomId = (String(config.live?.roomId || 'global').trim() || 'global');
     const workerBaseUrl = String(config.live?.workerUrl || config.github?.workerUrl || '').replace(/\/+$/, '');
@@ -2237,6 +2251,19 @@ async function initializeOwnerLiveMode() {
     }
 
     return liveModeActive;
+}
+
+// Does a single fetchState to ask the server what role this authenticated user has.
+// Returns 'owner', 'editor', or null on error/rejection.
+async function probeServerEditorRole() {
+    if (!liveClient?.isReady()) return null;
+    try {
+        const payload = await liveClient.fetchState({ sinceVersion: 0 });
+        return liveClient.actorRole || null;
+    } catch (err) {
+        // 401/403 means definitely not allowed — anything else is a transient error
+        return null;
+    }
 }
 
 function scheduleLivePoll(delayMs = LIVE_POLL_INTERVAL_MS) {
