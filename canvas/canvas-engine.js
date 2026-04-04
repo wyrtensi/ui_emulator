@@ -4426,6 +4426,11 @@ function setupNodeInteractions(el, node) {
                 }
             }
 
+            if (ke.key === 'Tab') {
+                ke.preventDefault();
+                return;
+            }
+
             if (ke.key === 'Escape') {
                 ke.preventDefault();
                 finishRichEdit();
@@ -5898,6 +5903,15 @@ async function handleGlobalPaste(e) {
     // Ignore if pasting into text inputs (chat, forms)
     if (isInputLike) {
         pendingClipboardNodePaste = false;
+        return;
+    }
+
+    // If the user copied canvas nodes and is pasting outside an editor,
+    // prioritize the node paste over any residual clipboard image.
+    if (pendingClipboardNodePaste && canvasClipboard && Array.isArray(canvasClipboard.nodes) && canvasClipboard.nodes.length > 0 && !e.target.isContentEditable) {
+        e.preventDefault();
+        pendingClipboardNodePaste = false;
+        pasteFromClipboard();
         return;
     }
 
