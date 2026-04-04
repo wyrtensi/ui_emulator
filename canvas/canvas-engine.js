@@ -52,9 +52,12 @@ let livePresenceUsers = [];
 let livePresenceByNode = new Map();
 let livePresenceSignature = '';
 let liveEditorRebindingDepth = 0;
+let moveSnapEnabled = true;
+let resizeSnapEnabled = true;
 
 const CANVAS_FILE = 'concept.canvas';
 const CANVAS_VIEW_STATE_KEY = 'ui-canvas-view-v1';
+const SNAP_THRESHOLD = 8;
 const LIVE_SYNC_DEBOUNCE_MS = Math.max(250, Number(config.live?.syncDebounceMs) || 1200);
 const LIVE_POLL_INTERVAL_MS = Math.max(1200, Number(config.live?.pollIntervalMs) || 2200);
 let hasUnsavedChanges = false;
@@ -105,6 +108,7 @@ let nodeCleanupFns = [];
 // DOM Elements
 let container, viewport, content, nodesLayer, edgesLayer, drawingLayer, drawingEdge;
 let zoomLabel, saveIndicator, nodeToolbar, liveStatusIndicator, livePresenceIndicator;
+let moveMagnetToggleBtn, resizeMagnetToggleBtn;
 
 async function ensureMarkedLoaded() {
     if (typeof marked !== 'undefined' && typeof marked.parse === 'function') return;
@@ -1387,6 +1391,8 @@ export async function initCanvas(winContainer, config) {
     saveIndicator = container.querySelector('#canvas-saving-indicator');
     liveStatusIndicator = container.querySelector('#canvas-live-status');
     livePresenceIndicator = container.querySelector('#canvas-live-presence');
+    moveMagnetToggleBtn = container.querySelector('#canvas-move-magnet-toggle');
+    resizeMagnetToggleBtn = container.querySelector('#canvas-resize-magnet-toggle');
     nodeToolbar = container.querySelector('#canvas-node-toolbar');
     guidesLayer = container.querySelector('#canvas-guides-layer');
     hideForeignNodeToolbars();
@@ -1415,6 +1421,8 @@ export async function initCanvas(winContainer, config) {
     } else {
         document.body.classList.remove('is-owner');
     }
+
+    syncMagnetToggleButtons();
 
     if (isOwner) {
         setLiveStatus('Initializing...', 'live-off', 'Preparing owner live session');
@@ -1822,6 +1830,12 @@ function restoreActiveEditorSnapshot(snapshot) {
     applyNodeTextAlignment(node, editorEl);
     editorEl.focus();
     restoreSelectionOffsetsWithin(editorEl, snapshot.selectionStart, snapshot.selectionEnd);
+}
+
+function isStaleEditorInstance(nodeId, editorEl) {
+    if (!nodeId || !editorEl || !nodesLayer) return false;
+    const activeEditor = nodesLayer.querySelector(`[data-id="${nodeId}"] .node-content-text.editing`);
+    return !!activeEditor && activeEditor !== editorEl;
 }
 
 function isLiveEditorRebinding() {
@@ -4006,6 +4020,7 @@ function setupNodeInteractions(el, node) {
 
         function finishRichEdit() {
             if (isLiveEditorRebinding()) return;
+            if (isStaleEditorInstance(node.id, textContent)) return;
             if (editingNodeId !== node.id) return;
 
             const html = textContent.innerHTML.trim();
@@ -4047,6 +4062,9 @@ function setupNodeInteractions(el, node) {
 
         textContent.addEventListener('input', () => {
             if (editingNodeId !== node.id) return;
+
+            node.html = textContent.innerHTML;
+            node.text = stripEditorZeroWidth(textContent.textContent || '');
             handleInlineRepoFileRemovalsDuringEdit(node.id, textContent);
         });
 
@@ -4257,6 +4275,9 @@ function setupNodeInteractions(el, node) {
                 textContent.focus();
                 return;
             }
+            if (isStaleEditorInstance(node.id, textContent)) {
+                return;
+            }
             if (isLiveEditorRebinding()) {
                 return;
             }
@@ -4444,11 +4465,15 @@ function setupNodeInteractions(el, node) {
                 let anchorY = Math.round(anchorOrigin.y + dy);
 
                 // Snap based on the dragged anchor node while moving the full selection as a block.
-                const anchorSnapProbe = { ...node, x: anchorX, y: anchorY };
-                const snap = getSnapGuides(anchorSnapProbe);
-                if (snap.snapX !== null) anchorX = snap.snapX;
-                if (snap.snapY !== null) anchorY = snap.snapY;
-                renderGuides(snap.guides);
+                if (moveSnapEnabled) {
+                    const anchorSnapProbe = { ...node, x: anchorX, y: anchorY };
+                    const snap = getSnapGuides(anchorSnapProbe);
+                    if (snap.snapX !== null) anchorX = snap.snapX;
+                    if (snap.snapY !== null) anchorY = snap.snapY;
+                    renderGuides(snap.guides);
+                } else {
+                    clearGuides();
+                }
 
                 const deltaX = anchorX - anchorOrigin.x;
                 const deltaY = anchorY - anchorOrigin.y;
@@ -4484,11 +4509,15 @@ function setupNodeInteractions(el, node) {
                 let anchorX = Math.round(anchorOrigin.x + dx);
                 let anchorY = Math.round(anchorOrigin.y + dy);
 
-                const anchorSnapProbe = { ...node, x: anchorX, y: anchorY };
-                const snap = getSnapGuides(anchorSnapProbe);
-                if (snap.snapX !== null) anchorX = snap.snapX;
-                if (snap.snapY !== null) anchorY = snap.snapY;
-                renderGuides(snap.guides);
+                if (moveSnapEnabled) {
+                    const anchorSnapProbe = { ...node, x: anchorX, y: anchorY };
+                    const snap = getSnapGuides(anchorSnapProbe);
+                    if (snap.snapX !== null) anchorX = snap.snapX;
+                    if (snap.snapY !== null) anchorY = snap.snapY;
+                    renderGuides(snap.guides);
+                } else {
+                    clearGuides();
+                }
 
                 const deltaX = anchorX - anchorOrigin.x;
                 const deltaY = anchorY - anchorOrigin.y;
@@ -4513,11 +4542,15 @@ function setupNodeInteractions(el, node) {
                 node.x = Math.round(origLeft + dx);
                 node.y = Math.round(origTop + dy);
 
-                // Snap guides for single-node drag
-                const snap = getSnapGuides(node);
-                if (snap.snapX !== null) node.x = snap.snapX;
-                if (snap.snapY !== null) node.y = snap.snapY;
-                renderGuides(snap.guides);
+                if (moveSnapEnabled) {
+                    // Snap guides for single-node drag
+                    const snap = getSnapGuides(node);
+                    if (snap.snapX !== null) node.x = snap.snapX;
+                    if (snap.snapY !== null) node.y = snap.snapY;
+                    renderGuides(snap.guides);
+                } else {
+                    clearGuides();
+                }
 
                 el.style.left = `${node.x}px`;
                 el.style.top = `${node.y}px`;
@@ -4531,18 +4564,46 @@ function setupNodeInteractions(el, node) {
             const dx = (e.clientX - startX) / scale;
             const dy = (e.clientY - startY) / scale;
 
-            if (resizeDir.includes('e')) node.width = Math.max(150, Math.round(origWidth + dx));
-            if (resizeDir.includes('s')) node.height = Math.max(80, Math.round(origHeight + dy));
+            const minWidth = 150;
+            const minHeight = 80;
+            let nextX = origLeft;
+            let nextY = origTop;
+            let nextWidth = origWidth;
+            let nextHeight = origHeight;
+
+            if (resizeDir.includes('e')) nextWidth = Math.max(minWidth, Math.round(origWidth + dx));
+            if (resizeDir.includes('s')) nextHeight = Math.max(minHeight, Math.round(origHeight + dy));
             if (resizeDir.includes('w')) {
-                const nw = Math.max(150, Math.round(origWidth - dx));
-                node.x = origLeft + (origWidth - nw);
-                node.width = nw;
+                const nw = Math.max(minWidth, Math.round(origWidth - dx));
+                nextX = Math.round(origLeft + (origWidth - nw));
+                nextWidth = nw;
             }
             if (resizeDir.includes('n')) {
-                const nh = Math.max(80, Math.round(origHeight - dy));
-                node.y = origTop + (origHeight - nh);
-                node.height = nh;
+                const nh = Math.max(minHeight, Math.round(origHeight - dy));
+                nextY = Math.round(origTop + (origHeight - nh));
+                nextHeight = nh;
             }
+
+            if (resizeSnapEnabled) {
+                const resizeSnap = getResizeSnapGuides(node, resizeDir, {
+                    x: nextX,
+                    y: nextY,
+                    width: nextWidth,
+                    height: nextHeight,
+                });
+                nextX = resizeSnap.rect.x;
+                nextY = resizeSnap.rect.y;
+                nextWidth = resizeSnap.rect.width;
+                nextHeight = resizeSnap.rect.height;
+                renderGuides(resizeSnap.guides);
+            } else {
+                clearGuides();
+            }
+
+            node.x = Math.round(nextX);
+            node.y = Math.round(nextY);
+            node.width = Math.round(nextWidth);
+            node.height = Math.round(nextHeight);
 
             el.style.left = `${node.x}px`;
             el.style.top = `${node.y}px`;
@@ -4582,6 +4643,10 @@ function setupNodeInteractions(el, node) {
             el._groupDragOrigins = null;
             dragMovedNodeIds = null;
             dragIncludesGroupNode = false;
+            clearGuides();
+        }
+
+        if (wasResizing) {
             clearGuides();
         }
 
@@ -5524,6 +5589,41 @@ function setupNodeToolbar() {
     }
 }
 
+function syncMagnetToggleButtons() {
+    if (moveMagnetToggleBtn) {
+        moveMagnetToggleBtn.setAttribute('aria-pressed', moveSnapEnabled ? 'true' : 'false');
+    }
+    if (resizeMagnetToggleBtn) {
+        resizeMagnetToggleBtn.setAttribute('aria-pressed', resizeSnapEnabled ? 'true' : 'false');
+    }
+}
+
+function setMoveSnapEnabled(nextEnabled) {
+    const normalized = !!nextEnabled;
+    if (moveSnapEnabled === normalized) {
+        syncMagnetToggleButtons();
+        return;
+    }
+
+    moveSnapEnabled = normalized;
+    if (!moveSnapEnabled) clearGuides();
+    syncMagnetToggleButtons();
+    queueSaveCanvasViewState();
+}
+
+function setResizeSnapEnabled(nextEnabled) {
+    const normalized = !!nextEnabled;
+    if (resizeSnapEnabled === normalized) {
+        syncMagnetToggleButtons();
+        return;
+    }
+
+    resizeSnapEnabled = normalized;
+    if (!resizeSnapEnabled) clearGuides();
+    syncMagnetToggleButtons();
+    queueSaveCanvasViewState();
+}
+
 function setupOwnerTools() {
     const tools = container.querySelectorAll('.canvas-tool-btn[data-tool]');
     tools.forEach(btn => {
@@ -5537,6 +5637,20 @@ function setupOwnerTools() {
 
     const saveBtn = container.querySelector('#canvas-save-btn');
     saveBtn.addEventListener('click', () => saveCanvasData(false));
+
+    if (moveMagnetToggleBtn) {
+        moveMagnetToggleBtn.addEventListener('click', () => {
+            setMoveSnapEnabled(!moveSnapEnabled);
+        });
+    }
+
+    if (resizeMagnetToggleBtn) {
+        resizeMagnetToggleBtn.addEventListener('click', () => {
+            setResizeSnapEnabled(!resizeSnapEnabled);
+        });
+    }
+
+    syncMagnetToggleButtons();
 
     // Keyboard shortcuts
     container.addEventListener('keydown', (e) => {
@@ -6272,11 +6386,19 @@ function loadCanvasViewState() {
         const raw = localStorage.getItem(CANVAS_VIEW_STATE_KEY);
         if (!raw) return false;
         const parsed = JSON.parse(raw);
-        if (parsed?.v !== 2) return false;
+        if (parsed?.v !== 2 && parsed?.v !== 3) return false;
         const nextScale = Number(parsed?.scale);
         const nextTX = Number(parsed?.translateX);
         const nextTY = Number(parsed?.translateY);
         if (!Number.isFinite(nextScale) || !Number.isFinite(nextTX) || !Number.isFinite(nextTY)) return false;
+
+        if (typeof parsed?.moveSnapEnabled === 'boolean') {
+            moveSnapEnabled = parsed.moveSnapEnabled;
+        }
+        if (typeof parsed?.resizeSnapEnabled === 'boolean') {
+            resizeSnapEnabled = parsed.resizeSnapEnabled;
+        }
+        syncMagnetToggleButtons();
 
         scale = Math.min(5, Math.max(0.1, nextScale));
         translateX = nextTX;
@@ -6293,10 +6415,12 @@ function queueSaveCanvasViewState() {
     viewStateSaveTimer = setTimeout(() => {
         try {
             localStorage.setItem(CANVAS_VIEW_STATE_KEY, JSON.stringify({
-                v: 2,
+                v: 3,
                 scale,
                 translateX,
                 translateY,
+                moveSnapEnabled,
+                resizeSnapEnabled,
             }));
         } catch (err) {
             // Ignore storage failures (private mode/quota)
@@ -7029,7 +7153,6 @@ function closeSearch() {
 // -----------------------------------------------------------------
 
 function getSnapGuides(dragNode) {
-    const THRESH = 8;
     const guides = [];
     let snapX = null, snapY = null;
 
@@ -7076,7 +7199,7 @@ function getSnapGuides(dragNode) {
         ];
 
         for (const chk of xChecks) {
-            if (Math.abs(chk.drag - chk.other) < THRESH) {
+            if (Math.abs(chk.drag - chk.other) < SNAP_THRESHOLD) {
                 if (snapX === null) snapX = chk.snapVal;
                 // Vertical guide line at the align-x coordinate
                 const lineX = chk.other;
@@ -7096,7 +7219,7 @@ function getSnapGuides(dragNode) {
         ];
 
         for (const chk of yChecks) {
-            if (Math.abs(chk.drag - chk.other) < THRESH) {
+            if (Math.abs(chk.drag - chk.other) < SNAP_THRESHOLD) {
                 if (snapY === null) snapY = chk.snapVal;
                 const lineY = chk.other;
                 const lineLeft = Math.min(dl, dr, ol, or_) - 20;
@@ -7107,6 +7230,121 @@ function getSnapGuides(dragNode) {
     }
 
     return { snapX, snapY, guides };
+}
+
+function getResizeSnapGuides(resizeNode, resizeDir, draftRect) {
+    const guides = [];
+    const rect = {
+        x: Number(draftRect?.x) || 0,
+        y: Number(draftRect?.y) || 0,
+        width: Math.max(150, Number(draftRect?.width) || 150),
+        height: Math.max(80, Number(draftRect?.height) || 80),
+    };
+
+    if (!isNodeVisible(resizeNode)) {
+        return { rect, guides };
+    }
+
+    const adjustsLeft = resizeDir.includes('w');
+    const adjustsRight = resizeDir.includes('e');
+    const adjustsTop = resizeDir.includes('n');
+    const adjustsBottom = resizeDir.includes('s');
+
+    const resizeGroupId = (resizeNode.type !== 'group' && typeof resizeNode.groupId === 'string' && resizeNode.groupId)
+        ? resizeNode.groupId
+        : null;
+    const restrictToSameGroupMembers = !!resizeGroupId;
+
+    let bestX = null;
+    let bestY = null;
+
+    for (const other of canvasData.nodes) {
+        if (other.id === resizeNode.id) continue;
+        if (multiSelectedNodes.has(other.id)) continue;
+        if (!isNodeVisible(other)) continue;
+
+        if (restrictToSameGroupMembers) {
+            if (other.type === 'group') continue;
+            if (other.groupId !== resizeGroupId) continue;
+        }
+
+        const ol = other.x;
+        const or_ = other.x + other.width;
+        const ocx = other.x + other.width / 2;
+        const ot = other.y;
+        const ob = other.y + other.height;
+        const ocy = other.y + other.height / 2;
+
+        if (adjustsLeft || adjustsRight) {
+            const movingX = adjustsLeft ? rect.x : (rect.x + rect.width);
+            const xTargets = [ol, or_, ocx];
+            for (const target of xTargets) {
+                const dist = Math.abs(movingX - target);
+                if (dist < SNAP_THRESHOLD && (!bestX || dist < bestX.dist)) {
+                    bestX = { dist, target, ot, ob };
+                }
+            }
+        }
+
+        if (adjustsTop || adjustsBottom) {
+            const movingY = adjustsTop ? rect.y : (rect.y + rect.height);
+            const yTargets = [ot, ob, ocy];
+            for (const target of yTargets) {
+                const dist = Math.abs(movingY - target);
+                if (dist < SNAP_THRESHOLD && (!bestY || dist < bestY.dist)) {
+                    bestY = { dist, target, ol, or_ };
+                }
+            }
+        }
+    }
+
+    if (bestX) {
+        const movingX = adjustsLeft ? rect.x : (rect.x + rect.width);
+        const delta = bestX.target - movingX;
+        if (adjustsLeft) {
+            rect.x += delta;
+            rect.width -= delta;
+        } else if (adjustsRight) {
+            rect.width += delta;
+        }
+
+        const lineTop = Math.min(rect.y, rect.y + rect.height, bestX.ot, bestX.ob) - 20;
+        const lineBot = Math.max(rect.y, rect.y + rect.height, bestX.ot, bestX.ob) + 20;
+        guides.push({ x1: bestX.target, y1: lineTop, x2: bestX.target, y2: lineBot });
+    }
+
+    if (bestY) {
+        const movingY = adjustsTop ? rect.y : (rect.y + rect.height);
+        const delta = bestY.target - movingY;
+        if (adjustsTop) {
+            rect.y += delta;
+            rect.height -= delta;
+        } else if (adjustsBottom) {
+            rect.height += delta;
+        }
+
+        const lineLeft = Math.min(rect.x, rect.x + rect.width, bestY.ol, bestY.or_) - 20;
+        const lineRight = Math.max(rect.x, rect.x + rect.width, bestY.ol, bestY.or_) + 20;
+        guides.push({ x1: lineLeft, y1: bestY.target, x2: lineRight, y2: bestY.target });
+    }
+
+    if (rect.width < 150) {
+        const deficit = 150 - rect.width;
+        rect.width = 150;
+        if (adjustsLeft) rect.x -= deficit;
+    }
+    if (rect.height < 80) {
+        const deficit = 80 - rect.height;
+        rect.height = 80;
+        if (adjustsTop) rect.y -= deficit;
+    }
+
+    rect.x = Math.round(rect.x);
+    rect.y = Math.round(rect.y);
+    rect.width = Math.round(rect.width);
+    rect.height = Math.round(rect.height);
+
+    return { rect, guides };
 }
 
 function renderGuides(guides) {
@@ -7460,14 +7698,26 @@ function autoResizeNode(node, el) {
     // Measure the content's natural height
     const scrollH = textEl.scrollHeight;
     const newHeight = Math.max(80, scrollH + 4); // 4px buffer
+    let sizeChanged = false;
 
     if (newHeight !== node.height) {
         node.height = newHeight;
+        sizeChanged = true;
         el.style.height = `${newHeight}px`;
         updateEdgesForNode(node.id);
         if (selectedNode && selectedNode.id === node.id) {
             showNodeToolbar(node, el);
         }
+    }
+
+    // Keep group bounds in sync with text-driven node growth/shrink.
+    const fitChanged = fitGroupsForNodeIds([node.id]);
+    if (fitChanged) {
+        renderCanvasSmart();
+        return;
+    }
+
+    if (sizeChanged) {
         renderMinimap();
     }
 }
