@@ -472,11 +472,20 @@
       "x": -6769,
       "y": -6535,
       "width": 692,
-      "height": 453,
+      "height": 455,
       "text": "Regarding the schema creation, here is what I'm thinking so far:Window nameCurrent functionality or what should be included by defaultThe concept version to which you will be adding new featuresWhat to add to this concept — (for example, I added an NPC icon)Design and styling, including specific elements, etc.Concept drafts (rough sketches) branch out from here. You can just mock these up in an image format, even using Paint; there's no need to draw them out using blocks on the canvas.From each schema branch, final/ready-made designs are attached as images.Design changes/iterations based on the specified image.",
       "textAlign": "left",
       "verticalAlign": "top",
       "html": "<p data-path-to-node=\"1\"><b data-path-to-node=\"1\" data-index-in-node=\"0\">Regarding the schema creation, here is what I'm thinking so far:</b></p><ol start=\"1\" data-path-to-node=\"2\"><li><p data-path-to-node=\"2,0,0\"><b data-path-to-node=\"2,0,0\" data-index-in-node=\"0\">Window name</b></p></li><li><p data-path-to-node=\"2,1,0\"><b data-path-to-node=\"2,1,0\" data-index-in-node=\"0\">Current functionality</b> or what should be included by default</p></li><li><p data-path-to-node=\"2,2,0\"><b data-path-to-node=\"2,2,0\" data-index-in-node=\"0\">The concept version</b> to which you will be adding new features</p></li><li><p data-path-to-node=\"2,3,0\"><b data-path-to-node=\"2,3,0\" data-index-in-node=\"0\">What to add to this concept</b> — (for example, I added an NPC icon)</p></li><li><p data-path-to-node=\"2,4,0\"><b data-path-to-node=\"2,4,0\" data-index-in-node=\"0\">Design and styling</b>, including specific elements, etc.</p></li><li><p data-path-to-node=\"2,5,0\"><b data-path-to-node=\"2,5,0\" data-index-in-node=\"0\">Concept drafts (rough sketches)</b> branch out from here. You can just mock these up in an image format, even using Paint; there's no need to draw them out using blocks on the canvas.</p></li><li><p data-path-to-node=\"2,6,0\">From each schema branch, <b data-path-to-node=\"2,6,0\" data-index-in-node=\"25\">final/ready-made designs</b> are attached as images.</p></li><li><p data-path-to-node=\"2,7,0\"><b data-path-to-node=\"2,7,0\" data-index-in-node=\"0\">Design changes/iterations</b> based on the specified image.</p></li></ol>"
+    },
+    {
+      "id": "8rq22sa0jnc",
+      "type": "file",
+      "x": -5340,
+      "y": -4608,
+      "width": 254,
+      "height": 319,
+      "file": "canvas_uploads/pasted_image_1775334728261.png"
     }
   ],
   "edges": [
@@ -598,6 +607,13 @@
       "fromSide": "right",
       "toNode": "46p2m583xql",
       "toSide": "left"
+    },
+    {
+      "id": "gfbvjkenpb",
+      "fromNode": "8rq22sa0jnc",
+      "fromSide": "top",
+      "toNode": "n_1775207743140",
+      "toSide": "bottom"
     }
   ]
 }
