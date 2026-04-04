@@ -52,6 +52,7 @@ let livePresenceUsers = [];
 let livePresenceByNode = new Map();
 let livePresenceSignature = '';
 let liveEditorRebindingDepth = 0;
+let liveEditorRebindingReleaseTimer = null;
 let moveSnapEnabled = true;
 let resizeSnapEnabled = true;
 
@@ -1833,9 +1834,12 @@ function restoreActiveEditorSnapshot(snapshot) {
 }
 
 function isStaleEditorInstance(nodeId, editorEl) {
-    if (!nodeId || !editorEl || !nodesLayer) return false;
+    if (!nodeId || !editorEl || !nodesLayer) return true;
+    if (editingNodeId !== nodeId) return true;
+    if (!editorEl.isConnected || !nodesLayer.contains(editorEl)) return true;
     const activeEditor = nodesLayer.querySelector(`[data-id="${nodeId}"] .node-content-text.editing`);
-    return !!activeEditor && activeEditor !== editorEl;
+    if (!activeEditor) return true;
+    return activeEditor !== editorEl;
 }
 
 function isLiveEditorRebinding() {
@@ -1843,7 +1847,7 @@ function isLiveEditorRebinding() {
 }
 
 function renderCanvasSmart() {
-    const snapshot = captureActiveEditorSnapshot();
+    const snapshot = getActiveEditorDraft();
     if (!snapshot) {
         renderCanvas();
         return;
@@ -1854,10 +1858,51 @@ function renderCanvasSmart() {
         renderCanvas();
         restoreActiveEditorSnapshot(snapshot);
     } finally {
-        setTimeout(() => {
+        if (liveEditorRebindingReleaseTimer) {
+            clearTimeout(liveEditorRebindingReleaseTimer);
+        }
+        liveEditorRebindingReleaseTimer = setTimeout(() => {
             liveEditorRebindingDepth = Math.max(0, liveEditorRebindingDepth - 1);
-        }, 0);
+            liveEditorRebindingReleaseTimer = null;
+        }, 34);
     }
+}
+
+function applyPresenceDecorationToNodeElement(nodeEl, nodeId) {
+    if (!nodeEl || !nodeId) return;
+
+    const peerSelections = livePresenceByNode.get(nodeId);
+    if (Array.isArray(peerSelections) && peerSelections.length > 0) {
+        nodeEl.classList.add('presence-selected');
+        if (!('presenceBaseTitle' in nodeEl.dataset)) {
+            nodeEl.dataset.presenceBaseTitle = nodeEl.getAttribute('title') || '';
+        }
+        nodeEl.title = `Selected by: ${peerSelections.join(', ')}`;
+        return;
+    }
+
+    nodeEl.classList.remove('presence-selected');
+    if ('presenceBaseTitle' in nodeEl.dataset) {
+        const baseTitle = nodeEl.dataset.presenceBaseTitle;
+        if (baseTitle) {
+            nodeEl.setAttribute('title', baseTitle);
+        } else {
+            nodeEl.removeAttribute('title');
+        }
+        delete nodeEl.dataset.presenceBaseTitle;
+    }
+}
+
+function applyPresenceDecorationsToDom() {
+    if (!nodesLayer || nodesLayer.childElementCount === 0) return false;
+
+    nodesLayer.querySelectorAll('.canvas-node').forEach(nodeEl => {
+        const nodeId = String(nodeEl.dataset.id || '').trim();
+        if (!nodeId) return;
+        applyPresenceDecorationToNodeElement(nodeEl, nodeId);
+    });
+
+    return true;
 }
 
 function refreshLivePresenceIndicator() {
@@ -1898,7 +1943,7 @@ function clearLivePresenceState(options = {}) {
     refreshLivePresenceIndicator();
 
     if (shouldRerender && hadPresence && nodesLayer && nodesLayer.childElementCount > 0) {
-        renderCanvasSmart();
+        applyPresenceDecorationsToDom();
     }
 }
 
@@ -1945,7 +1990,7 @@ function applyLivePresence(presenceList) {
     refreshLivePresenceIndicator();
 
     if (changed && nodesLayer && nodesLayer.childElementCount > 0) {
-        renderCanvasSmart();
+        applyPresenceDecorationsToDom();
     }
 }
 
@@ -2075,6 +2120,10 @@ async function initializeOwnerLiveMode() {
     livePendingIncomingState = null;
     livePendingIncomingVersion = null;
     liveEditorRebindingDepth = 0;
+    if (liveEditorRebindingReleaseTimer) {
+        clearTimeout(liveEditorRebindingReleaseTimer);
+        liveEditorRebindingReleaseTimer = null;
+    }
     clearLivePresenceState({ rerender: true });
 
     if (!isOwner) return false;
@@ -3614,11 +3663,7 @@ function renderNode(node) {
         el.classList.add('selected');
     }
 
-    const peerSelections = livePresenceByNode.get(node.id);
-    if (Array.isArray(peerSelections) && peerSelections.length > 0) {
-        el.classList.add('presence-selected');
-        el.title = `Selected by: ${peerSelections.join(', ')}`;
-    }
+    applyPresenceDecorationToNodeElement(el, node.id);
 
     // Make links in node content clickable
     const textEl = el.querySelector('.node-content-text');
@@ -3678,7 +3723,6 @@ function setupNodeInteractions(el, node) {
     let inlineImageResizeState = null;
     let inlineImageDragState = null;
     let dragMovedNodeIds = null;
-    let dragIncludesGroupNode = false;
 
     el.addEventListener('mousedown', (e) => {
         if (e.button !== 0) return;
@@ -4057,11 +4101,12 @@ function setupNodeInteractions(el, node) {
 
             markUnsaved();
             autoResizeNode(node, el);
+            flushPendingIncomingLiveState();
             promptDeleteRepoFiles(removedRepoFiles);
         }
 
         textContent.addEventListener('input', () => {
-            if (editingNodeId !== node.id) return;
+            if (editingNodeId !== node.id || isStaleEditorInstance(node.id, textContent)) return;
 
             node.html = textContent.innerHTML;
             node.text = stripEditorZeroWidth(textContent.textContent || '');
@@ -4069,7 +4114,7 @@ function setupNodeInteractions(el, node) {
         });
 
         textContent.addEventListener('beforeinput', (be) => {
-            if (editingNodeId !== node.id) return;
+            if (editingNodeId !== node.id || isStaleEditorInstance(node.id, textContent)) return;
             const inputType = String(be.inputType || '');
             if (!inputType.startsWith('delete')) return;
             requestAnimationFrame(() => {
@@ -4286,7 +4331,7 @@ function setupNodeInteractions(el, node) {
 
         textContent.addEventListener('keydown', (ke) => {
             ke.stopPropagation();
-            if (editingNodeId !== node.id) return;
+            if (editingNodeId !== node.id || isStaleEditorInstance(node.id, textContent)) return;
 
             if (selectedInlineImage?.nodeId === node.id && selectedInlineImage?.inlineId) {
                 const selectedFigure = getSelectedInlineFigureElement();
@@ -4411,7 +4456,7 @@ function setupNodeInteractions(el, node) {
         });
 
         textContent.addEventListener('keyup', (ke) => {
-            if (editingNodeId !== node.id) return;
+            if (editingNodeId !== node.id || isStaleEditorInstance(node.id, textContent)) return;
             if (ke.key === 'Backspace' || ke.key === 'Delete') {
                 handleInlineRepoFileRemovalsDuringEdit(node.id, textContent);
             }
@@ -4432,7 +4477,6 @@ function setupNodeInteractions(el, node) {
             const dx = (e.clientX - startX) / scale;
             const dy = (e.clientY - startY) / scale;
             dragMovedNodeIds = new Set();
-            dragIncludesGroupNode = false;
 
             // Multi-select drag: move all selected nodes together
             if (multiSelectedNodes.size > 0 && multiSelectedNodes.has(node.id)) {
@@ -4440,12 +4484,10 @@ function setupNodeInteractions(el, node) {
                     const target = canvasData.nodes.find(n => n.id === id);
                     return !!target && !isNodeLocked(target);
                 }));
-                const selectedGroupIds = new Set();
 
                 multiSelectedNodes.forEach(id => {
                     const selected = canvasData.nodes.find(n => n.id === id);
                     if (!selected || selected.type !== 'group') return;
-                    selectedGroupIds.add(selected.id);
                     getGroupMemberNodes(selected.id)
                         .filter(member => !isNodeLocked(member))
                         .forEach(member => dragNodeIds.add(member.id));
@@ -4493,7 +4535,6 @@ function setupNodeInteractions(el, node) {
                     }
                 });
                 dragMovedNodeIds = dragNodeIds;
-                dragIncludesGroupNode = selectedGroupIds.size > 0;
             } else if (node.type === 'group') {
                 if (!el._groupDragOrigins) {
                     el._groupDragOrigins = new Map();
@@ -4537,7 +4578,6 @@ function setupNodeInteractions(el, node) {
                 });
 
                 dragMovedNodeIds = new Set(el._groupDragOrigins.keys());
-                dragIncludesGroupNode = true;
             } else {
                 node.x = Math.round(origLeft + dx);
                 node.y = Math.round(origTop + dy);
@@ -4629,10 +4669,32 @@ function setupNodeInteractions(el, node) {
         const wasResizing = isResizing;
 
         if (isDragging) {
-            if (dragMovedNodeIds && dragMovedNodeIds.size > 0 && !dragIncludesGroupNode) {
+            if (dragMovedNodeIds && dragMovedNodeIds.size > 0) {
                 const movedIds = Array.from(dragMovedNodeIds);
-                const membershipChanged = updateGroupMembershipForNodeIds(movedIds);
-                const fitChanged = fitGroupsForNodeIds(movedIds);
+                const movedGroupIds = new Set(
+                    movedIds.filter(id => {
+                        const movedNode = canvasData.nodes.find(n => n.id === id);
+                        return !!movedNode && movedNode.type === 'group';
+                    })
+                );
+
+                const movedNonGroupIds = movedIds.filter(id => {
+                    const movedNode = canvasData.nodes.find(n => n.id === id);
+                    if (!movedNode || movedNode.type === 'group') return false;
+
+                    // If the member moved with its owning selected group, keep membership stable.
+                    if (movedNode.groupId && movedGroupIds.has(movedNode.groupId)) {
+                        return false;
+                    }
+
+                    return true;
+                });
+                const membershipChanged = movedNonGroupIds.length > 0
+                    ? updateGroupMembershipForNodeIds(movedNonGroupIds)
+                    : false;
+                const fitChanged = movedNonGroupIds.length > 0
+                    ? fitGroupsForNodeIds(movedNonGroupIds)
+                    : false;
                 if (membershipChanged || fitChanged) {
                     markUnsaved();
                     renderCanvas();
@@ -4642,7 +4704,6 @@ function setupNodeInteractions(el, node) {
             el._multiDragOrigins = null;
             el._groupDragOrigins = null;
             dragMovedNodeIds = null;
-            dragIncludesGroupNode = false;
             clearGuides();
         }
 
@@ -7713,6 +7774,7 @@ function autoResizeNode(node, el) {
     // Keep group bounds in sync with text-driven node growth/shrink.
     const fitChanged = fitGroupsForNodeIds([node.id]);
     if (fitChanged) {
+        markUnsaved();
         renderCanvasSmart();
         return;
     }
