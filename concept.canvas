@@ -61,10 +61,10 @@
     {
       "id": "n_1775207743140",
       "type": "text",
-      "x": -4321,
-      "y": -5029,
+      "x": -5327,
+      "y": -4845,
       "width": 228,
-      "height": 129,
+      "height": 133,
       "text": "NPC Window",
       "textAlign": "center",
       "verticalAlign": "center",
@@ -73,8 +73,8 @@
     {
       "id": "n_1775207827493",
       "type": "text",
-      "x": -4321,
-      "y": -4825,
+      "x": -4971,
+      "y": -4908,
       "width": 228,
       "height": 259,
       "text": "Window functionality:NPC NameNPC MessageButtons (e.g. Trade, Quest, Conversation, Processing, Recovery point)",
@@ -86,7 +86,7 @@
       "id": "n_1775208272856",
       "type": "text",
       "x": -4971,
-      "y": -4256,
+      "y": -4440,
       "width": 228,
       "height": 224,
       "text": "Improvements to window functionality:Add icon picture for NPC",
@@ -98,7 +98,7 @@
       "id": "n_1775208468582",
       "type": "text",
       "x": -4971,
-      "y": -3998,
+      "y": -4163,
       "width": 229,
       "height": 281,
       "text": "Window design and styling:NPC IconTitle (NPC name)Text inside the cloud style (NPC message)Buttons under the cloud",
@@ -122,8 +122,8 @@
       "id": "n_1775244168780",
       "type": "file",
       "file": "canvas_uploads/NPC_a.png",
-      "x": -4483,
-      "y": -4118,
+      "x": -4511,
+      "y": -4366,
       "width": 162,
       "height": 172,
       "groupId": "n_1775244389661018"
@@ -131,8 +131,8 @@
     {
       "id": "n_1775244189740",
       "type": "text",
-      "x": -4483,
-      "y": -4210,
+      "x": -4511,
+      "y": -4458,
       "width": 434,
       "height": 82,
       "text": "   NPC NAME",
@@ -144,8 +144,8 @@
     {
       "id": "n_1775244297937",
       "type": "text",
-      "x": -4309,
-      "y": -4118,
+      "x": -4337,
+      "y": -4366,
       "width": 804,
       "height": 174,
       "text": "NPC MESSAGE HERE...",
@@ -158,16 +158,16 @@
       "id": "n_1775244389661018",
       "type": "group",
       "label": "v1 Concept #1",
-      "x": -4523,
-      "y": -4270,
-      "width": 1058,
-      "height": 553
+      "x": -4551,
+      "y": -4518,
+      "width": 1036,
+      "height": 560
     },
     {
       "id": "n_1775253836067",
       "type": "text",
-      "x": -4483,
-      "y": -3933,
+      "x": -4511,
+      "y": -4181,
       "width": 481,
       "height": 80,
       "text": "Button 1",
@@ -179,8 +179,8 @@
     {
       "id": "yrwpech0ngn",
       "type": "text",
-      "x": -3986,
-      "y": -3933,
+      "x": -4014,
+      "y": -4181,
       "width": 481,
       "height": 80,
       "text": "Button 2",
@@ -192,8 +192,8 @@
     {
       "id": "pgjzhj4j2t",
       "type": "text",
-      "x": -4483,
-      "y": -3841,
+      "x": -4511,
+      "y": -4089,
       "width": 481,
       "height": 80,
       "text": "Button 3",
@@ -203,24 +203,11 @@
       "groupId": "n_1775244389661018"
     },
     {
-      "id": "b5ww5ga49u7",
-      "type": "text",
-      "x": -3986,
-      "y": -3841,
-      "width": 481,
-      "height": 80,
-      "text": "Button 4",
-      "textAlign": "left",
-      "verticalAlign": "top",
-      "html": "Button 4",
-      "groupId": "n_1775244389661018"
-    },
-    {
       "id": "n2ftjh56mhg",
       "type": "file",
       "file": "canvas_uploads/NPC_a.png",
-      "x": -4483,
-      "y": -3543,
+      "x": -4511,
+      "y": -3828,
       "width": 214,
       "height": 219,
       "groupId": "oej63v2hs4e"
@@ -228,8 +215,8 @@
     {
       "id": "ralo0puv7jq",
       "type": "text",
-      "x": -4257,
-      "y": -3543,
+      "x": -4285,
+      "y": -3828,
       "width": 434,
       "height": 82,
       "text": "   NPC NAME",
@@ -241,8 +228,8 @@
     {
       "id": "14bmymp7byqk",
       "type": "text",
-      "x": -4257,
-      "y": -3448,
+      "x": -4285,
+      "y": -3733,
       "width": 434,
       "height": 124,
       "text": "NPC MESSAGE HERE...",
@@ -255,16 +242,16 @@
       "id": "oej63v2hs4e",
       "type": "group",
       "label": "v1 Concept #2",
-      "x": -4523,
-      "y": -3603,
+      "x": -4551,
+      "y": -3888,
       "width": 740,
       "height": 700
     },
     {
       "id": "aeopf0rq8w",
       "type": "text",
-      "x": -4483,
-      "y": -3309,
+      "x": -4511,
+      "y": -3594,
       "width": 660,
       "height": 80,
       "text": "Button 1",
@@ -276,8 +263,8 @@
     {
       "id": "4j52cnngoxi",
       "type": "text",
-      "x": -4483,
-      "y": -3215,
+      "x": -4511,
+      "y": -3500,
       "width": 660,
       "height": 80,
       "text": "Button 2",
@@ -289,8 +276,8 @@
     {
       "id": "h052t14z8b4",
       "type": "text",
-      "x": -4483,
-      "y": -3120,
+      "x": -4511,
+      "y": -3405,
       "width": 660,
       "height": 80,
       "text": "Button 3",
@@ -302,8 +289,8 @@
     {
       "id": "fxa1k5jyzwc",
       "type": "text",
-      "x": -4483,
-      "y": -3023,
+      "x": -4511,
+      "y": -3308,
       "width": 660,
       "height": 80,
       "text": "Button 4",
@@ -316,13 +303,26 @@
       "id": "n_1775320679652",
       "type": "text",
       "x": -4932,
-      "y": -4377,
+      "y": -4580,
       "width": 150,
       "height": 80,
       "text": "v1",
       "textAlign": "center",
       "verticalAlign": "center",
       "html": "<h1>v1</h1>"
+    },
+    {
+      "id": "b5ww5ga49u7",
+      "type": "text",
+      "x": -4014,
+      "y": -4074,
+      "width": 481,
+      "height": 80,
+      "text": "Button 4",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Button 4",
+      "groupId": "n_1775244389661018"
     }
   ],
   "edges": [
@@ -355,24 +355,10 @@
       "toSide": "top"
     },
     {
-      "id": "v0x7sr5o23r",
-      "fromNode": "n_1775207743140",
-      "fromSide": "bottom",
-      "toNode": "n_1775207827493",
-      "toSide": "top"
-    },
-    {
       "id": "bllsmkh66kn",
       "fromNode": "n_1775218986373",
       "fromSide": "bottom",
       "toNode": "n_1775178260035",
-      "toSide": "top"
-    },
-    {
-      "id": "nx0qev9ijkp",
-      "fromNode": "n_1775207827493",
-      "fromSide": "bottom",
-      "toNode": "n_1775320679652",
       "toSide": "top"
     },
     {
@@ -401,6 +387,20 @@
       "fromNode": "n_1775208468582",
       "fromSide": "right",
       "toNode": "oej63v2hs4e",
+      "toSide": "left"
+    },
+    {
+      "id": "n9m9jmc2pk",
+      "fromNode": "n_1775207827493",
+      "fromSide": "bottom",
+      "toNode": "n_1775320679652",
+      "toSide": "top"
+    },
+    {
+      "id": "7azc7ehs8",
+      "fromNode": "n_1775207743140",
+      "fromSide": "right",
+      "toNode": "n_1775207827493",
       "toSide": "left"
     }
   ]
