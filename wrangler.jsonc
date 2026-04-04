@@ -10,7 +10,7 @@
     "bindings": [
       {
         "name": "CANVAS_ROOM",
-        "class_name": "CanvasRoom"
+        "class_name": "CanvasRoomV2"
       }
     ]
   },
@@ -19,6 +19,12 @@
       "tag": "v1",
       "new_sqlite_classes": [
         "CanvasRoom"
+      ]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": [
+        "CanvasRoomV2"
       ]
     }
   ]

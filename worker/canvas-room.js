@@ -28,7 +28,7 @@ async function readRoomRecord(storage) {
   return fresh;
 }
 
-export class CanvasRoom {
+class BaseCanvasRoom {
   constructor(state) {
     this.state = state;
   }
@@ -79,3 +79,7 @@ export class CanvasRoom {
     }
   }
 }
+
+export class CanvasRoom extends BaseCanvasRoom {}
+
+export class CanvasRoomV2 extends BaseCanvasRoom {}

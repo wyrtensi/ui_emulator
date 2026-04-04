@@ -15,9 +15,9 @@
  *   GITHUB_ALLOWED_EDITORS — Optional CSV of additional GitHub logins allowed for live edit
  */
 
-import { CanvasRoom } from './canvas-room.js';
+import { CanvasRoom, CanvasRoomV2 } from './canvas-room.js';
 
-export { CanvasRoom };
+export { CanvasRoom, CanvasRoomV2 };
 
 function getCorsHeaders(env) {
   const allowed = env.ALLOWED_ORIGIN || '*';
