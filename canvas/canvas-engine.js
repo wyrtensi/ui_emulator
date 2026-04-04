@@ -1573,12 +1573,16 @@ function buildCanvasPatch(baseState, nextState) {
 
     nextNodes.forEach((node, id) => {
         const previous = baseNodes.get(id);
-        if (!previous || JSON.stringify(previous) !== JSON.stringify(node)) {
+        if (!previous) {
             patch.upsertNodes.push(node);
-            const changedFields = previous
-                ? getChangedObjectFields(previous, node)
-                : Object.keys(node).filter(key => key !== 'id').sort();
+            const changedFields = Object.keys(node).filter(key => key !== 'id').sort();
             if (changedFields.length > 0) {
+                patch.nodeChangedFields[id] = changedFields;
+            }
+        } else {
+            const changedFields = getChangedObjectFields(previous, node);
+            if (changedFields.length > 0) {
+                patch.upsertNodes.push(node);
                 patch.nodeChangedFields[id] = changedFields;
             }
         }
@@ -1592,12 +1596,16 @@ function buildCanvasPatch(baseState, nextState) {
 
     nextEdges.forEach((edge, id) => {
         const previous = baseEdges.get(id);
-        if (!previous || JSON.stringify(previous) !== JSON.stringify(edge)) {
+        if (!previous) {
             patch.upsertEdges.push(edge);
-            const changedFields = previous
-                ? getChangedObjectFields(previous, edge)
-                : Object.keys(edge).filter(key => key !== 'id').sort();
+            const changedFields = Object.keys(edge).filter(key => key !== 'id').sort();
             if (changedFields.length > 0) {
+                patch.edgeChangedFields[id] = changedFields;
+            }
+        } else {
+            const changedFields = getChangedObjectFields(previous, edge);
+            if (changedFields.length > 0) {
+                patch.upsertEdges.push(edge);
                 patch.edgeChangedFields[id] = changedFields;
             }
         }
@@ -4349,7 +4357,23 @@ function setupNodeInteractions(el, node) {
             if (isLiveEditorRebinding()) {
                 return;
             }
-            finishRichEdit();
+            // Defer the close decision so that refocus from renderCanvasSmart
+            // or restoreActiveEditorSnapshot can cancel it.
+            if (textContent._blurCloseTimer) clearTimeout(textContent._blurCloseTimer);
+            textContent._blurCloseTimer = setTimeout(() => {
+                textContent._blurCloseTimer = null;
+                if (isStaleEditorInstance(node.id, textContent)) return;
+                if (isLiveEditorRebinding()) return;
+                if (document.activeElement === textContent || textContent.contains(document.activeElement)) return;
+                finishRichEdit();
+            }, 50);
+        });
+
+        textContent.addEventListener('focus', () => {
+            if (textContent._blurCloseTimer) {
+                clearTimeout(textContent._blurCloseTimer);
+                textContent._blurCloseTimer = null;
+            }
         });
 
         textContent.addEventListener('keydown', (ke) => {
