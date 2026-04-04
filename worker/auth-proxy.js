@@ -47,6 +47,55 @@ function parseAllowedEditors(env) {
   );
 }
 
+async function resolveGitHubUserFromToken(token) {
+  const commonHeaders = {
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'ui-emulator-auth-worker',
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+
+  const authCandidates = [`Bearer ${token}`, `token ${token}`];
+  let lastResp = null;
+
+  for (const authorization of authCandidates) {
+    const resp = await fetch('https://api.github.com/user', {
+      method: 'GET',
+      headers: {
+        ...commonHeaders,
+        Authorization: authorization,
+      },
+    });
+
+    if (resp.ok) {
+      const user = await resp.json().catch(() => null);
+      return { ok: true, user };
+    }
+
+    lastResp = resp;
+    if (resp.status !== 401) {
+      break;
+    }
+  }
+
+  let detail = '';
+  if (lastResp) {
+    try {
+      const payload = await lastResp.json();
+      if (payload && typeof payload.message === 'string') {
+        detail = payload.message;
+      }
+    } catch {
+      detail = '';
+    }
+  }
+
+  return {
+    ok: false,
+    status: lastResp?.status || 502,
+    detail,
+  };
+}
+
 async function verifyOwnerRequest(request, env) {
   const authHeader = request.headers.get('Authorization') || '';
   let token = '';
@@ -74,24 +123,32 @@ async function verifyOwnerRequest(request, env) {
     };
   }
 
-  let userResp;
+  let verification;
   try {
-    userResp = await fetch('https://api.github.com/user', {
-      method: 'GET',
-      headers: {
-        Authorization: `token ${token}`,
-        Accept: 'application/vnd.github+json',
-      },
-    });
+    verification = await resolveGitHubUserFromToken(token);
   } catch {
     return { ok: false, status: 502, error: 'Failed to verify token against GitHub' };
   }
 
-  if (!userResp.ok) {
-    return { ok: false, status: 401, error: 'Invalid GitHub token' };
+  if (!verification?.ok) {
+    if (verification?.status === 401) {
+      return { ok: false, status: 401, error: 'Invalid or expired GitHub token' };
+    }
+    if (verification?.status === 403) {
+      return {
+        ok: false,
+        status: 403,
+        error: verification.detail || 'GitHub denied token validation request',
+      };
+    }
+    return {
+      ok: false,
+      status: 502,
+      error: verification?.detail || 'Failed to verify token against GitHub',
+    };
   }
 
-  const user = await userResp.json().catch(() => null);
+  const user = verification.user;
   const login = String(user?.login || '').trim().toLowerCase();
   if (!login) {
     return { ok: false, status: 401, error: 'Unable to resolve GitHub user' };

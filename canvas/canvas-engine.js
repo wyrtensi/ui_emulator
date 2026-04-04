@@ -1508,6 +1508,14 @@ async function pushLiveStateNow(options = {}) {
         }
         return true;
     } catch (err) {
+        if (err?.status === 401) {
+            liveModeActive = false;
+            setLiveStatus('Live: auth required', 'live-warn', 'Live auth failed. Please sign out and sign in again.');
+            if (!silent) {
+                window.uiToast?.('Live mode auth failed. Sign out and sign in again.', 'error');
+            }
+            return false;
+        }
         setLiveStatus('Live: retrying', 'live-warn', 'Live sync failed, will retry while editing');
         if (!silent) {
             console.warn('Live sync push failed', err);
@@ -1553,7 +1561,7 @@ async function loadCanvasData() {
     if (isOwner && liveModeActive && liveClient) {
         try {
             const liveState = await liveClient.fetchState();
-            if (liveState && ((liveState.nodes?.length || 0) > 0 || (liveState.edges?.length || 0) > 0)) {
+            if (liveState) {
                 canvasData = liveState;
                 canvasSha = null;
                 loaded = true;
@@ -1561,7 +1569,12 @@ async function loadCanvasData() {
                 setLiveStatus('Live: connected', 'live-ok', 'Owner live room connected');
             }
         } catch (err) {
-            setLiveStatus('Live: fallback', 'live-warn', 'Live room unavailable, using snapshot fallback');
+            if (err?.status === 401) {
+                liveModeActive = false;
+                setLiveStatus('Live: auth required', 'live-warn', 'Live auth failed. Please sign out and sign in again.');
+            } else {
+                setLiveStatus('Live: fallback', 'live-warn', 'Live room unavailable, using snapshot fallback');
+            }
             console.warn('Live canvas load failed, trying snapshot fallback', err);
         }
     }
@@ -1606,8 +1619,10 @@ async function loadCanvasData() {
     }
 
     if (isOwner && liveModeActive && liveClient && !loadedFromLive) {
-        await pushLiveStateNow({ silent: true });
-        setLiveStatus('Live: connected', 'live-ok', 'Owner live room connected');
+        const synced = await pushLiveStateNow({ silent: true });
+        if (synced) {
+            setLiveStatus('Live: connected', 'live-ok', 'Owner live room connected');
+        }
     } else if (isOwner && !liveModeActive) {
         setLiveStatus('Live: snapshot', 'live-off', 'Owner is in snapshot-only mode');
     }

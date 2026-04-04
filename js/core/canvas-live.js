@@ -16,6 +16,24 @@ function buildRoomUrl(roomId) {
   return `${base}/live/canvas/${encodeURIComponent(targetRoom)}`;
 }
 
+async function buildLiveRequestError(resp, fallbackMessage) {
+  let detail = '';
+  try {
+    const payload = await resp.json();
+    if (payload && typeof payload.error === 'string') {
+      detail = payload.error.trim();
+    }
+  } catch {
+    // Ignore JSON parse failures; fallback to status-only message.
+  }
+
+  const suffix = detail ? `: ${detail}` : '';
+  const err = new Error(`${fallbackMessage} (${resp.status})${suffix}`);
+  err.status = resp.status;
+  err.detail = detail;
+  return err;
+}
+
 export class CanvasLiveClient {
   constructor(options = {}) {
     this.roomId = options.roomId || config.live?.roomId || 'global';
@@ -44,7 +62,7 @@ export class CanvasLiveClient {
     });
 
     if (!resp.ok) {
-      throw new Error(`Live state fetch failed (${resp.status})`);
+      throw await buildLiveRequestError(resp, 'Live state fetch failed');
     }
 
     const payload = await resp.json();
@@ -69,11 +87,13 @@ export class CanvasLiveClient {
       if (payload && Number.isInteger(payload.version)) {
         this.version = payload.version;
       }
-      throw new Error('Live state version conflict');
+      const err = new Error('Live state version conflict');
+      err.status = 409;
+      throw err;
     }
 
     if (!resp.ok) {
-      throw new Error(`Live state push failed (${resp.status})`);
+      throw await buildLiveRequestError(resp, 'Live state push failed');
     }
 
     const payload = await resp.json();
