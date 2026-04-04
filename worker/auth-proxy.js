@@ -174,30 +174,35 @@ async function proxyCanvasRoomRequest(request, env, roomName) {
     return jsonResponse(env, 500, { error: 'Canvas room binding is not configured' });
   }
 
-  const roomId = env.CANVAS_ROOM.idFromName(roomName || 'global');
-  const roomStub = env.CANVAS_ROOM.get(roomId);
+  try {
+    const roomId = env.CANVAS_ROOM.idFromName(roomName || 'global');
+    const roomStub = env.CANVAS_ROOM.get(roomId);
 
-  const init = {
-    method: request.method,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  };
+    const init = {
+      method: request.method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
 
-  if (request.method === 'POST') {
-    init.body = await request.text();
+    if (request.method === 'POST') {
+      init.body = await request.text();
+    }
+
+    const roomResp = await roomStub.fetch('https://canvas-room.internal/live', init);
+    const responseText = await roomResp.text();
+
+    return new Response(responseText, {
+      status: roomResp.status,
+      headers: {
+        ...getCorsHeaders(env),
+        'Content-Type': roomResp.headers.get('Content-Type') || 'application/json',
+      },
+    });
+  } catch (err) {
+    const detail = err instanceof Error && err.message ? err.message : 'Unknown canvas room error';
+    return jsonResponse(env, 500, { error: `Canvas room request failed: ${detail}` });
   }
-
-  const roomResp = await roomStub.fetch('https://canvas-room.internal/live', init);
-  const responseText = await roomResp.text();
-
-  return new Response(responseText, {
-    status: roomResp.status,
-    headers: {
-      ...getCorsHeaders(env),
-      'Content-Type': roomResp.headers.get('Content-Type') || 'application/json',
-    },
-  });
 }
 
 export default {

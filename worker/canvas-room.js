@@ -34,43 +34,48 @@ export class CanvasRoom {
   }
 
   async fetch(request) {
-    if (request.method === 'GET') {
-      const record = await readRoomRecord(this.state.storage);
-      return Response.json(record, { status: 200 });
-    }
-
-    if (request.method === 'POST') {
-      let body;
-      try {
-        body = await request.json();
-      } catch {
-        return Response.json({ error: 'Invalid JSON payload' }, { status: 400 });
+    try {
+      if (request.method === 'GET') {
+        const record = await readRoomRecord(this.state.storage);
+        return Response.json(record, { status: 200 });
       }
 
-      const record = await readRoomRecord(this.state.storage);
-      const baseVersion = Number.isInteger(body?.baseVersion) ? body.baseVersion : null;
+      if (request.method === 'POST') {
+        let body;
+        try {
+          body = await request.json();
+        } catch {
+          return Response.json({ error: 'Invalid JSON payload' }, { status: 400 });
+        }
 
-      if (baseVersion !== null && baseVersion !== record.version) {
-        return Response.json(
-          {
-            error: 'Version mismatch',
-            version: record.version,
-            state: record.state,
-          },
-          { status: 409 },
-        );
+        const record = await readRoomRecord(this.state.storage);
+        const baseVersion = Number.isInteger(body?.baseVersion) ? body.baseVersion : null;
+
+        if (baseVersion !== null && baseVersion !== record.version) {
+          return Response.json(
+            {
+              error: 'Version mismatch',
+              version: record.version,
+              state: record.state,
+            },
+            { status: 409 },
+          );
+        }
+
+        const nextRecord = {
+          version: record.version + 1,
+          updatedAt: new Date().toISOString(),
+          state: normalizeCanvasState(body?.state),
+        };
+
+        await this.state.storage.put('canvas-record', nextRecord);
+        return Response.json(nextRecord, { status: 200 });
       }
 
-      const nextRecord = {
-        version: record.version + 1,
-        updatedAt: new Date().toISOString(),
-        state: normalizeCanvasState(body?.state),
-      };
-
-      await this.state.storage.put('canvas-record', nextRecord);
-      return Response.json(nextRecord, { status: 200 });
+      return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    } catch (err) {
+      const detail = err instanceof Error && err.message ? err.message : 'Unknown persistence error';
+      return Response.json({ error: `Canvas room persistence failed: ${detail}` }, { status: 500 });
     }
-
-    return Response.json({ error: 'Method not allowed' }, { status: 405 });
   }
 }

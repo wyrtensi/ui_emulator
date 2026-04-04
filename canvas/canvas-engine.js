@@ -1451,10 +1451,31 @@ export async function initCanvas(winContainer, config) {
 }
 
 function buildLiveCanvasStatePayload() {
+    return buildPersistentCanvasState(canvasData);
+}
+
+function buildPersistentCanvasState(sourceState) {
+    const input = sourceState && typeof sourceState === 'object' ? sourceState : {};
     return {
-        nodes: Array.isArray(canvasData?.nodes) ? canvasData.nodes : [],
-        edges: Array.isArray(canvasData?.edges) ? canvasData.edges : [],
+        nodes: Array.isArray(input.nodes)
+            ? input.nodes.map(node => {
+                const clone = JSON.parse(JSON.stringify(node));
+                if (clone && typeof clone === 'object' && clone._tempBase64) {
+                    delete clone._tempBase64;
+                }
+                return clone;
+            })
+            : [],
+        edges: Array.isArray(input.edges)
+            ? input.edges.map(edge => JSON.parse(JSON.stringify(edge)))
+            : [],
     };
+}
+
+function isCanvasStateEmpty(state) {
+    const nodes = Array.isArray(state?.nodes) ? state.nodes : [];
+    const edges = Array.isArray(state?.edges) ? state.edges : [];
+    return nodes.length === 0 && edges.length === 0;
 }
 
 function setLiveStatus(text, className = 'live-off', title = '') {
@@ -1548,10 +1569,7 @@ async function loadCanvasData() {
 
         try {
             const parsed = JSON.parse(text);
-            return {
-                nodes: Array.isArray(parsed?.nodes) ? parsed.nodes : [],
-                edges: Array.isArray(parsed?.edges) ? parsed.edges : []
-            };
+            return buildPersistentCanvasState(parsed);
         } catch (err) {
             console.warn(`Invalid canvas JSON from ${sourceLabel}; continuing fallback`, err);
             return null;
@@ -1561,12 +1579,15 @@ async function loadCanvasData() {
     if (isOwner && liveModeActive && liveClient) {
         try {
             const liveState = await liveClient.fetchState();
-            if (liveState) {
+            const isFreshEmptyRoom = liveClient.version === 0 && isCanvasStateEmpty(liveState);
+            if (liveState && !isFreshEmptyRoom) {
                 canvasData = liveState;
                 canvasSha = null;
                 loaded = true;
                 loadedFromLive = true;
                 setLiveStatus('Live: connected', 'live-ok', 'Owner live room connected');
+            } else if (isFreshEmptyRoom) {
+                setLiveStatus('Live: seeding', 'live-off', 'Empty live room detected, seeding from GitHub snapshot');
             }
         } catch (err) {
             if (err?.status === 401) {
@@ -1655,7 +1676,7 @@ async function saveCanvasData(isAuto = false) {
     saveIndicator.textContent = 'Publishing...';
 
     try {
-        const content = JSON.stringify(canvasData, null, 2);
+        const content = JSON.stringify(buildPersistentCanvasState(canvasData), null, 2);
         const result = await githubApi.saveFile(
             CANVAS_FILE,
             content,
