@@ -15,7 +15,6 @@ export default {
   exports: [
     { selector: '[data-export="mm-full"]', name: 'full', label: 'Full Minimap' },
     { selector: '[data-export="mm-header"]', name: 'header', label: 'Header Bar' },
-    { selector: '[data-export="mm-location"]', name: 'location', label: 'Location Name' },
     {
       selector: '[data-export="mm-close"]',
       name: 'close',
@@ -40,7 +39,6 @@ export default {
         { state: 'click', className: 'ui-export-click' },
       ],
     },
-    { selector: '[data-export="mm-coords"]', name: 'coords', label: 'Coordinates' },
   ],
   init(container) {
     const requestExportRefresh = () => {

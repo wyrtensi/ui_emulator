@@ -18,7 +18,6 @@ export default {
   exports: [
     { selector: '[data-export="example-full"]', name: 'full', label: 'Full Window' },
     { selector: '[data-export="example-header"]', name: 'header', label: 'Header Bar' },
-    { selector: '[data-export="example-title"]', name: 'title', label: 'Title' },
     {
       selector: '[data-export="example-close"]',
       name: 'close',
@@ -40,18 +39,12 @@ export default {
     },
     { selector: '[data-export="example-content"]', name: 'content', label: 'Content Area' },
     { selector: '[data-export="example-panel"]', name: 'panel', label: 'Panels' },
-    { selector: '[data-export="example-row"]', name: 'row', label: 'Info Rows' },
-    { selector: '[data-export="example-label"]', name: 'label', label: 'Labels' },
-    { selector: '[data-export="example-value"]', name: 'value', label: 'Values' },
+    { selector: '[data-export="example-row"]', name: 'row', label: 'Cells (Info Rows)' },
     { selector: '[data-export="example-bars"]', name: 'bars', label: 'Bar Group' },
-    { selector: '[data-export="example-bar"]', name: 'bar', label: 'Bars' },
+    { selector: '[data-export="example-bar"]', name: 'bar', label: 'Cells (Bars)' },
     { selector: '[data-export="example-bar-fill"]', name: 'bar-fill', label: 'Bar Fill' },
-    { selector: '[data-export="example-bar-text"]', name: 'bar-text', label: 'Bar Text' },
     { selector: '[data-export="example-stat-grid"]', name: 'stat-grid', label: 'Stat Grid' },
-    { selector: '[data-export="example-stat"]', name: 'stat', label: 'Stats' },
-    { selector: '[data-export="example-stat-label"]', name: 'stat-label', label: 'Stat Labels' },
-    { selector: '[data-export="example-stat-value"]', name: 'stat-value', label: 'Stat Values' },
-    { selector: '[data-export="example-hint"]', name: 'hint', label: 'Hints' },
+    { selector: '[data-export="example-stat"]', name: 'stat', label: 'Cells (Stats)' },
   ],
   init(container) {
     const requestExportRefresh = () => {

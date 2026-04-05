@@ -26,7 +26,8 @@ export default {
     { selector: '[data-export="wg-full"]', name: 'full', label: 'Full Window' },
     // Add granular slices only if you really need export assets per sub-part.
     // { selector: '[data-export="wg-tab"]', name: 'tab', label: 'Tab Button' },
-    // { selector: '[data-export="wg-value"]', name: 'value', label: 'Value Text' },
+    // { selector: '[data-export="wg-cell"]', name: 'cell', label: 'Cells (Items)' },
+    // Prefer exporting element/cell containers, not text-only selectors.
     // Optional state variants (exported as extra files, e.g. tab_hover / tab_click):
     // {
     //   selector: '[data-export="wg-tab"]',

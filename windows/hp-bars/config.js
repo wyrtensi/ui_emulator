@@ -14,15 +14,9 @@ export default {
   exports: [
     { selector: '[data-export="hp-bars-full"]', name: 'full', label: 'HP Bars Full' },
     { selector: '[data-export="hp-bars-container"]', name: 'container', label: 'Bars Container' },
-    { selector: '[data-export="hp-bar-row"]', name: 'row', label: 'Individual Bars' },
+    { selector: '[data-export="hp-bar-row"]', name: 'row', label: 'Cells (Bars)' },
     { selector: '[data-export="hp-bar-fill"]', name: 'fill', label: 'Bar Fills' },
-    { selector: '[data-export="hp-bar-label"]', name: 'label', label: 'Bar Labels' },
     { selector: '[data-export="hp-bar-icon"]', name: 'icon', label: 'Bar Icons' },
-    { selector: '[data-export="hp-bar-label-text"]', name: 'label-text', label: 'Label Text' },
-    { selector: '[data-export="hp-bar-value"]', name: 'value', label: 'Value Fields' },
-    { selector: '[data-export="hp-bar-current"]', name: 'current', label: 'Current Values' },
-    { selector: '[data-export="hp-bar-separator"]', name: 'separator', label: 'Value Separators' },
-    { selector: '[data-export="hp-bar-max"]', name: 'max', label: 'Max Values' },
   ],
   init(container) {
     const requestExportRefresh = () => {

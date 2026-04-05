@@ -15,7 +15,6 @@ export default {
   exports: [
     { selector: '[data-export="abl-full"]', name: 'full', label: 'Full Abilities' },
     { selector: '[data-export="abl-header"]', name: 'header', label: 'Header Bar' },
-    { selector: '[data-export="abl-title"]', name: 'title', label: 'Title Text' },
     { selector: '[data-export="abl-dots"]', name: 'dots', label: 'Color Dots' },
     {
       selector: '[data-export="abl-dot"]',
@@ -49,19 +48,16 @@ export default {
     {
       selector: '[data-export="abl-skill"]',
       name: 'skill',
-      label: 'Individual Skills',
+      label: 'Cells (Skills)',
       variants: [
         { state: 'hover', className: 'ui-export-hover' },
         { state: 'click', className: 'ui-export-click' },
       ],
     },
     { selector: '[data-export="abl-icon"]', name: 'icon', label: 'Skill Icons' },
-    { selector: '[data-export="abl-name"]', name: 'name', label: 'Skill Names' },
     { selector: '[data-export="abl-bar"]', name: 'bar', label: 'Skill Bars' },
     { selector: '[data-export="abl-seg"]', name: 'seg', label: 'Skill Segments' },
     { selector: '[data-export="abl-rank"]', name: 'rank', label: 'Skill Rank Blocks' },
-    { selector: '[data-export="abl-rank-lv"]', name: 'rank-lv', label: 'Skill Rank Level' },
-    { selector: '[data-export="abl-rank-pct"]', name: 'rank-pct', label: 'Skill Rank Percent' },
   ],
   init(container) {
     const requestExportRefresh = () => {

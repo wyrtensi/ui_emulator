@@ -72,7 +72,142 @@ class ExportManager {
   _hasClipPath(element) {
     if (!element) return false;
     const style = window.getComputedStyle(element);
-    return !!style?.clipPath && style.clipPath !== 'none';
+    const clipPath = style?.clipPath || style?.webkitClipPath;
+    return !!clipPath && clipPath !== 'none';
+  }
+
+  _splitTopLevelComma(input) {
+    const parts = [];
+    let depth = 0;
+    let start = 0;
+
+    for (let i = 0; i < input.length; i++) {
+      const ch = input[i];
+      if (ch === '(') depth++;
+      else if (ch === ')') depth = Math.max(0, depth - 1);
+      else if (ch === ',' && depth === 0) {
+        parts.push(input.slice(start, i).trim());
+        start = i + 1;
+      }
+    }
+
+    const tail = input.slice(start).trim();
+    if (tail) parts.push(tail);
+    return parts;
+  }
+
+  _resolveClipLength(rawValue, basis) {
+    const value = String(rawValue || '').trim();
+    if (!value) return 0;
+
+    if (value.startsWith('calc(') && value.endsWith(')')) {
+      const inner = value.slice(5, -1).trim();
+      const terms = inner.match(/[+-]?\s*[^+-]+/g) || [];
+      let total = 0;
+
+      for (const termRaw of terms) {
+        const term = termRaw.trim();
+        if (!term) continue;
+
+        let sign = 1;
+        let body = term;
+        if (body.startsWith('+')) body = body.slice(1).trim();
+        else if (body.startsWith('-')) {
+          sign = -1;
+          body = body.slice(1).trim();
+        }
+
+        total += sign * this._resolveClipLength(body, basis);
+      }
+
+      return total;
+    }
+
+    if (value.endsWith('%')) {
+      const n = Number.parseFloat(value);
+      return Number.isFinite(n) ? (n / 100) * basis : 0;
+    }
+
+    if (value.endsWith('px')) {
+      const n = Number.parseFloat(value);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    const numeric = Number.parseFloat(value);
+    return Number.isFinite(numeric) ? numeric : 0;
+  }
+
+  _parsePolygonClipPath(clipPath, width, height) {
+    const raw = String(clipPath || '').trim();
+    if (!raw.startsWith('polygon(') || !raw.endsWith(')')) return null;
+
+    const inner = raw.slice('polygon('.length, -1).trim();
+    const pointChunks = this._splitTopLevelComma(inner).filter(Boolean);
+    const points = [];
+
+    for (const chunk of pointChunks) {
+      // Skip optional polygon fill-rule token (e.g. evenodd).
+      if (/^(nonzero|evenodd)$/i.test(chunk)) continue;
+
+      const coords = chunk.match(/calc\([^)]*\)|-?\d*\.?\d+(?:px|%)?/g);
+      if (!coords || coords.length < 2) continue;
+
+      const x = this._resolveClipLength(coords[0], width);
+      const y = this._resolveClipLength(coords[1], height);
+      points.push({ x, y });
+    }
+
+    return points.length >= 3 ? points : null;
+  }
+
+  _extractClipMask(element) {
+    if (!element) return null;
+    const rect = element.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+
+    const style = window.getComputedStyle(element);
+    const clipPath = style?.clipPath || style?.webkitClipPath;
+    if (!clipPath || clipPath === 'none') return null;
+
+    const points = this._parsePolygonClipPath(clipPath, rect.width, rect.height);
+    if (!points) return null;
+
+    return {
+      type: 'polygon',
+      width: rect.width,
+      height: rect.height,
+      points,
+    };
+  }
+
+  _applyClipMaskToCanvas(canvas, mask) {
+    if (!canvas || !mask || mask.type !== 'polygon' || !Array.isArray(mask.points) || mask.points.length < 3) {
+      return canvas;
+    }
+
+    const ratioX = canvas.width / mask.width;
+    const ratioY = canvas.height / mask.height;
+    const output = document.createElement('canvas');
+    output.width = canvas.width;
+    output.height = canvas.height;
+
+    const ctx = output.getContext('2d');
+    if (!ctx) return canvas;
+
+    ctx.save();
+    ctx.beginPath();
+    mask.points.forEach((point, idx) => {
+      const x = point.x * ratioX;
+      const y = point.y * ratioY;
+      if (idx === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(canvas, 0, 0);
+    ctx.restore();
+
+    return output;
   }
 
   _normalizeVariantSuffix(value) {
@@ -155,8 +290,12 @@ class ExportManager {
   _getRenderableMatches(container, selector) {
     if (!container || !selector) return [];
     return Array.from(container.querySelectorAll(selector)).filter((el) => {
-      const rect = el.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0;
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden') return false;
+      const rects = el.getClientRects();
+      if (!rects || rects.length === 0) return false;
+      const rect = rects[0];
+      return rect.width > 0.5 && rect.height > 0.5;
     });
   }
 
@@ -321,6 +460,7 @@ class ExportManager {
     element.classList.remove('ui-export-highlight');
 
     const isSVG = element.tagName.toLowerCase() === 'svg' || element.closest('svg') !== null;
+    const clipMask = this._extractClipMask(element);
     const hasClipPath = this._hasClipPath(element);
     const needsPaddingHack = !isSVG && !hasClipPath;
     const renderMarker = this._createRenderMarker();
@@ -329,7 +469,7 @@ class ExportManager {
     const transparent = this._transparentEl?.checked ?? true;
 
     try {
-      const canvas = await html2canvas(element, {
+      const renderOptions = {
         backgroundColor: transparent ? null : '#000000',
         scale,
         useCORS: true,
@@ -348,9 +488,24 @@ class ExportManager {
             clone.style.margin = '-10px';
           }
         },
-      });
+      };
 
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      let canvas;
+      try {
+        canvas = await html2canvas(element, {
+          ...renderOptions,
+          foreignObjectRendering: true,
+        });
+      } catch (renderError) {
+        console.warn('[ExportManager] foreignObject rendering failed, retrying standard mode:', renderError);
+        canvas = await html2canvas(element, {
+          ...renderOptions,
+          foreignObjectRendering: false,
+        });
+      }
+
+      const maskedCanvas = clipMask ? this._applyClipMaskToCanvas(canvas, clipMask) : canvas;
+      const blob = await new Promise(resolve => maskedCanvas.toBlob(resolve, 'image/png'));
       if (!blob) return null;
 
       const filename = `${windowId}_${exportName}_${scale}x.png`;

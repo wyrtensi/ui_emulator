@@ -82,6 +82,7 @@ If you enable granular slicing:
 
 - include stable semantic selectors
 - use repeated selectors for repeated nodes (multi-match export supported)
+- prefer cell/shape containers over text-only selectors
 - dispatch refresh event after dynamic DOM updates:
 
 ```js
@@ -120,8 +121,8 @@ Supported variant fields:
 
 Cut-corner note:
 
-- clip-path based corners/chamfers are preserved in exported PNGs
-- avoid relying on global overflow/padding hacks for clipped shapes
+- clip-path based corners/chamfers are preserved in exported PNGs via clip-path-aware masking
+- avoid text-only export targets when building granular lists
 
 ## Minimal Baseline Example
 
@@ -232,6 +233,7 @@ Reject output if:
 - missing drag handle element
 - wrong close import depth
 - over-sliced templates by default
+- text-only export slices that duplicate typography instead of UI elements
 - no refresh event after dynamic render
 - unbounded resize values
 - variant classes declared in config but missing in CSS
@@ -278,6 +280,7 @@ Same constraints as minimal mode, plus:
 - Add granular export slicing for requested sub-parts.
 - Use stable semantic export selectors.
 - Use repeated selectors for repeated nodes.
+- Avoid text-only export targets; export element containers/cells.
 - Dispatch ui-export-refresh after dynamic DOM changes.
 - If interactive export states are requested, add `variants` and matching CSS state classes.
 

@@ -367,6 +367,111 @@ function parseGitHubImportURL(rawUrl) {
   return { user, repo, branch, targetWindow, targetVersion };
 }
 
+async function _switchWindowVersionInPlace(windowId, versionKey) {
+  const currentEntry = windowManager.get(windowId);
+  if (!currentEntry?.config) return false;
+
+  const manifestEntry = manifest?.windows?.find(w => w.id === windowId) || null;
+  if (manifestEntry?._imported) {
+    window.uiToast?.('Version switching without reload is only supported for built-in windows.', 'error');
+    return false;
+  }
+
+  const folder = manifestEntry?.folder || (windowId === 'canvas' ? 'canvas' : `windows/${windowId}`);
+  const rootConfigModule = await import(`../${folder}/config.js`);
+  const rootConfig = rootConfigModule.default;
+  if (!rootConfig || !rootConfig.id) return false;
+
+  const versionEntries = getWindowVersionEntries(rootConfig);
+  if (versionEntries.length <= 1) return false;
+
+  const selected = versionEntries.find(v => v.key === versionKey);
+  if (!selected) return false;
+  if (currentEntry.config._versionKey === selected.key) return true;
+
+  const versionFolder = joinRelativePath(folder, selected.folder);
+  const versionConfigPath = joinRelativePath(versionFolder, selected.configFile);
+
+  let versionConfig = null;
+  try {
+    const versionConfigModule = await import(`../${versionConfigPath}`);
+    versionConfig = versionConfigModule.default;
+  } catch (err) {
+    console.warn(`[UI Emulator] Missing version config: ${versionConfigPath}`, err);
+  }
+
+  const nextConfig = mergeWindowConfigs(rootConfig, versionConfig);
+  nextConfig._versionKey = selected.key;
+  nextConfig._versionLabel = selected.label;
+
+  const mountOptions = {
+    templatePath: `${versionFolder}/${selected.templateFile}`,
+    stylePath: `${versionFolder}/${selected.styleFile}`,
+  };
+
+  const htmlResp = await fetch(mountOptions.templatePath);
+  if (!htmlResp.ok) {
+    throw new Error(`Missing template: ${mountOptions.templatePath}`);
+  }
+  const htmlText = await htmlResp.text();
+
+  const cssResp = await fetch(mountOptions.stylePath);
+  const cssText = cssResp.ok ? await cssResp.text() : '';
+
+  const wasOpen = windowManager.isOpen(windowId);
+  const pos = windowManager.getPosition(windowId);
+  const size = windowManager.getSize(windowId);
+
+  windowManager.close(windowId);
+
+  const oldContainer = currentEntry.container;
+  if (oldContainer?.parentElement) {
+    oldContainer.parentElement.removeChild(oldContainer);
+  }
+
+  document.querySelectorAll(`style[data-window-id="${windowId}"]`).forEach(el => el.remove());
+
+  const windowsLayer = document.getElementById('ui-windows');
+  if (!windowsLayer) throw new Error('Windows layer not found');
+
+  const wDef = manifestEntry || {
+    id: nextConfig.id,
+    name: nextConfig.title || nextConfig.id,
+    folder,
+    defaultPosition: nextConfig.defaultPosition || { x: 100, y: 100, width: 300, height: 200 },
+    defaultOpen: nextConfig.defaultOpen ?? false,
+    version: selected.key,
+  };
+
+  wDef.name = nextConfig.title || wDef.name;
+  wDef.folder = folder;
+  wDef.version = selected.key;
+  if (nextConfig.defaultPosition) {
+    wDef.defaultPosition = nextConfig.defaultPosition;
+  }
+
+  if (!manifestEntry && manifest?.windows) {
+    manifest.windows.push(wDef);
+  }
+
+  _injectWindow(wDef, nextConfig, htmlText, cssText, windowsLayer);
+
+  windowManager.setPosition(windowId, pos.x, pos.y);
+  if (size.width > 0 && size.height > 0) {
+    windowManager.setSize(windowId, size.width, size.height);
+  }
+  if (wasOpen) {
+    windowManager.open(windowId);
+  }
+
+  setStoredWindowVersion(windowId, selected.key);
+  _rebuildWindowsList();
+  document.dispatchEvent(new CustomEvent('ui-export-refresh'));
+  window.dispatchEvent(new CustomEvent('ui-export-refresh'));
+
+  return true;
+}
+
 function setWindowVersionAndReload(windowId, versionKey) {
   const entry = windowManager.get(windowId);
   if (!entry?.config) return;
@@ -379,9 +484,19 @@ function setWindowVersionAndReload(windowId, versionKey) {
 
   if (entry.config._versionKey === selected.key) return;
 
-  setStoredWindowVersion(windowId, selected.key);
-  window.uiToast?.(`Switched ${entry.config.title || windowId} to ${selected.label || selected.key}. Reloading...`, 'info');
-  window.location.reload();
+  window.uiToast?.(`Switching ${entry.config.title || windowId} to ${selected.label || selected.key}...`, 'info');
+  _switchWindowVersionInPlace(windowId, selected.key)
+    .then((ok) => {
+      if (ok) {
+        window.uiToast?.(`Switched ${entry.config.title || windowId} to ${selected.label || selected.key}.`, 'success');
+      } else {
+        window.uiToast?.('Version switch failed.', 'error');
+      }
+    })
+    .catch((err) => {
+      console.error('[UI Emulator] Version switch failed:', err);
+      window.uiToast?.('Version switch failed.', 'error');
+    });
 }
 
 /* ── Global toast function ────────────────────────────── */

@@ -21,7 +21,6 @@ export default {
         { state: 'hover', className: 'ui-export-hover' },
       ],
     },
-    { selector: '[data-export="ti-title"]', name: 'title', label: 'Title Text' },
     {
       selector: '[data-export="ti-close"]',
       name: 'close',
@@ -32,15 +31,8 @@ export default {
       ],
     },
     { selector: '[data-export="ti-body"]', name: 'body', label: 'Body Content' },
-    { selector: '[data-export="ti-info"]', name: 'info', label: 'Name & Level' },
-    { selector: '[data-export="ti-level"]', name: 'level', label: 'Level Badge' },
-    { selector: '[data-export="ti-name"]', name: 'name', label: 'Target Name' },
-    { selector: '[data-export="ti-dist"]', name: 'dist', label: 'Distance' },
     { selector: '[data-export="ti-health"]', name: 'health', label: 'Health Bar' },
     { selector: '[data-export="ti-health-fill"]', name: 'health-fill', label: 'Health Fill' },
-    { selector: '[data-export="ti-bottom"]', name: 'bottom', label: 'Bottom Row' },
-    { selector: '[data-export="ti-race"]', name: 'race', label: 'Race Label' },
-    { selector: '[data-export="ti-pct"]', name: 'pct', label: 'HP Percent' },
   ],
   init(container) {
     const requestExportRefresh = () => {

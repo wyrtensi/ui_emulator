@@ -359,7 +359,7 @@
   },
   exports: [
     { selector: '[data-export="my-full"]', name: 'full', label: 'Full Window' }, // minimal export baseline
-    // add fine-grained slices only when explicitly needed
+    // add fine-grained slices only when explicitly needed (prefer cells/elements, not text-only selectors)
     // optional interactive states:
     // {
     //   selector: '[data-export="my-btn"]', name: 'btn', label: 'Button',
@@ -398,6 +398,7 @@
         <section class="ui-guide-section">
           <h4>style.css Notes</h4>
           <p>Write <strong>plain CSS</strong> — selectors are automatically scoped to your window. No IDs needed, class names won't conflict with other windows. Animations (<code>@keyframes</code>) pass through unmodified.</p>
+          <p style="margin-top:6px"><em>For granular export lists, prefer element/cell selectors (buttons, slots, bars, cards). Avoid text-only export slices.</em></p>
         </section>
 
         <section class="ui-guide-section">
@@ -435,6 +436,7 @@ Each window = 3 files: config.js, template.html, style.css.
 ## Rules
 - template.html: pure HTML, include a drag handle element matching config.dragHandle
 - export slicing: default to one `data-export` for full window; add granular markers only when requested
+- export slicing detail: prefer cells/elements; avoid text-only export selectors
 - export variants (optional): only when requested, add `variants` entries and matching CSS state selectors/classes for hover/click outputs
 - style.css: plain CSS (auto-scoped, no need to prefix selectors), @keyframes work, avoid IDs
 - init(container): use container.querySelector() to wire events, animations, state changes

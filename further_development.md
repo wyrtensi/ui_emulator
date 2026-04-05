@@ -7,6 +7,8 @@
 - Milestone (April 2026): export slicing v3 foundations implemented (multi-match highlights, dynamic refresh, count-aware export tree) with per-window granular `data-export` migration and interactive state hooks (`captureState` / `applyState`) for defaults.
 - Milestone (April 2026): export state variants implemented (`variants` on export entries) for hover/click asset output and clip-path-aware rendering to preserve cut-corner shapes.
 - Milestone (April 2026): hover/click variant coverage expanded across interactive built-in windows (inventory, action-bar, target-info, minimap, chat-box, character, abilities, example root/v1/v2) plus state-cycle export variants for race-indicator (attack/warning).
+- Milestone (April 2026): export renderer now applies clip-path polygon masks directly on output canvases to keep chamfered/cut corners in PNG output.
+- Milestone (April 2026): built-in window export lists normalized to element/cell slices; text-only export targets removed.
 - After the Windows versions are implemented, it will be possible to enable a voting system for each window and version. It must be a friendly voting system. It should be run by the owner of the interface and cannot be taken over by other users.
 
 ## Raffi:

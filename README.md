@@ -18,8 +18,9 @@ No build pipeline is required. The app runs on plain HTML, CSS, and ES modules.
 - Design, Export, and Comment modes.
 - PNG export and batch ZIP export via html2canvas + JSZip.
 - Export Mode now supports multi-match selector slicing with count-aware selection (fine-grained repeated parts export correctly).
+- Export slicing policy is element-first: text-only selectors are intentionally excluded from built-in export lists.
 - Export definitions can declare optional state variants (for example hover/click) and generate extra PNGs with suffixes (`_hover`, `_click`, ...).
-- Export rendering preserves clip-path/cut-corner silhouettes by avoiding overflow padding hacks on clipped targets.
+- Export rendering preserves clip-path/cut-corner silhouettes with a clip-path-aware canvas mask pass.
 - Layout save/load/share using JSON files or URL hash compression (LZ-String).
 - Auto-save to localStorage.
 - Background gallery, local background upload, and independent background zoom.
@@ -241,6 +242,7 @@ Notes:
 - Export file naming includes the variant suffix, e.g. `my-window_button_hover_2x.png`.
 - Multi-match selectors keep indexing, then add suffix, e.g. `button_3_click`.
 - Implement the matching CSS classes (or attribute/style rules) in your window styles.
+- Prefer exporting element containers/cells (buttons, slots, bars, cards) and avoid text-only export targets.
 
 ## Tech Stack
 

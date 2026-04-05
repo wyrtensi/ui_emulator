@@ -55,7 +55,6 @@ export default {
     },
     { selector: '[data-export="ab-slot-inner"]', name: 'slot-inner', label: 'Slot Inner Area' },
     { selector: '[data-export="ab-slot-dot"]', name: 'slot-dot', label: 'Slot Dots' },
-    { selector: '[data-export="ab-slot-label"]', name: 'slot-label', label: 'Slot Labels' },
     {
       selector: '[data-export="ab-right"]',
       name: 'right',

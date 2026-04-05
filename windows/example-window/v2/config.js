@@ -19,8 +19,6 @@ export default {
     { selector: '[data-export="example-v2-full"]', name: 'full', label: 'Full Window' },
     { selector: '[data-export="example-v2-header"]', name: 'header', label: 'Header' },
     { selector: '[data-export="example-v2-title-wrap"]', name: 'title-wrap', label: 'Title Wrap' },
-    { selector: '[data-export="example-v2-kicker"]', name: 'kicker', label: 'Kicker' },
-    { selector: '[data-export="example-v2-title"]', name: 'title', label: 'Title' },
     {
       selector: '[data-export="example-v2-close"]',
       name: 'close',
@@ -42,9 +40,7 @@ export default {
       ],
     },
     { selector: '[data-export="example-v2-panel"]', name: 'panel', label: 'Mode Panel' },
-    { selector: '[data-export="example-v2-card"]', name: 'card', label: 'Cards' },
-    { selector: '[data-export="example-v2-card-label"]', name: 'card-label', label: 'Card Labels' },
-    { selector: '[data-export="example-v2-card-value"]', name: 'card-value', label: 'Card Values' },
+    { selector: '[data-export="example-v2-card"]', name: 'card', label: 'Cells (Cards)' },
   ],
   init(container) {
     const requestExportRefresh = () => {

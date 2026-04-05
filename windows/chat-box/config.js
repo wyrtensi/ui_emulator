@@ -27,7 +27,6 @@ export default {
     },
     { selector: '[data-export="cb-log"]', name: 'log', label: 'Chat Log' },
     { selector: '[data-export="cb-input"]', name: 'input', label: 'Input Box' },
-    { selector: '[data-export="cb-type"]', name: 'type', label: 'Channel Label' },
     { selector: '[data-export="cb-field"]', name: 'field', label: 'Text Field' },
     {
       selector: '[data-export="cb-tab"]',
@@ -38,9 +37,7 @@ export default {
         { state: 'click', className: 'ui-export-click' },
       ],
     },
-    { selector: '[data-export="cb-msg"]', name: 'msg', label: 'Chat Messages' },
-    { selector: '[data-export="cb-time"]', name: 'msg-time', label: 'Message Time' },
-    { selector: '[data-export="cb-text"]', name: 'msg-text', label: 'Message Text' },
+    { selector: '[data-export="cb-msg"]', name: 'msg', label: 'Cells (Messages)' },
   ],
   init(container) {
     const requestExportRefresh = () => {

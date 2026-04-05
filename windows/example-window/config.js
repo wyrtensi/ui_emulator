@@ -29,7 +29,7 @@ export default {
       ],
     },
     {
-      selector: '.example-close',
+      selector: '[data-export="example-close"]',
       name: 'close',
       label: 'Close Button',
       variants: [

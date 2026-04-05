@@ -15,7 +15,6 @@ export default {
   exports: [
     { selector: '[data-export="char-full"]', name: 'full', label: 'Full Character' },
     { selector: '[data-export="char-header"]', name: 'header', label: 'Header Bar' },
-    { selector: '[data-export="char-title"]', name: 'title', label: 'Title Text' },
     { selector: '[data-export="char-tabs"]', name: 'tabs', label: 'Tab Row' },
     {
       selector: '[data-export="char-tab"]',
@@ -38,17 +37,13 @@ export default {
     { selector: '[data-export="char-equip"]', name: 'equip', label: 'Equipment Area' },
     { selector: '[data-export="char-silhouette"]', name: 'silhouette', label: 'Silhouette' },
     { selector: '[data-export="char-stats"]', name: 'stats', label: 'Stats Panel' },
-    { selector: '[data-export="char-stat-label"]', name: 'stat-label', label: 'Stat Labels' },
-    { selector: '[data-export="char-stat-value"]', name: 'stat-value', label: 'Stat Values' },
     { selector: '[data-export="char-stat-atk"]', name: 'stat-atk', label: 'Attack Stat' },
     { selector: '[data-export="char-stat-def"]', name: 'stat-def', label: 'Defense Stat' },
     { selector: '[data-export="char-stat-range"]', name: 'stat-range', label: 'Range Stat' },
     { selector: '[data-export="char-stat-hp"]', name: 'stat-hp', label: 'Max HP Stat' },
     { selector: '[data-export="char-mastery"]', name: 'mastery', label: 'Mastery Bars' },
-    { selector: '[data-export="char-mastery-label"]', name: 'mastery-label', label: 'Mastery Labels' },
     { selector: '[data-export="char-mastery-track"]', name: 'mastery-track', label: 'Mastery Tracks' },
     { selector: '[data-export="char-mastery-fill"]', name: 'mastery-fill', label: 'Mastery Fills' },
-    { selector: '[data-export="char-mastery-rank"]', name: 'mastery-rank', label: 'Mastery Ranks' },
     { selector: '[data-export="char-mastery-melee"]', name: 'mastery-melee', label: 'Melee Mastery' },
     { selector: '[data-export="char-mastery-range"]', name: 'mastery-range', label: 'Range Mastery' },
     { selector: '[data-export="char-mastery-def"]', name: 'mastery-def', label: 'Defense Mastery' },
@@ -56,13 +51,12 @@ export default {
     {
       selector: '[data-export="char-slot"]',
       name: 'slot',
-      label: 'Equipment Slots',
+      label: 'Cells (Equipment Slots)',
       variants: [
         { state: 'hover', className: 'ui-export-hover' },
         { state: 'click', className: 'ui-export-click' },
       ],
     },
-    { selector: '[data-export="char-slot-label"]', name: 'slot-label', label: 'Equipment Labels' },
   ],
   init(container) {
     const requestExportRefresh = () => {

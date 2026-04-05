@@ -16,10 +16,6 @@ export default {
     { selector: '[data-export="xp-bar"]', name: 'bar', label: 'Progress Arc' },
     { selector: '[data-export="xp-bg"]', name: 'bg', label: 'Background Path' },
     { selector: '[data-export="xp-fg"]', name: 'fg', label: 'Fill Path' },
-    { selector: '[data-export="xp-text"]', name: 'text', label: 'Level & Percent' },
-    { selector: '[data-export="xp-level"]', name: 'level', label: 'Level Value' },
-    { selector: '[data-export="xp-percent-main"]', name: 'percent-main', label: 'Percent Main' },
-    { selector: '[data-export="xp-percent-frac"]', name: 'percent-frac', label: 'Percent Fraction' },
   ],
 
   init(container) {

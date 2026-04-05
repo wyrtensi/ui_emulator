@@ -18,7 +18,6 @@ export default {
     { selector: '[data-export="top-panel-middle"]', name: 'middle', label: 'Middle Panel' },
     { selector: '[data-export="top-panel-middle-icon"]', name: 'middle-icon', label: 'Middle Icons' },
     { selector: '[data-export="top-panel-timer"]', name: 'timer', label: 'Timer Panel' },
-    { selector: '[data-export="top-panel-timer-text"]', name: 'timer-text', label: 'Timer Text' },
   ],
   init(container) {
     const requestExportRefresh = () => {
