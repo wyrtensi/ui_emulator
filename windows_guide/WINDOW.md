@@ -78,7 +78,7 @@ Optional state persistence:
 
 Note:
 
-- Control Panel transparency sliders are handled globally and stored in settings/presets; window modules do not need custom state hooks for this.
+- Control Panel transparency controls (slider + numeric input) are handled globally and stored in settings/presets; window modules do not need custom state hooks for this.
 - Every runtime window now has transparency control (0..100) in Control Panel.
 - Default mode selection is adaptive (`content` for custom shape windows, otherwise `frame` when root background exists).
 - Use `opacityMode` in `config.js` to explicitly control behavior when design intent differs from auto selection.
@@ -136,6 +136,7 @@ Cut-corner note:
 
 - clip-path based corners/chamfers are preserved in exported PNGs via clip-path-aware masking
 - export pipeline renders targets in full-opacity view (ignores live window transparency slider) so assets stay clear
+- with `Transparent BG` disabled in Export mode, module-level alpha (`opacity`, `rgba(...)`) is flattened so exported UI pixels are opaque while transparent cutouts remain
 - avoid text-only export targets when building granular lists
 
 ## Minimal Baseline Example

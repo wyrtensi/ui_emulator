@@ -227,6 +227,30 @@ class ExportManager {
     return output;
   }
 
+  _flattenAlphaToOpaque(canvas) {
+    if (!canvas) return canvas;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return canvas;
+
+    try {
+      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = img.data;
+
+      for (let i = 3; i < data.length; i += 4) {
+        if (data[i] > 0) {
+          data[i] = 255;
+        }
+      }
+
+      ctx.putImageData(img, 0, 0);
+    } catch {
+      // If canvas is tainted by external assets without CORS, keep original export.
+      return canvas;
+    }
+
+    return canvas;
+  }
+
   _normalizeVariantSuffix(value) {
     const raw = String(value || 'variant').trim().toLowerCase();
     const normalized = raw
@@ -483,11 +507,11 @@ class ExportManager {
     const renderMarker = this._createRenderMarker();
     element.setAttribute('data-ui-export-marker', renderMarker);
 
-    const transparent = this._transparentEl?.checked ?? true;
+    const transparent = this._transparentEl?.checked ?? false;
 
     try {
       const renderOptions = {
-        backgroundColor: transparent ? null : '#000000',
+        backgroundColor: null,
         scale,
         useCORS: true,
         logging: false,
@@ -524,9 +548,15 @@ class ExportManager {
         foreignObjectRendering: false,
       });
 
-      const maskedCanvas = clipMask ? this._applyClipMaskToCanvas(canvas, clipMask) : canvas;
-      let blob = await new Promise(resolve => maskedCanvas.toBlob(resolve, 'image/png'));
-      if (!blob && maskedCanvas !== canvas) {
+      let outputCanvas = clipMask ? this._applyClipMaskToCanvas(canvas, clipMask) : canvas;
+      if (!transparent) {
+        // Flatten per-pixel alpha to remove module-level rgba/opacity fade
+        // while preserving fully transparent cutouts (alpha=0).
+        outputCanvas = this._flattenAlphaToOpaque(outputCanvas);
+      }
+
+      let blob = await new Promise(resolve => outputCanvas.toBlob(resolve, 'image/png'));
+      if (!blob && outputCanvas !== canvas) {
         blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
       }
       if (!blob) return null;

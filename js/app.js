@@ -1597,22 +1597,74 @@ function wireControlPanel() {
       opacityRange.value = String(getWindowOpacityPercent(w.id));
       opacityRange.title = `${w.config.title || w.id} transparency (${opacityMode} mode)`;
 
-      const opacityValue = document.createElement('span');
+      const opacityValue = document.createElement('div');
       opacityValue.className = 'window-opacity-value';
-      opacityValue.textContent = `${opacityRange.value}%`;
+
+      const opacityNumber = document.createElement('input');
+      opacityNumber.className = 'window-opacity-number';
+      opacityNumber.type = 'number';
+      opacityNumber.min = String(WINDOW_OPACITY_MIN);
+      opacityNumber.max = String(WINDOW_OPACITY_MAX);
+      opacityNumber.step = '1';
+      opacityNumber.inputMode = 'numeric';
+      opacityNumber.value = opacityRange.value;
+      opacityNumber.title = `${w.config.title || w.id} transparency percent`;
+
+      const opacityUnit = document.createElement('span');
+      opacityUnit.className = 'window-opacity-unit';
+      opacityUnit.textContent = '%';
+
+      const setOpacityValue = (rawValue) => {
+        const nextOpacity = normalizeWindowOpacityPercent(rawValue);
+        opacityRange.value = String(nextOpacity);
+        opacityNumber.value = String(nextOpacity);
+        setWindowOpacityPercent(w.id, nextOpacity);
+      };
 
       opacityRange.addEventListener('click', (event) => event.stopPropagation());
       opacityRange.addEventListener('pointerdown', (event) => event.stopPropagation());
       opacityRange.addEventListener('input', (event) => {
         event.stopPropagation();
-        const nextOpacity = normalizeWindowOpacityPercent(event.target.value);
-        opacityRange.value = String(nextOpacity);
-        opacityValue.textContent = `${nextOpacity}%`;
-        setWindowOpacityPercent(w.id, nextOpacity);
+        setOpacityValue(event.target.value);
+      });
+
+      opacityNumber.addEventListener('click', (event) => event.stopPropagation());
+      opacityNumber.addEventListener('pointerdown', (event) => event.stopPropagation());
+      opacityNumber.addEventListener('keydown', (event) => event.stopPropagation());
+      opacityNumber.addEventListener('focus', () => opacityNumber.select());
+      opacityNumber.addEventListener('input', (event) => {
+        event.stopPropagation();
+        const rawValue = event.target.value;
+        if (rawValue === '') return;
+        const parsedValue = Number(rawValue);
+        if (!Number.isFinite(parsedValue)) return;
+        setOpacityValue(parsedValue);
+      });
+      opacityNumber.addEventListener('change', (event) => {
+        event.stopPropagation();
+        const rawValue = event.target.value;
+        if (rawValue === '') {
+          opacityNumber.value = opacityRange.value;
+          return;
+        }
+        const parsedValue = Number(rawValue);
+        if (!Number.isFinite(parsedValue)) {
+          opacityNumber.value = opacityRange.value;
+          return;
+        }
+        setOpacityValue(parsedValue);
+      });
+      opacityNumber.addEventListener('blur', () => {
+        if (opacityNumber.value === '') {
+          opacityNumber.value = opacityRange.value;
+        }
       });
 
       itemHead.appendChild(titleWrap);
       itemHead.appendChild(toggle);
+
+      opacityValue.appendChild(opacityNumber);
+      opacityValue.appendChild(opacityUnit);
 
       opacityRow.appendChild(opacityLabel);
       opacityRow.appendChild(opacityRange);

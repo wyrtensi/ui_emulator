@@ -22,10 +22,12 @@ No build pipeline is required. The app runs on plain HTML, CSS, and ES modules.
 - Export definitions can declare optional state variants (for example hover/click) and generate extra PNGs with suffixes (`_hover`, `_click`, ...).
 - Export rendering preserves clip-path/cut-corner silhouettes with a clip-path-aware canvas mask pass.
 - Export renders source elements in full-opacity view (ignores live window transparency) while preserving clip-path/mask silhouettes.
+- Export with `Transparent BG` disabled now flattens per-element alpha (including module `opacity` / `rgba(...)` styling) so exported UI pixels are opaque while silhouette cutouts stay intact.
+- Export panel now defaults to `Transparent BG` off (opaque-first workflow); enable it when you explicitly need alpha-preserving output.
 - Layout save/load/share using JSON files or URL hash compression (LZ-String).
 - Auto-save to localStorage.
 - Background gallery, local background upload, and independent background zoom.
-- Per-window transparency control in Control Panel Windows list (0% to 100%), persisted in local settings and layout presets/share URLs.
+- Per-window transparency control in Control Panel Windows list (0% to 100%) supports both slider drag and direct numeric entry, persisted in local settings and layout presets/share URLs.
 - Adaptive transparency modes are applied per window: `frame` mode (fade wrapper background only) or `content` mode (fade full window) so every window has a working regulator.
 - Shape-heavy windows (clip-path/mask) default to `content` mode, and can explicitly set `opacityMode` in `config.js` when needed.
 - Runtime module import:

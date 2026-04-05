@@ -842,12 +842,37 @@ body[data-panel-open="true"] .side-controls {
 }
 
 .window-opacity-value {
-  width: 36px;
+  width: 64px;
   flex: 0 0 auto;
-  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
   font-size: 11px;
   color: var(--panel-text-dim);
   font-variant-numeric: tabular-nums;
+}
+
+.window-opacity-number {
+  width: 44px;
+  height: 20px;
+  padding: 0 4px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--panel-text);
+  background: var(--panel-input-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+}
+
+.window-opacity-number:focus {
+  outline: none;
+  border-color: var(--panel-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--panel-accent) 50%, transparent);
+}
+
+.window-opacity-unit {
+  color: var(--panel-text-dim);
 }
 
 .window-version-select {
