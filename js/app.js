@@ -558,6 +558,7 @@ async function boot() {
   discussionManager.init();
   layoutManager.init({ commentManager });
   exportManager.init();
+  settings.on('screenBounds', () => applyViewportBoundsMode());
 
   // 3b. Init GitHub auth (handles OAuth callback if ?code= present)
   const loggedIn = await githubAuth.init();
@@ -624,6 +625,7 @@ async function boot() {
   } else {
     applyScale(settings.get('scale'));
   }
+  applyViewportBoundsMode();
   applyBackground(settings.get('background'), settings.get('backgroundType'));
   applyBackgroundColor(settings.get('backgroundColor'));
 
@@ -1513,6 +1515,7 @@ function wireControlPanel() {
   boundsCheck.checked = settings.get('screenBounds');
   boundsCheck.addEventListener('change', () => {
     settings.set('screenBounds', boundsCheck.checked);
+    applyViewportBoundsMode();
   });
 
   // ── Snap to grid ──────────────────────────────────
@@ -1697,6 +1700,14 @@ function applyScale(scale) {
   // Calculate top-left based on scaled dimensions
   viewport.style.left = Math.max(0, (ww - vw) / 2) + 'px';
   viewport.style.top = Math.max(0, (wh - vh) / 2) + 'px';
+}
+
+function applyViewportBoundsMode() {
+  const viewport = document.getElementById('ui-viewport');
+  if (!viewport) return;
+
+  // When bounds are off, allow windows to render beyond the scaled viewport frame.
+  viewport.style.overflow = settings.get('screenBounds') ? 'hidden' : 'visible';
 }
 
 function applyBgScale(scale) {
