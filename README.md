@@ -227,4 +227,4 @@ For versioned windows (single id, multiple looks):
 
 ## License
 
-MIT
+PolyForm Noncommercial License 1.0.0
