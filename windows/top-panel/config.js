@@ -4,12 +4,14 @@ export default {
   defaultPosition: { x: 20, y: 55, width: 500, height: 65 },
   defaultOpen: true,
   hideHeader: true,
-  dragHandle: null,
+  dragHandle: '.top-bar',
   resizable: {
-    enabled: false,
-    handles: [],
-    minWidth: 500,
+    enabled: true,
+    handles: ['e', 'w'],
+    minWidth: 360,
     minHeight: 65,
+    maxWidth: 980,
+    maxHeight: 65,
   },
   exports: [
     { selector: '[data-export="top-panel-full"]', name: 'full', label: 'Top Panel Full' },

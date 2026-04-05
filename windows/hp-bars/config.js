@@ -4,12 +4,14 @@ export default {
   defaultPosition: { x: 20, y: 130, width: 500, height: 180 },
   defaultOpen: true,
   hideHeader: true,
-  dragHandle: null,
+  dragHandle: '.bars-background-wrapper',
   resizable: {
-    enabled: false,
-    handles: [],
+    enabled: true,
+    handles: ['e', 'w'],
     minWidth: 500,
     minHeight: 180,
+    maxWidth: 1100,
+    maxHeight: 180,
   },
   exports: [
     { selector: '[data-export="hp-bars-full"]', name: 'full', label: 'HP Bars Full' },
