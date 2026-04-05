@@ -26,6 +26,7 @@ No build pipeline is required. The app runs on plain HTML, CSS, and ES modules.
 - Background gallery, local background upload, and independent background zoom.
 - Per-window transparency control in Control Panel Windows list (30% to 100%), persisted in local settings and layout presets/share URLs.
 - Window transparency uses background alpha on the window wrapper so text/content opacity is preserved.
+- Shape-only windows without a root background surface are auto-detected and show `N/A` for transparency until a module opts in.
 - Runtime module import:
   - Local ZIP or file bundle (`config.js`, `template.html`, `style.css`)
   - GitHub branch window import (`https://github.com/{user}/{repo}/tree/{branch}`).

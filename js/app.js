@@ -25,6 +25,7 @@ let _activeVersionPrompt = null;
 const WINDOW_OPACITY_MIN = 30;
 const WINDOW_OPACITY_MAX = 100;
 const WINDOW_OPACITY_DEFAULT = 100;
+const windowOpacityFrameSupport = new Map();
 
 function normalizeRelativePath(path) {
   return String(path || '')
@@ -194,9 +195,65 @@ function setWindowOpacityPercent(windowId, value) {
   settings.set('windowOpacity', currentMap);
 }
 
+function parseAlphaToken(token) {
+  if (!token) return 1;
+  const trimmed = String(token).trim();
+  if (trimmed.endsWith('%')) {
+    const percent = Number(trimmed.slice(0, -1));
+    return Number.isFinite(percent) ? percent / 100 : 1;
+  }
+  const value = Number(trimmed);
+  return Number.isFinite(value) ? value : 1;
+}
+
+function parseColorAlpha(colorValue) {
+  if (!colorValue || colorValue === 'transparent') return 0;
+
+  const match = String(colorValue).match(/^rgba?\((.+)\)$/i);
+  if (!match) return 1;
+
+  const body = match[1].trim();
+
+  // CSS Color 4 syntax: rgb(10 20 30 / 0.5)
+  if (body.includes('/')) {
+    const [, alphaRaw] = body.split('/');
+    return parseAlphaToken(alphaRaw);
+  }
+
+  // Legacy syntax: rgba(10, 20, 30, 0.5)
+  const parts = body.split(',').map(part => part.trim());
+  if (parts.length < 4) return 1;
+  return parseAlphaToken(parts[3]);
+}
+
+function shouldUseOpaqueWindowFrame(container, configObj) {
+  if (typeof configObj?.opaqueFrame === 'boolean') {
+    return configObj.opaqueFrame;
+  }
+
+  const rootEl = container?.firstElementChild;
+  if (!(rootEl instanceof HTMLElement)) return false;
+
+  const style = window.getComputedStyle(rootEl);
+  if (style.backgroundImage && style.backgroundImage !== 'none') {
+    return true;
+  }
+
+  return parseColorAlpha(style.backgroundColor) > 0.01;
+}
+
+function canWindowUseOpacityFrame(windowId) {
+  return windowOpacityFrameSupport.get(windowId) === true;
+}
+
 function applyWindowOpacityToContainer(container, windowId) {
   if (!container || !windowId) return;
-  const opacityPercent = getWindowOpacityPercent(windowId);
+  const frameEnabled = canWindowUseOpacityFrame(windowId);
+  container.classList.toggle('ui-window-opaque-frame', frameEnabled);
+
+  const opacityPercent = frameEnabled
+    ? getWindowOpacityPercent(windowId)
+    : WINDOW_OPACITY_DEFAULT;
   container.style.setProperty('--window-bg-opacity', String(opacityPercent / 100));
 }
 
@@ -899,9 +956,11 @@ function _injectWindow(wDef, config, htmlText, cssText, windowsLayer) {
     if (dp.height) container.style.height = dp.height + 'px';
   }
 
-  applyWindowOpacityToContainer(container, wDef.id);
-
   windowsLayer.appendChild(container);
+
+  const frameSupported = shouldUseOpaqueWindowFrame(container, config);
+  windowOpacityFrameSupport.set(wDef.id, frameSupported);
+  applyWindowOpacityToContainer(container, wDef.id);
 
   windowManager.register(wDef.id, config, container);
   dragEngine.attach(wDef.id);
@@ -1416,22 +1475,32 @@ function wireControlPanel() {
       opacityRange.min = String(WINDOW_OPACITY_MIN);
       opacityRange.max = String(WINDOW_OPACITY_MAX);
       opacityRange.step = '1';
+      const supportsOpacityFrame = canWindowUseOpacityFrame(w.id);
       opacityRange.value = String(getWindowOpacityPercent(w.id));
-      opacityRange.title = `${w.config.title || w.id} transparency`;
+      opacityRange.title = supportsOpacityFrame
+        ? `${w.config.title || w.id} transparency`
+        : `${w.config.title || w.id} has no window frame background`;
+      opacityRange.disabled = !supportsOpacityFrame;
 
       const opacityValue = document.createElement('span');
       opacityValue.className = 'window-opacity-value';
-      opacityValue.textContent = `${opacityRange.value}%`;
+      opacityValue.textContent = supportsOpacityFrame ? `${opacityRange.value}%` : 'N/A';
+
+      if (!supportsOpacityFrame) {
+        opacityRow.classList.add('disabled');
+      }
 
       opacityRange.addEventListener('click', (event) => event.stopPropagation());
       opacityRange.addEventListener('pointerdown', (event) => event.stopPropagation());
-      opacityRange.addEventListener('input', (event) => {
-        event.stopPropagation();
-        const nextOpacity = normalizeWindowOpacityPercent(event.target.value);
-        opacityRange.value = String(nextOpacity);
-        opacityValue.textContent = `${nextOpacity}%`;
-        setWindowOpacityPercent(w.id, nextOpacity);
-      });
+      if (supportsOpacityFrame) {
+        opacityRange.addEventListener('input', (event) => {
+          event.stopPropagation();
+          const nextOpacity = normalizeWindowOpacityPercent(event.target.value);
+          opacityRange.value = String(nextOpacity);
+          opacityValue.textContent = `${nextOpacity}%`;
+          setWindowOpacityPercent(w.id, nextOpacity);
+        });
+      }
 
       itemHead.appendChild(titleWrap);
       itemHead.appendChild(toggle);

@@ -72,10 +72,12 @@ Optional state persistence:
 
 - `captureState(container)`
 - `applyState(container, state)`
+- `opaqueFrame` (optional boolean): force-enable/disable global wrapper transparency support for this window
 
 Note:
 
 - Control Panel transparency sliders are handled globally and stored in settings/presets; window modules do not need custom state hooks for this.
+- Slider availability is auto-detected from the window root background; modules can override detection with `opaqueFrame`.
 
 ## Export Strategy (Decision Rule)
 

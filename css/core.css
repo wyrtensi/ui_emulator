@@ -128,6 +128,10 @@ body {
   --window-bg-opacity: 1;
   position: absolute;
   display: none;
+  background: transparent;
+}
+
+.ui-window.ui-window-opaque-frame {
   background: rgba(8, 12, 16, var(--window-bg-opacity));
 }
 
@@ -818,6 +822,14 @@ body[data-panel-open="true"] .side-controls {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.window-opacity-row.disabled {
+  opacity: 0.55;
+}
+
+.window-opacity-row.disabled .window-opacity-range {
+  cursor: not-allowed;
 }
 
 .window-opacity-label {
