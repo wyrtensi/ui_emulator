@@ -187,6 +187,23 @@ class ExportManager {
 
     const ratioX = canvas.width / mask.width;
     const ratioY = canvas.height / mask.height;
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const scaledPoints = mask.points.map((point) => ({
+      x: clamp(point.x * ratioX, 0, canvas.width),
+      y: clamp(point.y * ratioY, 0, canvas.height),
+    }));
+
+    // Shoelace area; skip masking if polygon is degenerate to avoid empty exports.
+    let area = 0;
+    for (let i = 0; i < scaledPoints.length; i++) {
+      const a = scaledPoints[i];
+      const b = scaledPoints[(i + 1) % scaledPoints.length];
+      area += (a.x * b.y) - (b.x * a.y);
+    }
+    if (Math.abs(area) < 1) {
+      return canvas;
+    }
+
     const output = document.createElement('canvas');
     output.width = canvas.width;
     output.height = canvas.height;
@@ -196,9 +213,9 @@ class ExportManager {
 
     ctx.save();
     ctx.beginPath();
-    mask.points.forEach((point, idx) => {
-      const x = point.x * ratioX;
-      const y = point.y * ratioY;
+    scaledPoints.forEach((point, idx) => {
+      const x = point.x;
+      const y = point.y;
       if (idx === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     });
@@ -490,22 +507,16 @@ class ExportManager {
         },
       };
 
-      let canvas;
-      try {
-        canvas = await html2canvas(element, {
-          ...renderOptions,
-          foreignObjectRendering: true,
-        });
-      } catch (renderError) {
-        console.warn('[ExportManager] foreignObject rendering failed, retrying standard mode:', renderError);
-        canvas = await html2canvas(element, {
-          ...renderOptions,
-          foreignObjectRendering: false,
-        });
-      }
+      const canvas = await html2canvas(element, {
+        ...renderOptions,
+        foreignObjectRendering: false,
+      });
 
       const maskedCanvas = clipMask ? this._applyClipMaskToCanvas(canvas, clipMask) : canvas;
-      const blob = await new Promise(resolve => maskedCanvas.toBlob(resolve, 'image/png'));
+      let blob = await new Promise(resolve => maskedCanvas.toBlob(resolve, 'image/png'));
+      if (!blob && maskedCanvas !== canvas) {
+        blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      }
       if (!blob) return null;
 
       const filename = `${windowId}_${exportName}_${scale}x.png`;

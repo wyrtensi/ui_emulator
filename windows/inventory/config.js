@@ -47,7 +47,7 @@ export default {
     {
       selector: '[data-export="inv-cell"]',
       name: 'cell',
-      label: 'Individual Cells',
+      label: 'Cells (Items)',
       variants: [
         { state: 'hover', className: 'ui-export-hover' },
         { state: 'click', className: 'ui-export-click' },
