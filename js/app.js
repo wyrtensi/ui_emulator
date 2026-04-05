@@ -1700,14 +1700,21 @@ function applyScale(scale) {
   // Calculate top-left based on scaled dimensions
   viewport.style.left = Math.max(0, (ww - vw) / 2) + 'px';
   viewport.style.top = Math.max(0, (wh - vh) / 2) + 'px';
+
+  applyViewportBoundsMode();
 }
 
 function applyViewportBoundsMode() {
   const viewport = document.getElementById('ui-viewport');
   if (!viewport) return;
 
-  // When bounds are off, allow windows to render beyond the scaled viewport frame.
-  viewport.style.overflow = settings.get('screenBounds') ? 'hidden' : 'visible';
+  const boundsEnabled = settings.get('screenBounds');
+  const scale = settings.get('scale') || 1;
+
+  // In constrained mode at low scales, keep overflow visible so windows can
+  // move into the outer margins outside the scaled 1920x1080 frame.
+  const shouldClip = boundsEnabled && scale >= 1;
+  viewport.style.overflow = shouldClip ? 'hidden' : 'visible';
 }
 
 function applyBgScale(scale) {

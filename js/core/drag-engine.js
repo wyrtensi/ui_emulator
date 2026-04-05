@@ -14,6 +14,12 @@ class DragEngine {
     this._onUp = this._onUp.bind(this);
   }
 
+  _clamp(value, min, max) {
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return value;
+    if (max < min) return min;
+    return Math.max(min, Math.min(value, max));
+  }
+
   /** Call once after DOM ready */
   init(viewport) {
     this._viewport = viewport;
@@ -80,8 +86,31 @@ class DragEngine {
         const vh = this._viewport.clientHeight;
         const ww = entry.container.offsetWidth;
         const wh = entry.container.offsetHeight;
-        newX = Math.max(0, Math.min(newX, vw - ww));
-        newY = Math.max(0, Math.min(newY, vh - wh));
+
+        let minX = 0;
+        let minY = 0;
+        let maxX = vw - ww;
+        let maxY = vh - wh;
+
+        // At lower UI scales, the viewport is centered with outer margins.
+        // Extend bounds into those margins so windows can pass the scaled frame.
+        if (scale < 1) {
+          const safeScale = Math.max(0.001, scale);
+          const rect = this._viewport.getBoundingClientRect();
+
+          const marginMinX = (0 - rect.left) / safeScale;
+          const marginMinY = (0 - rect.top) / safeScale;
+          const marginMaxX = (window.innerWidth - rect.left) / safeScale - ww;
+          const marginMaxY = (window.innerHeight - rect.top) / safeScale - wh;
+
+          minX = Math.min(minX, marginMinX);
+          minY = Math.min(minY, marginMinY);
+          maxX = Math.max(maxX, marginMaxX);
+          maxY = Math.max(maxY, marginMaxY);
+        }
+
+        newX = this._clamp(newX, minX, maxX);
+        newY = this._clamp(newY, minY, maxY);
       }
     }
 
