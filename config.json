@@ -3,7 +3,7 @@
   "bgScale": 1,
   "windowDefaults": {
     "version": 1,
-    "updatedAt": "2026-04-05T09:57:30.186Z",
+    "updatedAt": "2026-04-05T09:58:33.095Z",
     "windows": [
       {
         "id": "top-panel",
@@ -12,7 +12,7 @@
         "y": -21.8421,
         "width": 453,
         "height": 65,
-        "zIndex": 107
+        "zIndex": 106
       },
       {
         "id": "hp-bars",
@@ -21,7 +21,7 @@
         "y": 72.1057,
         "width": 500,
         "height": 140,
-        "zIndex": 108
+        "zIndex": 107
       },
       {
         "id": "race-indicator",
@@ -30,7 +30,7 @@
         "y": -38.421,
         "width": 140,
         "height": 140,
-        "zIndex": 106
+        "zIndex": 105
       },
       {
         "id": "target-info",
@@ -39,7 +39,7 @@
         "y": -15,
         "width": 380,
         "height": 110,
-        "zIndex": 105
+        "zIndex": 104
       },
       {
         "id": "minimap",
@@ -48,7 +48,7 @@
         "y": -3.15789,
         "width": 240,
         "height": 240,
-        "zIndex": 104
+        "zIndex": 103
       },
       {
         "id": "chat-box",
@@ -57,13 +57,13 @@
         "y": 773.947,
         "width": 440,
         "height": 240,
-        "zIndex": 109
+        "zIndex": 108
       },
       {
         "id": "action-bar",
         "open": true,
-        "x": 629.579,
-        "y": 858.526,
+        "x": 618.001,
+        "y": 977.474,
         "width": 646,
         "height": 100,
         "zIndex": 110
@@ -72,10 +72,10 @@
         "id": "xp-bar",
         "open": true,
         "x": 650,
-        "y": 1000,
+        "y": 1105.26,
         "width": 620,
         "height": 50,
-        "zIndex": 100
+        "zIndex": 109
       },
       {
         "id": "inventory",
@@ -84,7 +84,7 @@
         "y": 312.105,
         "width": 340,
         "height": 380,
-        "zIndex": 102
+        "zIndex": 101
       },
       {
         "id": "character",
@@ -93,7 +93,7 @@
         "y": 299.474,
         "width": 340,
         "height": 480,
-        "zIndex": 103
+        "zIndex": 102
       },
       {
         "id": "abilities",
@@ -102,7 +102,7 @@
         "y": 298.947,
         "width": 320,
         "height": 420,
-        "zIndex": 101
+        "zIndex": 100
       },
       {
         "id": "example-window",
