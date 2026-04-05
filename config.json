@@ -3,7 +3,7 @@
   "bgScale": 1,
   "windowDefaults": {
     "version": 1,
-    "updatedAt": "2026-04-05T10:48:23.923Z",
+    "updatedAt": "2026-04-05T10:54:28.421Z",
     "settings": {
       "scale": 0.95,
       "bgScale": 1,
@@ -56,11 +56,11 @@
       {
         "id": "minimap",
         "open": true,
-        "x": 1710.53,
-        "y": -30.5263,
+        "x": 1644.21,
+        "y": -3.15789,
         "width": 240,
         "height": 240,
-        "zIndex": 110
+        "zIndex": 102
       },
       {
         "id": "chat-box",
@@ -92,11 +92,11 @@
       {
         "id": "inventory",
         "open": true,
-        "x": 772.632,
-        "y": 312.105,
+        "x": 1463.16,
+        "y": 455.263,
         "width": 340,
         "height": 380,
-        "zIndex": 101
+        "zIndex": 110
       },
       {
         "id": "character",
@@ -105,7 +105,7 @@
         "y": 299.474,
         "width": 340,
         "height": 480,
-        "zIndex": 102
+        "zIndex": 101
       },
       {
         "id": "abilities",
