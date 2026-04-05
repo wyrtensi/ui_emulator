@@ -27,11 +27,21 @@
 .abl-dot.active {
   opacity: 1; box-shadow: 0 0 6px var(--dot-color);
 }
+.abl-dot.ui-export-hover { opacity: 0.6; }
+.abl-dot.ui-export-click {
+  opacity: 1;
+  box-shadow: 0 0 6px var(--dot-color);
+}
 .abl-close {
   background: none; border: none; color: #8a9ba8; cursor: pointer;
   font-size: 14px; padding: 0 2px; line-height: 1; margin-left: 6px;
 }
 .abl-close:hover { color: #ff2a55; }
+.abl-close.ui-export-hover { color: #ff2a55; }
+.abl-close.ui-export-click {
+  color: #ff2a55;
+  text-shadow: 0 0 6px rgba(255, 42, 85, 0.7);
+}
 
 /* Category tabs */
 .abl-cats {
@@ -49,6 +59,11 @@
 .abl-cat:hover { color: #8a9ba8; }
 .abl-cat.active {
   color: #00e5ff; background: rgba(0,229,255,0.06);
+}
+.abl-cat.ui-export-hover { color: #8a9ba8; }
+.abl-cat.ui-export-click {
+  color: #00e5ff;
+  background: rgba(0,229,255,0.06);
 }
 
 /* Skill list */
@@ -68,6 +83,13 @@
   background: rgba(0,229,255,0.03);
 }
 .abl-skill.active {
+  border-left-color: #00e5ff;
+}
+.abl-skill.ui-export-hover {
+  background: rgba(0,229,255,0.03);
+}
+.abl-skill.ui-export-click {
+  background: rgba(0,229,255,0.06);
   border-left-color: #00e5ff;
 }
 .abl-skill.disabled {

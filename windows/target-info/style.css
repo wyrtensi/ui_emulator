@@ -16,9 +16,16 @@
   opacity: 0; transition: opacity 0.2s;
 }
 .ti-container:hover .ti-header { opacity: 1; }
+.ti-header.ui-export-hover,
+.ti-header.ui-export-click { opacity: 1; }
 .ti-title { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.3); letter-spacing: 1.5px; }
 .ti-close { background: none; border: none; color: rgba(255,255,255,0.3); font-size: 12px; cursor: pointer; padding: 2px 6px; }
 .ti-close:hover { color: #ff4060; }
+.ti-close.ui-export-hover { color: #ff4060; }
+.ti-close.ui-export-click {
+  color: #ff4060;
+  text-shadow: 0 0 6px rgba(255, 64, 96, 0.7);
+}
 
 .ti-body { flex: 1; padding: 8px 16px 12px; display: flex; flex-direction: column; gap: 6px; }
 .ti-top { display: flex; align-items: baseline; gap: 8px; }

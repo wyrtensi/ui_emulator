@@ -19,7 +19,24 @@ export default {
     { selector: '[data-export="example-full"]', name: 'full', label: 'Full Window' },
     { selector: '[data-export="example-header"]', name: 'header', label: 'Header Bar' },
     { selector: '[data-export="example-tabs"]', name: 'tabs', label: 'Tab Row' },
-    { selector: '[data-export="example-tab"]', name: 'tab', label: 'Single Tab' },
+    {
+      selector: '[data-export="example-tab"]',
+      name: 'tab',
+      label: 'Single Tab',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
+    {
+      selector: '.example-close',
+      name: 'close',
+      label: 'Close Button',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
     { selector: '[data-export="example-content"]', name: 'content', label: 'Content Area' },
   ],
   defaultVersion: 'v1',

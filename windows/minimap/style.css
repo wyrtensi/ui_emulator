@@ -19,6 +19,11 @@
 }
 .mm-close { color: rgba(255,255,255,0.3); cursor: pointer; }
 .mm-close:hover { color: #00e5ff; }
+.mm-close.ui-export-hover { color: #00e5ff; }
+.mm-close.ui-export-click {
+  color: #00e5ff;
+  text-shadow: 0 0 6px rgba(0, 229, 255, 0.7);
+}
 
 .mm-content { display: flex; flex: 1; overflow: hidden; }
 
@@ -53,6 +58,12 @@
   color: rgba(255,255,255,0.4); font-size: 16px; cursor: pointer; transition: 0.2s;
 }
 .mm-btn:hover { color: #00e5ff; background: rgba(0,229,255,0.1); }
+.mm-btn.ui-export-hover { color: #00e5ff; background: rgba(0,229,255,0.1); }
+.mm-btn.ui-export-click {
+  color: #00e5ff;
+  background: rgba(0,229,255,0.16);
+  box-shadow: inset 0 0 0 1px rgba(0,229,255,0.25);
+}
 
 .mm-footer {
   padding: 6px 12px; font-size: 11px; color: #8a9ba8;

@@ -15,16 +15,56 @@ export default {
   exports: [
     { selector: '[data-export="ab-full"]', name: 'full', label: 'Full Action Bar' },
     { selector: '[data-export="ab-left"]', name: 'left', label: 'Left Buttons' },
-    { selector: '[data-export="ab-move"]', name: 'move', label: 'Move Handle' },
-    { selector: '[data-export="ab-settings"]', name: 'settings', label: 'Settings Button' },
-    { selector: '[data-export="ab-lock"]', name: 'lock', label: 'Lock Button' },
+    {
+      selector: '[data-export="ab-move"]',
+      name: 'move',
+      label: 'Move Handle',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
+    {
+      selector: '[data-export="ab-settings"]',
+      name: 'settings',
+      label: 'Settings Button',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
+    {
+      selector: '[data-export="ab-lock"]',
+      name: 'lock',
+      label: 'Lock Button',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
     { selector: '[data-export="ab-grid"]', name: 'grid', label: 'Grid Wrap' },
     { selector: '[data-export="ab-slots"]', name: 'slots', label: 'Slot Grid' },
-    { selector: '[data-export="ab-slot"]', name: 'slot', label: 'Individual Slots' },
+    {
+      selector: '[data-export="ab-slot"]',
+      name: 'slot',
+      label: 'Cells (Slots)',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
     { selector: '[data-export="ab-slot-inner"]', name: 'slot-inner', label: 'Slot Inner Area' },
     { selector: '[data-export="ab-slot-dot"]', name: 'slot-dot', label: 'Slot Dots' },
     { selector: '[data-export="ab-slot-label"]', name: 'slot-label', label: 'Slot Labels' },
-    { selector: '[data-export="ab-right"]', name: 'right', label: 'Resize Arrow' },
+    {
+      selector: '[data-export="ab-right"]',
+      name: 'right',
+      label: 'Resize Arrow',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
   ],
   init(container) {
     const grid = container.querySelector('.ab-grid');

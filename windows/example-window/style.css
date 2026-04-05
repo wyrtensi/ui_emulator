@@ -45,6 +45,16 @@
   background: rgba(255, 64, 96, 0.15);
 }
 
+.example-close.ui-export-hover {
+  color: #ff4060;
+  background: rgba(255, 64, 96, 0.15);
+}
+
+.example-close.ui-export-click {
+  color: #ff4060;
+  background: rgba(255, 64, 96, 0.22);
+}
+
 /* ── Tabs ──────────────────────────────────────────── */
 .example-tabs {
   display: flex;
@@ -70,7 +80,16 @@
   color: rgba(200, 216, 232, 0.7);
 }
 
+.example-tab.ui-export-hover {
+  color: rgba(200, 216, 232, 0.7);
+}
+
 .example-tab.active {
+  color: #00c8ff;
+  border-bottom-color: #00c8ff;
+}
+
+.example-tab.ui-export-click {
   color: #00c8ff;
   border-bottom-color: #00c8ff;
 }

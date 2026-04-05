@@ -21,10 +21,26 @@ export default {
     { selector: '[data-export="example-v2-title-wrap"]', name: 'title-wrap', label: 'Title Wrap' },
     { selector: '[data-export="example-v2-kicker"]', name: 'kicker', label: 'Kicker' },
     { selector: '[data-export="example-v2-title"]', name: 'title', label: 'Title' },
-    { selector: '[data-export="example-v2-close"]', name: 'close', label: 'Close Button' },
+    {
+      selector: '[data-export="example-v2-close"]',
+      name: 'close',
+      label: 'Close Button',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
     { selector: '[data-export="example-v2-grid"]', name: 'grid', label: 'Stats Grid' },
     { selector: '[data-export="example-v2-mode"]', name: 'mode', label: 'Mode Switch' },
-    { selector: '[data-export="example-v2-mode-btn"]', name: 'mode-button', label: 'Mode Button' },
+    {
+      selector: '[data-export="example-v2-mode-btn"]',
+      name: 'mode-button',
+      label: 'Mode Button',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
     { selector: '[data-export="example-v2-panel"]', name: 'panel', label: 'Mode Panel' },
     { selector: '[data-export="example-v2-card"]', name: 'card', label: 'Cards' },
     { selector: '[data-export="example-v2-card-label"]', name: 'card-label', label: 'Card Labels' },

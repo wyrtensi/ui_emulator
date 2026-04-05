@@ -13,9 +13,24 @@ export default {
   },
   exports: [
     { selector: '[data-export="ti-full"]', name: 'full', label: 'Full Target' },
-    { selector: '[data-export="ti-header"]', name: 'header', label: 'Header Bar' },
+    {
+      selector: '[data-export="ti-header"]',
+      name: 'header',
+      label: 'Header Bar',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+      ],
+    },
     { selector: '[data-export="ti-title"]', name: 'title', label: 'Title Text' },
-    { selector: '[data-export="ti-close"]', name: 'close', label: 'Close Button' },
+    {
+      selector: '[data-export="ti-close"]',
+      name: 'close',
+      label: 'Close Button',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
     { selector: '[data-export="ti-body"]', name: 'body', label: 'Body Content' },
     { selector: '[data-export="ti-info"]', name: 'info', label: 'Name & Level' },
     { selector: '[data-export="ti-level"]', name: 'level', label: 'Level Badge' },

@@ -29,6 +29,7 @@ Ad-hoc windows can be imported from:
 Versioned import targeting supports:
 
 - `#window={id}&version={key}`
+- runtime switching from Control Panel Windows list selector (for windows with multiple versions)
 
 ## Quick Start
 
@@ -88,6 +89,39 @@ document.dispatchEvent(new CustomEvent('ui-export-refresh'));
 ```
 
 `window.dispatchEvent(...)` is also supported.
+
+Optional state variants (hover/click/active):
+
+- add `variants` to a specific export entry when extra state PNGs are required
+- variants are rendered from cloned DOM during export (live UI is not mutated)
+- file names append a normalized suffix from `state` (or fallback token)
+
+Example:
+
+```js
+{
+  selector: '[data-export="my-btn"]',
+  name: 'button',
+  label: 'Button',
+  variants: [
+    { state: 'hover', className: 'ui-export-hover' },
+    { state: 'click', className: 'ui-export-click' },
+  ],
+}
+```
+
+Supported variant fields:
+
+- `state`: logical state name used for output suffix (`_hover`, `_click`, ...)
+- `className`: class tokens to add to target clone
+- `selector`: optional nested selector inside exported element clone
+- `attributes`: optional attribute map applied to clone target(s)
+- `style`: optional inline style map applied to clone target(s)
+
+Cut-corner note:
+
+- clip-path based corners/chamfers are preserved in exported PNGs
+- avoid relying on global overflow/padding hacks for clipped shapes
 
 ## Minimal Baseline Example
 
@@ -154,6 +188,8 @@ windows/example-window/
 
 Keep one logical id across versions.
 
+At runtime, users can change version from the Windows list selector for that window.
+
 ## Close Import Paths
 
 Standard window path (`windows/{id}/config.js`):
@@ -198,6 +234,8 @@ Reject output if:
 - over-sliced templates by default
 - no refresh event after dynamic render
 - unbounded resize values
+- variant classes declared in config but missing in CSS
+- using variants when base selector is too broad (unintended state output)
 
 ## Verification Gate (Must Pass)
 
@@ -208,8 +246,10 @@ Reject output if:
    - minimal: full only
    - granular: repeated selectors index correctly
 5. Dynamic DOM updates keep export tree in sync.
-6. Optional state capture/apply restores UI correctly.
-7. No runtime console errors.
+6. Optional variant exports produce expected suffix files and visuals.
+7. Clip-path/cut-corner elements preserve silhouette in exported output.
+8. Optional state capture/apply restores UI correctly.
+9. No runtime console errors.
 
 ## Copy-Paste Prompt (Minimal, Recommended)
 
@@ -239,6 +279,7 @@ Same constraints as minimal mode, plus:
 - Use stable semantic export selectors.
 - Use repeated selectors for repeated nodes.
 - Dispatch ui-export-refresh after dynamic DOM changes.
+- If interactive export states are requested, add `variants` and matching CSS state classes.
 
 Output format:
 - Return only 3 code blocks named config.js, template.html, style.css.

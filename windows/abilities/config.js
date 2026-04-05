@@ -17,12 +17,44 @@ export default {
     { selector: '[data-export="abl-header"]', name: 'header', label: 'Header Bar' },
     { selector: '[data-export="abl-title"]', name: 'title', label: 'Title Text' },
     { selector: '[data-export="abl-dots"]', name: 'dots', label: 'Color Dots' },
-    { selector: '[data-export="abl-dot"]', name: 'dot', label: 'Single Dot' },
-    { selector: '[data-export="abl-close"]', name: 'close', label: 'Close Button' },
+    {
+      selector: '[data-export="abl-dot"]',
+      name: 'dot',
+      label: 'Single Dot',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
+    {
+      selector: '[data-export="abl-close"]',
+      name: 'close',
+      label: 'Close Button',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
     { selector: '[data-export="abl-cats"]', name: 'cats', label: 'Category Tabs' },
-    { selector: '[data-export="abl-cat"]', name: 'cat', label: 'Single Category Tab' },
+    {
+      selector: '[data-export="abl-cat"]',
+      name: 'cat',
+      label: 'Single Category Tab',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
     { selector: '[data-export="abl-list"]', name: 'list', label: 'Skill List' },
-    { selector: '[data-export="abl-skill"]', name: 'skill', label: 'Individual Skills' },
+    {
+      selector: '[data-export="abl-skill"]',
+      name: 'skill',
+      label: 'Individual Skills',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
     { selector: '[data-export="abl-icon"]', name: 'icon', label: 'Skill Icons' },
     { selector: '[data-export="abl-name"]', name: 'name', label: 'Skill Names' },
     { selector: '[data-export="abl-bar"]', name: 'bar', label: 'Skill Bars' },

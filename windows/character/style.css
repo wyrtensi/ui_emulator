@@ -24,11 +24,18 @@
 }
 .char-tab:hover { color: #8a9ba8; }
 .char-tab.active { color: #00e5ff; }
+.char-tab.ui-export-hover { color: #8a9ba8; }
+.char-tab.ui-export-click { color: #00e5ff; }
 .char-close {
   background: none; border: none; color: #8a9ba8; cursor: pointer;
   font-size: 14px; padding: 0 2px; line-height: 1;
 }
 .char-close:hover { color: #ff2a55; }
+.char-close.ui-export-hover { color: #ff2a55; }
+.char-close.ui-export-click {
+  color: #ff2a55;
+  text-shadow: 0 0 6px rgba(255, 42, 85, 0.7);
+}
 
 /* Body */
 .char-body {
@@ -68,6 +75,14 @@
 .eq-slot:hover {
   border-color: rgba(0,229,255,0.3);
   background: rgba(0,229,255,0.08);
+}
+.eq-slot.ui-export-hover {
+  border-color: rgba(0,229,255,0.3);
+  background: rgba(0,229,255,0.08);
+}
+.eq-slot.ui-export-click {
+  border-color: rgba(0,229,255,0.45);
+  background: rgba(0,229,255,0.14);
 }
 
 /* Left column slot positions */

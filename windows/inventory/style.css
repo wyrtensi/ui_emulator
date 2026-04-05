@@ -19,7 +19,12 @@
   background: none; border: none; color: #8a9ba8; cursor: pointer;
   font-size: 14px; padding: 0 2px; line-height: 1;
 }
-.inv-close:hover { color: #ff2a55; }
+.inv-close:hover,
+.inv-close.ui-export-hover { color: #ff2a55; }
+.inv-close.ui-export-click {
+  color: #ffffff;
+  background: rgba(255,42,85,0.18);
+}
 
 /* Toolbar */
 .inv-toolbar {
@@ -35,9 +40,14 @@
   letter-spacing: 1px; padding: 3px 8px; cursor: pointer;
   transition: color .2s, background .2s;
 }
-.inv-tab:hover { color: #8a9ba8; }
+.inv-tab:hover,
+.inv-tab.ui-export-hover { color: #8a9ba8; }
 .inv-tab.active {
   color: #00e5ff; background: rgba(0,229,255,0.06);
+}
+.inv-tab.ui-export-click {
+  color: #00e5ff;
+  background: rgba(0,229,255,0.12);
 }
 .inv-search {
   flex: 1; min-width: 60px;
@@ -48,6 +58,10 @@
 }
 .inv-search:focus {
   border-color: rgba(0,229,255,0.3);
+}
+.inv-search.ui-export-click {
+  border-color: rgba(0,229,255,0.3);
+  background: rgba(0,229,255,0.08);
 }
 
 /* Grid */
@@ -69,12 +83,17 @@
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
   transition: border-color .2s, background .2s;
 }
-.inv-cell:hover {
+.inv-cell:hover,
+.inv-cell.ui-export-hover {
   border-color: rgba(0,229,255,0.25);
 }
 .inv-cell.has {
   background: rgba(0,229,255,0.08);
   border-color: rgba(0,229,255,0.2);
+}
+.inv-cell.ui-export-click {
+  border-color: rgba(0,229,255,0.34);
+  background: rgba(0,229,255,0.14);
 }
 .inv-cell-inner {
   width: 100%; height: 100%;

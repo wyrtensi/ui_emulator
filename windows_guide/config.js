@@ -27,6 +27,16 @@ export default {
     // Add granular slices only if you really need export assets per sub-part.
     // { selector: '[data-export="wg-tab"]', name: 'tab', label: 'Tab Button' },
     // { selector: '[data-export="wg-value"]', name: 'value', label: 'Value Text' },
+    // Optional state variants (exported as extra files, e.g. tab_hover / tab_click):
+    // {
+    //   selector: '[data-export="wg-tab"]',
+    //   name: 'tab',
+    //   label: 'Tab Button',
+    //   variants: [
+    //     { state: 'hover', className: 'ui-export-hover' },
+    //     { state: 'click', className: 'ui-export-click' },
+    //   ],
+    // },
   ],
 
   init(container) {

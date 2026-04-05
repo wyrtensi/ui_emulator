@@ -796,6 +796,44 @@ body[data-panel-open="true"] .side-controls {
 
 .window-list-item span { font-size: 12px; }
 
+.window-list-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.window-version-select {
+  min-width: 90px;
+  max-width: 140px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: var(--panel-text);
+  background: var(--panel-input-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 5px;
+  outline: none;
+  cursor: pointer;
+}
+
+.window-version-select:hover,
+.window-version-select:focus {
+  border-color: var(--panel-accent-dim);
+}
+
+.window-version-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 6px;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  color: var(--panel-accent);
+  border: 1px solid rgba(0, 200, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(0, 200, 255, 0.08);
+}
+
 .window-list-toggle {
   position: relative;
   width: 32px;
@@ -907,6 +945,11 @@ body[data-panel-open="true"] .side-controls {
 
 .export-tree-item input[type="checkbox"] {
   accent-color: var(--panel-accent);
+}
+
+.export-variant-count {
+  color: var(--panel-text-dim);
+  font-size: 10px;
 }
 
 /* ── Comment pins ──────────────────────────────────── */

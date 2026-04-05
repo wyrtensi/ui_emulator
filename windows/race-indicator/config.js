@@ -6,7 +6,15 @@ export default {
   dragHandle: '.ri-drag-ring',
   resizable: { enabled: true },
   exports: [
-    { selector: '[data-export="ri-full"]', name: 'full', label: 'Full Indicator' },
+    {
+      selector: '[data-export="ri-full"]',
+      name: 'full',
+      label: 'Full Indicator',
+      variants: [
+        { state: 'attack', attributes: { 'data-state': 'attack' } },
+        { state: 'warning', attributes: { 'data-state': 'warning' } },
+      ],
+    },
     { selector: '[data-export="ri-logo"]', name: 'logo', label: 'Logo Only' },
     { selector: '[data-export="ri-logo-path"]', name: 'logo-path', label: 'Logo Path' },
     { selector: '[data-export="ri-ring"]', name: 'ring', label: 'Ring Only' },

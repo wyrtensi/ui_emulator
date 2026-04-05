@@ -338,6 +338,7 @@
             <li>Select your .zip or the 3 files together</li>
             <li>The window loads instantly — <strong>no upload, no server</strong></li>
             <li>For versioned windows, include <code>config.js</code> + version subfolders in the ZIP and choose a version in the picker</li>
+            <li>After load, switch versions any time from the Windows list selector (for multi-version windows)</li>
           </ol>
           <p style="margin-top:6px"><em>Note: <code>registry.json</code> is only for built-in windows that ship with the project.</em></p>
           <p style="margin-top:6px"><em>GitHub import supports optional hash params: <code>#window=inventory&amp;version=v2</code>.</em></p>
@@ -359,6 +360,14 @@
   exports: [
     { selector: '[data-export="my-full"]', name: 'full', label: 'Full Window' }, // minimal export baseline
     // add fine-grained slices only when explicitly needed
+    // optional interactive states:
+    // {
+    //   selector: '[data-export="my-btn"]', name: 'btn', label: 'Button',
+    //   variants: [
+    //     { state: 'hover', className: 'ui-export-hover' },
+    //     { state: 'click', className: 'ui-export-click' },
+    //   ],
+    // },
   ],
   init(container) {
     // wire interactive logic here
@@ -394,6 +403,7 @@
         <section class="ui-guide-section">
           <h4>Animated Elements</h4>
           <p>You can include any HTML/CSS animations in template.html. Use <code>@keyframes</code> in style.css and wire interactive logic in <code>config.init()</code>. Click handlers, state toggles, SVG animations — everything works.</p>
+          <p style="margin-top:6px"><em>If you use export <code>variants</code>, provide matching CSS state classes (for example <code>.ui-export-hover</code> / <code>.ui-export-click</code>) so cloned export renders the target state correctly.</em></p>
         </section>
 
         <section class="ui-guide-section">
@@ -418,13 +428,14 @@ Each window = 3 files: config.js, template.html, style.css.
 - `defaultOpen` (boolean): whether the window is visible on first load
 - `dragHandle` (string): CSS selector for the draggable area (e.g. '.my-header')
 - `resizable` (object): `{ enabled: true, handles: ['se'], minWidth, minHeight }` — which edges/corners can resize
-- `exports` (array): `[{ selector, name, label }]` — export targets (minimal `full` export is enough unless granular slicing is requested)
+- `exports` (array): `[{ selector, name, label, variants? }]` — export targets (minimal `full` export is enough unless granular slicing is requested)
 - `init(container)` (function): called after the window is mounted. Use `container.querySelector()` to access your elements.
 - `captureState(container)` + `applyState(container, state)` (optional): persist editable tabs/values/filters for defaults
 
 ## Rules
 - template.html: pure HTML, include a drag handle element matching config.dragHandle
 - export slicing: default to one `data-export` for full window; add granular markers only when requested
+- export variants (optional): only when requested, add `variants` entries and matching CSS state selectors/classes for hover/click outputs
 - style.css: plain CSS (auto-scoped, no need to prefix selectors), @keyframes work, avoid IDs
 - init(container): use container.querySelector() to wire events, animations, state changes
 - To close the window: import('../../js/core/window-manager.js').then(m =&gt; m.windowManager.close('my-id'))

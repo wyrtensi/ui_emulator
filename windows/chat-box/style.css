@@ -24,12 +24,23 @@
 }
 .cb-tab:hover { color: #fff; }
 .cb-tab.active { color: #00e5ff; background: rgba(0,229,255,0.05); }
+.cb-tab.ui-export-hover { color: #fff; }
+.cb-tab.ui-export-click { color: #00e5ff; background: rgba(0,229,255,0.05); }
 .cb-tab.active::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 1px; background: #00e5ff; box-shadow: 0 -2px 5px #00e5ff;
+}
+.cb-tab.ui-export-click::after {
   content: ''; position: absolute; bottom: 0; left: 0; right: 0;
   height: 1px; background: #00e5ff; box-shadow: 0 -2px 5px #00e5ff;
 }
 .cb-close { color: rgba(255,255,255,0.3); font-size: 14px; cursor: pointer; }
 .cb-close:hover { color: #ff4060; }
+.cb-close.ui-export-hover { color: #ff4060; }
+.cb-close.ui-export-click {
+  color: #ff4060;
+  text-shadow: 0 0 6px rgba(255, 64, 96, 0.7);
+}
 
 /* Log area */
 .cb-log {

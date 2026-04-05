@@ -65,6 +65,93 @@ class ExportManager {
     if (typeof window.uiToast === 'function') window.uiToast(msg, type);
   }
 
+  _createRenderMarker() {
+    return `ui-export-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  _hasClipPath(element) {
+    if (!element) return false;
+    const style = window.getComputedStyle(element);
+    return !!style?.clipPath && style.clipPath !== 'none';
+  }
+
+  _normalizeVariantSuffix(value) {
+    const raw = String(value || 'variant').trim().toLowerCase();
+    const normalized = raw
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    return normalized || 'variant';
+  }
+
+  _getExportVariants(exportDef) {
+    if (!Array.isArray(exportDef?.variants)) return [];
+
+    return exportDef.variants
+      .filter((variant) => variant && typeof variant === 'object')
+      .map((variant) => ({
+        state: typeof variant.state === 'string' ? variant.state : '',
+        className: typeof variant.className === 'string' ? variant.className : '',
+        selector: typeof variant.selector === 'string' ? variant.selector : '',
+        attributes: variant.attributes && typeof variant.attributes === 'object' ? variant.attributes : null,
+        style: variant.style && typeof variant.style === 'object' ? variant.style : null,
+      }))
+      .filter((variant) => variant.state || variant.className || variant.selector || variant.attributes || variant.style);
+  }
+
+  _applyVariantToClone(cloneRoot, variant) {
+    if (!cloneRoot || !variant || typeof variant !== 'object') return;
+
+    const targets = variant.selector
+      ? Array.from(cloneRoot.querySelectorAll(variant.selector))
+      : [cloneRoot];
+
+    if (targets.length === 0) return;
+
+    for (const target of targets) {
+      if (variant.className) {
+        for (const classToken of variant.className.split(/\s+/).filter(Boolean)) {
+          target.classList.add(classToken);
+        }
+      }
+
+      if (variant.attributes) {
+        for (const [key, val] of Object.entries(variant.attributes)) {
+          if (val === null || typeof val === 'undefined') continue;
+          target.setAttribute(key, String(val));
+        }
+      }
+
+      if (variant.style) {
+        for (const [prop, val] of Object.entries(variant.style)) {
+          if (val === null || typeof val === 'undefined') continue;
+          target.style.setProperty(prop, String(val));
+        }
+      }
+    }
+  }
+
+  async _renderTargetWithVariants(element, windowId, exportDef, baseExportName, scale) {
+    const files = [];
+
+    const base = await this._renderToPNG(element, windowId, baseExportName, scale, null);
+    if (base) files.push(base);
+
+    const variants = this._getExportVariants(exportDef);
+    for (const variant of variants) {
+      const suffix = this._normalizeVariantSuffix(variant.state || variant.className || 'variant');
+      const variantFile = await this._renderToPNG(
+        element,
+        windowId,
+        `${baseExportName}_${suffix}`,
+        scale,
+        variant,
+      );
+      if (variantFile) files.push(variantFile);
+    }
+
+    return files;
+  }
+
   _getRenderableMatches(container, selector) {
     if (!container || !selector) return [];
     return Array.from(container.querySelectorAll(selector)).filter((el) => {
@@ -109,13 +196,21 @@ class ExportManager {
     const scale = parseInt(this._exportScaleEl?.value || '2');
 
     if (els.length === 1) {
-      return this._renderToPNG(els[0], windowId, exportName, scale);
+      const files = await this._renderTargetWithVariants(els[0], windowId, exportDef, exportName, scale);
+      if (files.length === 0) return null;
+      return files.length === 1 ? files[0] : files;
     }
 
     const results = [];
     for (let i = 0; i < els.length; i++) {
-      const res = await this._renderToPNG(els[i], windowId, `${exportName}_${i + 1}`, scale);
-      if (res) results.push(res);
+      const files = await this._renderTargetWithVariants(
+        els[i],
+        windowId,
+        exportDef,
+        `${exportName}_${i + 1}`,
+        scale,
+      );
+      results.push(...files);
     }
     return results.length > 0 ? results : null;
   }
@@ -222,43 +317,50 @@ class ExportManager {
   }
 
   /* ── Render to PNG via html2canvas ──────────────────── */
-  async _renderToPNG(element, windowId, exportName, scale = 2) {
+  async _renderToPNG(element, windowId, exportName, scale = 2, variant = null) {
     element.classList.remove('ui-export-highlight');
 
-    // Temporarily apply padding to prevent html2canvas from clipping box-shadows/glows
-    const originalPadding = element.style.padding;
-    const originalMargin = element.style.margin;
-
-    // We only apply this hack if we're not inside an SVG (SVGs don't support HTML padding)
     const isSVG = element.tagName.toLowerCase() === 'svg' || element.closest('svg') !== null;
-    if (!isSVG) {
-      element.style.padding = '10px';
-      element.style.margin = '-10px';
-    }
+    const hasClipPath = this._hasClipPath(element);
+    const needsPaddingHack = !isSVG && !hasClipPath;
+    const renderMarker = this._createRenderMarker();
+    element.setAttribute('data-ui-export-marker', renderMarker);
 
     const transparent = this._transparentEl?.checked ?? true;
 
-    const canvas = await html2canvas(element, {
-      backgroundColor: transparent ? null : '#000000',
-      scale,
-      useCORS: true,
-      logging: false,
-    });
+    try {
+      const canvas = await html2canvas(element, {
+        backgroundColor: transparent ? null : '#000000',
+        scale,
+        useCORS: true,
+        logging: false,
+        onclone: (doc) => {
+          const clone = doc.querySelector(`[data-ui-export-marker="${renderMarker}"]`);
+          if (!clone) return;
 
-    // Restore original styles immediately after render
-    if (!isSVG) {
-      element.style.padding = originalPadding;
-      element.style.margin = originalMargin;
+          clone.classList.remove('ui-export-highlight');
+          this._applyVariantToClone(clone, variant);
+
+          // Padding hack is still useful for glow/box-shadow overflow,
+          // but should not be applied to clip-path targets.
+          if (needsPaddingHack) {
+            clone.style.padding = '10px';
+            clone.style.margin = '-10px';
+          }
+        },
+      });
+
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) return null;
+
+      const filename = `${windowId}_${exportName}_${scale}x.png`;
+      return { blob, filename };
+    } finally {
+      element.removeAttribute('data-ui-export-marker');
+      if (settings.get('mode') === 'export') {
+        element.classList.add('ui-export-highlight');
+      }
     }
-
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-    const filename = `${windowId}_${exportName}_${scale}x.png`;
-
-    if (settings.get('mode') === 'export') {
-      element.classList.add('ui-export-highlight');
-    }
-
-    return { blob, filename };
   }
 
   /* ── Download helpers ───────────────────────────────── */
@@ -340,12 +442,24 @@ class ExportManager {
 
     this._showProgress('Exporting element...');
     const scale = parseInt(this._exportScaleEl?.value || '2');
-    const result = await this._renderToPNG(highlighted, windowId, `${exportDef.name}${suffix}`, scale);
+    const files = await this._renderTargetWithVariants(
+      highlighted,
+      windowId,
+      exportDef,
+      `${exportDef.name}${suffix}`,
+      scale,
+    );
     this._hideProgress();
 
-    if (result) {
-      this._downloadBlob(result.blob, result.filename);
-      this._toast(`Exported: ${result.filename}`, 'success');
+    if (files.length === 1) {
+      this._downloadBlob(files[0].blob, files[0].filename);
+      this._toast(`Exported: ${files[0].filename}`, 'success');
+      return;
+    }
+
+    if (files.length > 1) {
+      await this._downloadZip(files);
+      this._toast(`Exported ${files.length} files (state variants included)`, 'success');
     }
   };
 
@@ -435,12 +549,16 @@ class ExportManager {
         const matchCount = this._getRenderableMatches(w.container, exp.selector).length;
         const hasMatches = matchCount > 0;
         const countHTML = matchCount > 1 ? ` <span class="export-match-count">(${matchCount})</span>` : '';
+        const variantCount = this._getExportVariants(exp).length;
+        const variantHTML = variantCount > 0
+          ? ` <span class="export-variant-count">(+${variantCount} states)</span>`
+          : '';
 
         const item = document.createElement('label');
         item.className = 'export-tree-item';
         item.innerHTML = `
           <input type="checkbox" ${hasMatches ? 'checked' : ''} ${hasMatches ? '' : 'disabled'} data-window-id="${w.id}" data-export-name="${exp.name}">
-          <span>${exp.label || exp.name}${countHTML}</span>
+          <span>${exp.label || exp.name}${countHTML}${variantHTML}</span>
         `;
 
         // Update the parent toggle checkbox if children are toggled

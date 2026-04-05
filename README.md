@@ -18,6 +18,8 @@ No build pipeline is required. The app runs on plain HTML, CSS, and ES modules.
 - Design, Export, and Comment modes.
 - PNG export and batch ZIP export via html2canvas + JSZip.
 - Export Mode now supports multi-match selector slicing with count-aware selection (fine-grained repeated parts export correctly).
+- Export definitions can declare optional state variants (for example hover/click) and generate extra PNGs with suffixes (`_hover`, `_click`, ...).
+- Export rendering preserves clip-path/cut-corner silhouettes by avoiding overflow padding hacks on clipped targets.
 - Layout save/load/share using JSON files or URL hash compression (LZ-String).
 - Auto-save to localStorage.
 - Background gallery, local background upload, and independent background zoom.
@@ -26,6 +28,7 @@ No build pipeline is required. The app runs on plain HTML, CSS, and ES modules.
   - GitHub branch window import (`https://github.com/{user}/{repo}/tree/{branch}`).
 - Optional window versions under one window id using subfolders (`windows/{id}/v1`, `windows/{id}/v2`, ...).
 - GitHub import can target a specific version with hash params (`#window={id}&version={key}`), while old links continue to work.
+- Versioned windows can be switched at runtime from the Control Panel Windows list (selection persists in local settings and owner defaults).
 - Owner-only one-click action to save default window versions + layout positions/sizes for everyone via `config.json`.
 - Interactive window state (tabs, editable values, filters, mode toggles) can be captured/applied by window modules and included in owner defaults.
 
@@ -214,6 +217,30 @@ For versioned windows (single id, multiple looks):
 2. Add subfolders per version (`v1`, `v2`, etc.), each with `config.js`, `template.html`, `style.css`.
 3. Keep the same `id` inside every version config.
 4. During import, the app prompts for version when multiple versions exist.
+5. After load, switch versions any time from the Control Panel Windows list selector.
+
+### Optional Export State Variants
+
+When you need interactive-state assets (hover/click/active), add `variants` to a granular export entry:
+
+```js
+{
+  selector: '[data-export="my-button"]',
+  name: 'button',
+  label: 'Button',
+  variants: [
+    { state: 'hover', className: 'ui-export-hover' },
+    { state: 'click', className: 'ui-export-click' },
+  ],
+}
+```
+
+Notes:
+
+- Variants are applied to cloned export DOM only (live UI is not mutated).
+- Export file naming includes the variant suffix, e.g. `my-window_button_hover_2x.png`.
+- Multi-match selectors keep indexing, then add suffix, e.g. `button_3_click`.
+- Implement the matching CSS classes (or attribute/style rules) in your window styles.
 
 ## Tech Stack
 

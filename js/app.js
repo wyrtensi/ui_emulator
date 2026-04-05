@@ -367,6 +367,23 @@ function parseGitHubImportURL(rawUrl) {
   return { user, repo, branch, targetWindow, targetVersion };
 }
 
+function setWindowVersionAndReload(windowId, versionKey) {
+  const entry = windowManager.get(windowId);
+  if (!entry?.config) return;
+
+  const versionEntries = getWindowVersionEntries(entry.config);
+  if (versionEntries.length <= 1) return;
+
+  const selected = versionEntries.find(v => v.key === versionKey);
+  if (!selected) return;
+
+  if (entry.config._versionKey === selected.key) return;
+
+  setStoredWindowVersion(windowId, selected.key);
+  window.uiToast?.(`Switched ${entry.config.title || windowId} to ${selected.label || selected.key}. Reloading...`, 'info');
+  window.location.reload();
+}
+
 /* ── Global toast function ────────────────────────────── */
 window.uiToast = function(message, type = 'info') {
   const container = document.getElementById('ui-toasts');
@@ -1146,14 +1163,50 @@ function wireControlPanel() {
       if (w.id === 'canvas') continue; // Hide canvas from windows list
       const item = document.createElement('div');
       item.className = 'window-list-item';
+
+      const titleWrap = document.createElement('div');
+      titleWrap.className = 'window-list-main';
+
+      const titleEl = document.createElement('span');
+      titleEl.textContent = w.config.title || w.id;
+      titleWrap.appendChild(titleEl);
+
+      const versionEntries = getWindowVersionEntries(w.config);
+      if (versionEntries.length > 1) {
+        const versionSelect = document.createElement('select');
+        versionSelect.className = 'window-version-select';
+
+        for (const versionEntry of versionEntries) {
+          const option = document.createElement('option');
+          option.value = versionEntry.key;
+          option.textContent = versionEntry.label || versionEntry.key;
+          versionSelect.appendChild(option);
+        }
+
+        versionSelect.value = w.config._versionKey || getDefaultWindowVersionKey(w.config, versionEntries);
+        versionSelect.title = `${w.config.title || w.id} version`;
+        versionSelect.addEventListener('click', (event) => event.stopPropagation());
+        versionSelect.addEventListener('change', (event) => {
+          event.stopPropagation();
+          setWindowVersionAndReload(w.id, versionSelect.value);
+        });
+
+        titleWrap.appendChild(versionSelect);
+      } else if (w.config._versionKey) {
+        const badge = document.createElement('span');
+        badge.className = 'window-version-badge';
+        badge.textContent = w.config._versionKey;
+        titleWrap.appendChild(badge);
+      }
+
       const toggle = document.createElement('button');
       toggle.className = 'window-list-toggle' + (w.open ? ' on' : '');
       toggle.addEventListener('click', () => {
         windowManager.toggle(w.id);
         toggle.classList.toggle('on', windowManager.isOpen(w.id));
       });
-      const versionSuffix = w.config._versionKey ? ` (${w.config._versionKey})` : '';
-      item.innerHTML = `<span>${w.config.title || w.id}${versionSuffix}</span>`;
+
+      item.appendChild(titleWrap);
       item.appendChild(toggle);
       windowsList.appendChild(item);
     }

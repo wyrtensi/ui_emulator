@@ -17,8 +17,24 @@ export default {
     { selector: '[data-export="char-header"]', name: 'header', label: 'Header Bar' },
     { selector: '[data-export="char-title"]', name: 'title', label: 'Title Text' },
     { selector: '[data-export="char-tabs"]', name: 'tabs', label: 'Tab Row' },
-    { selector: '[data-export="char-tab"]', name: 'tab', label: 'Individual Tabs' },
-    { selector: '[data-export="char-close"]', name: 'close', label: 'Close Button' },
+    {
+      selector: '[data-export="char-tab"]',
+      name: 'tab',
+      label: 'Individual Tabs',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
+    {
+      selector: '[data-export="char-close"]',
+      name: 'close',
+      label: 'Close Button',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
     { selector: '[data-export="char-equip"]', name: 'equip', label: 'Equipment Area' },
     { selector: '[data-export="char-silhouette"]', name: 'silhouette', label: 'Silhouette' },
     { selector: '[data-export="char-stats"]', name: 'stats', label: 'Stats Panel' },
@@ -37,7 +53,15 @@ export default {
     { selector: '[data-export="char-mastery-range"]', name: 'mastery-range', label: 'Range Mastery' },
     { selector: '[data-export="char-mastery-def"]', name: 'mastery-def', label: 'Defense Mastery' },
     { selector: '[data-export="char-mastery-shield"]', name: 'mastery-shield', label: 'Shield Mastery' },
-    { selector: '[data-export="char-slot"]', name: 'slot', label: 'Equipment Slots' },
+    {
+      selector: '[data-export="char-slot"]',
+      name: 'slot',
+      label: 'Equipment Slots',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
     { selector: '[data-export="char-slot-label"]', name: 'slot-label', label: 'Equipment Labels' },
   ],
   init(container) {

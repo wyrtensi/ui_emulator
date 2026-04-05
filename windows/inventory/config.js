@@ -16,13 +16,44 @@ export default {
     { selector: '[data-export="inv-full"]', name: 'full', label: 'Full Inventory' },
     { selector: '[data-export="inv-header"]', name: 'header', label: 'Title Bar' },
     { selector: '[data-export="inv-title"]', name: 'title', label: 'Title Text' },
-    { selector: '[data-export="inv-close"]', name: 'close', label: 'Close Button' },
+    {
+      selector: '[data-export="inv-close"]',
+      name: 'close',
+      label: 'Close Button',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
     { selector: '[data-export="inv-toolbar"]', name: 'toolbar', label: 'Tabs & Search' },
     { selector: '[data-export="inv-tabs"]', name: 'tabs', label: 'Filter Tabs' },
-    { selector: '[data-export="inv-tab"]', name: 'tab', label: 'Single Tab' },
-    { selector: '[data-export="inv-search"]', name: 'search', label: 'Search Field' },
+    {
+      selector: '[data-export="inv-tab"]',
+      name: 'tab',
+      label: 'Single Tab',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
+    {
+      selector: '[data-export="inv-search"]',
+      name: 'search',
+      label: 'Search Field',
+      variants: [
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
     { selector: '[data-export="inv-grid"]', name: 'grid', label: 'Item Grid' },
-    { selector: '[data-export="inv-cell"]', name: 'cell', label: 'Individual Cells' },
+    {
+      selector: '[data-export="inv-cell"]',
+      name: 'cell',
+      label: 'Individual Cells',
+      variants: [
+        { state: 'hover', className: 'ui-export-hover' },
+        { state: 'click', className: 'ui-export-click' },
+      ],
+    },
     { selector: '[data-export="inv-cell-inner"]', name: 'cell-inner', label: 'Cell Inner Area' },
     { selector: '[data-export="inv-footer"]', name: 'footer', label: 'Footer Bar' },
     { selector: '[data-export="inv-count"]', name: 'count', label: 'Slot Count' },
