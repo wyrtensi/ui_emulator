@@ -1,4 +1,328 @@
 {
   "scale": 0.95,
-  "bgScale": 1
+  "bgScale": 1,
+  "windowDefaults": {
+    "version": 1,
+    "updatedAt": "2026-04-05T09:57:30.186Z",
+    "windows": [
+      {
+        "id": "top-panel",
+        "open": true,
+        "x": -125.263,
+        "y": -21.8421,
+        "width": 453,
+        "height": 65,
+        "zIndex": 107
+      },
+      {
+        "id": "hp-bars",
+        "open": true,
+        "x": -130,
+        "y": 72.1057,
+        "width": 500,
+        "height": 140,
+        "zIndex": 108
+      },
+      {
+        "id": "race-indicator",
+        "open": true,
+        "x": 865.789,
+        "y": -38.421,
+        "width": 140,
+        "height": 140,
+        "zIndex": 106
+      },
+      {
+        "id": "target-info",
+        "open": true,
+        "x": 1141.05,
+        "y": -15,
+        "width": 380,
+        "height": 110,
+        "zIndex": 105
+      },
+      {
+        "id": "minimap",
+        "open": true,
+        "x": 1644.21,
+        "y": -3.15789,
+        "width": 240,
+        "height": 240,
+        "zIndex": 104
+      },
+      {
+        "id": "chat-box",
+        "open": true,
+        "x": -125.263,
+        "y": 773.947,
+        "width": 440,
+        "height": 240,
+        "zIndex": 109
+      },
+      {
+        "id": "action-bar",
+        "open": true,
+        "x": 629.579,
+        "y": 858.526,
+        "width": 646,
+        "height": 100,
+        "zIndex": 110
+      },
+      {
+        "id": "xp-bar",
+        "open": true,
+        "x": 650,
+        "y": 1000,
+        "width": 620,
+        "height": 50,
+        "zIndex": 100
+      },
+      {
+        "id": "inventory",
+        "open": true,
+        "x": 772.632,
+        "y": 312.105,
+        "width": 340,
+        "height": 380,
+        "zIndex": 102
+      },
+      {
+        "id": "character",
+        "open": true,
+        "x": 410,
+        "y": 299.474,
+        "width": 340,
+        "height": 480,
+        "zIndex": 103
+      },
+      {
+        "id": "abilities",
+        "open": true,
+        "x": 1133.68,
+        "y": 298.947,
+        "width": 320,
+        "height": 420,
+        "zIndex": 101
+      },
+      {
+        "id": "example-window",
+        "open": false,
+        "x": 200,
+        "y": 150,
+        "width": 0,
+        "height": 0,
+        "zIndex": 100
+      }
+    ],
+    "windowVersions": {
+      "example-window": "v1"
+    },
+    "windowOpacity": {},
+    "windowState": {
+      "top-panel": {
+        "timerText": "59:00"
+      },
+      "hp-bars": {
+        "rows": [
+          {
+            "bar": "HP",
+            "label": "HP",
+            "current": "14,875",
+            "max": "15,200",
+            "fillWidth": "97.8618%"
+          },
+          {
+            "bar": "FP",
+            "label": "FP",
+            "current": "9,950",
+            "max": "10,100",
+            "fillWidth": "98.5149%"
+          },
+          {
+            "bar": "SP",
+            "label": "SP",
+            "current": "1,600",
+            "max": "1,800",
+            "fillWidth": "88.8889%"
+          },
+          {
+            "bar": "DEF",
+            "label": "DEF",
+            "current": "810",
+            "max": "850",
+            "fillWidth": "95.2941%"
+          }
+        ]
+      },
+      "race-indicator": {
+        "state": "safe"
+      },
+      "target-info": {
+        "level": "LV 50",
+        "name": "JERRY_THE_HUNTER",
+        "distance": "[ 1000 M ]",
+        "race": "CORA",
+        "healthPercent": 33.5
+      },
+      "minimap": {
+        "location": "BELLATO HQ",
+        "coords": "COORD X:23 Y:27",
+        "zoom": 100,
+        "pinEnabled": false,
+        "player": {
+          "x": 50,
+          "y": 50
+        }
+      },
+      "chat-box": {
+        "activeChannel": "ALL",
+        "inputText": "",
+        "messages": [
+          {
+            "time": "[14:02]",
+            "text": "Welcome to the Novus Sector.",
+            "channel": "ALL"
+          },
+          {
+            "time": "[14:05]",
+            "text": "[All] Warrior12: Party for HQ farm?",
+            "channel": "ALL"
+          },
+          {
+            "time": "[14:06]",
+            "text": "[Guild] Officer: Gather up at the base.",
+            "channel": "GUILD"
+          },
+          {
+            "time": "[14:08]",
+            "text": "[Party] Clericz: Buffing, wait a sec.",
+            "channel": "PARTY"
+          },
+          {
+            "time": "[14:10]",
+            "text": "[Race] Archon: Chip is under attack! Defend!",
+            "channel": "RACE"
+          }
+        ]
+      },
+      "action-bar": {
+        "labels": [
+          "F1",
+          "F2",
+          "F3",
+          "F4",
+          "F5",
+          "F6",
+          "F7",
+          "F8",
+          "F9",
+          "F10",
+          "F11",
+          "F12",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "0",
+          "Q",
+          "W"
+        ]
+      },
+      "xp-bar": {
+        "level": 50,
+        "percent": 77.7764
+      },
+      "inventory": {
+        "activeTab": "ALL",
+        "filled": 1,
+        "gold": "💰 4,250,000"
+      },
+      "character": {
+        "activeTab": "EQUIP",
+        "statValues": [
+          "2,450",
+          "1,820",
+          "180",
+          "15,200"
+        ],
+        "slotLabels": [
+          "HEAD",
+          "CHEST",
+          "LEGS",
+          "SHOES",
+          "CLOAK",
+          "GLOVE",
+          "WEAPON",
+          "SHIELD",
+          "RING",
+          "RING",
+          "AMU",
+          "AMU"
+        ],
+        "mastery": [
+          {
+            "label": "MELEE",
+            "fillWidth": "92%",
+            "rank": "GM"
+          },
+          {
+            "label": "RANGE",
+            "fillWidth": "78%",
+            "rank": "GM"
+          },
+          {
+            "label": "DEFENSE",
+            "fillWidth": "85%",
+            "rank": "GM"
+          },
+          {
+            "label": "SHIELD",
+            "fillWidth": "60%",
+            "rank": "PT"
+          }
+        ]
+      },
+      "abilities": {
+        "activeDot": "attack",
+        "activeCat": "basic",
+        "skills": {
+          "power-strike": 92,
+          "blade-fury": 64,
+          "shield-bash": 50,
+          "war-cry": 30,
+          "berserker-rage": 0,
+          "omega-slash": 0
+        }
+      },
+      "example-window": {
+        "activeTab": "info",
+        "values": [
+          "Jerry_The_Hunter",
+          "CORA",
+          "50"
+        ],
+        "statValues": [
+          "1971",
+          "1529",
+          "55",
+          "16443"
+        ],
+        "barTexts": [
+          "HP 14,875 / 15,200",
+          "FP 1,200 / 1,200",
+          "SP 1,600 / 2,900"
+        ],
+        "barFills": [
+          "97.8%",
+          "100%",
+          "55%"
+        ]
+      }
+    }
+  }
 }
