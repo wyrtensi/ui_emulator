@@ -1363,7 +1363,10 @@ function wireControlPanel() {
 
   // ── Open All / Close All ──────────────────────────
   document.getElementById('ui-open-all')?.addEventListener('click', () => {
-    for (const w of windowManager.getAll()) windowManager.open(w.id);
+    for (const w of windowManager.getAll()) {
+      if (w.id === 'canvas') continue;
+      windowManager.open(w.id);
+    }
   });
   document.getElementById('ui-close-all')?.addEventListener('click', () => {
     for (const w of windowManager.getAll()) windowManager.close(w.id);
