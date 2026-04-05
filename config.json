@@ -3,7 +3,7 @@
   "bgScale": 1,
   "windowDefaults": {
     "version": 1,
-    "updatedAt": "2026-04-05T10:47:07.221Z",
+    "updatedAt": "2026-04-05T10:48:23.923Z",
     "settings": {
       "scale": 0.95,
       "bgScale": 1,
@@ -20,11 +20,11 @@
       {
         "id": "top-panel",
         "open": true,
-        "x": -113.684,
-        "y": -16.5789,
+        "x": -125.263,
+        "y": -21.8421,
         "width": 453,
         "height": 65,
-        "zIndex": 107
+        "zIndex": 105
       },
       {
         "id": "hp-bars",
@@ -33,16 +33,16 @@
         "y": 72.1057,
         "width": 500,
         "height": 140,
-        "zIndex": 103
+        "zIndex": 106
       },
       {
         "id": "race-indicator",
         "open": true,
-        "x": 835.263,
-        "y": -40.5263,
+        "x": 865.789,
+        "y": -38.421,
         "width": 140,
         "height": 140,
-        "zIndex": 109
+        "zIndex": 104
       },
       {
         "id": "target-info",
@@ -51,16 +51,16 @@
         "y": -15,
         "width": 380,
         "height": 110,
-        "zIndex": 102
+        "zIndex": 103
       },
       {
         "id": "minimap",
         "open": true,
-        "x": 1644.21,
-        "y": -3.15789,
+        "x": 1710.53,
+        "y": -30.5263,
         "width": 240,
         "height": 240,
-        "zIndex": 101
+        "zIndex": 110
       },
       {
         "id": "chat-box",
@@ -69,7 +69,7 @@
         "y": 773.947,
         "width": 440,
         "height": 240,
-        "zIndex": 104
+        "zIndex": 107
       },
       {
         "id": "action-bar",
@@ -78,7 +78,7 @@
         "y": 977.474,
         "width": 646,
         "height": 100,
-        "zIndex": 106
+        "zIndex": 109
       },
       {
         "id": "xp-bar",
@@ -87,25 +87,25 @@
         "y": 1105.26,
         "width": 620,
         "height": 50,
-        "zIndex": 105
+        "zIndex": 108
       },
       {
         "id": "inventory",
         "open": true,
-        "x": 1495.79,
-        "y": 485.789,
+        "x": 772.632,
+        "y": 312.105,
         "width": 340,
         "height": 380,
-        "zIndex": 108
+        "zIndex": 101
       },
       {
         "id": "character",
         "open": true,
-        "x": 342.632,
-        "y": 254.211,
+        "x": 410,
+        "y": 299.474,
         "width": 340,
         "height": 480,
-        "zIndex": 110
+        "zIndex": 102
       },
       {
         "id": "abilities",
@@ -121,6 +121,15 @@
         "open": false,
         "x": 200,
         "y": 150,
+        "width": 0,
+        "height": 0,
+        "zIndex": 100
+      },
+      {
+        "id": "canvas",
+        "open": false,
+        "x": 0,
+        "y": 0,
         "width": 0,
         "height": 0,
         "zIndex": 100
@@ -167,7 +176,7 @@
         ]
       },
       "race-indicator": {
-        "state": "attack"
+        "state": "safe"
       },
       "target-info": {
         "level": "LV 50",
