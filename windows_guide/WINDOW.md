@@ -187,6 +187,8 @@ applyState(container, state) {
 
 This integrates with `config.json.windowDefaults.windowState`.
 Global transparency defaults integrate through `config.json.windowDefaults.windowOpacity`.
+Owner baseline settings can also be published via `config.json.windowDefaults.settings` (`scale`, `bgScale`, `autoFitScale`, `screenBounds`, `snapToGrid`, `gridSize`, `background`, `backgroundType`, `backgroundColor`, `mode`).
+Startup precedence is `#preset` URL hash, then `windowDefaults`, then local autosave, then manifest defaults.
 
 ## Versioned Windows (Optional)
 

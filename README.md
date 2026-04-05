@@ -141,13 +141,26 @@ Edit `js/config.js`:
 
 `config.json` can define startup defaults:
 
-- `scale`
-- `bgScale`
-- `windowDefaults` (owner-published baseline for all users when no local/url preset exists):
+- Legacy top-level defaults (backward-compatible):
+  - `scale`
+  - `bgScale`
+- `windowDefaults` (owner-published baseline for all users, recommended):
+  - `settings`: optional shared control-panel baseline:
+    - `scale`, `bgScale`, `autoFitScale`
+    - `screenBounds`, `snapToGrid`, `gridSize`
+    - `background`, `backgroundType`, `backgroundColor`
+    - `mode`
   - `windowVersions`: selected version per window id
   - `windowOpacity`: optional per-window transparency percent map (`0..100`, omitted means `100`)
   - `windows`: layout snapshot (`x`, `y`, `width`, `height`, `open`, `zIndex`)
   - `windowState`: optional interactive state payload per window (tabs, editable values, filters)
+
+Startup precedence is:
+
+- URL preset hash (`#preset=...`)
+- `config.json.windowDefaults`
+- local autosave (`localStorage`)
+- manifest defaults
 
 ### Worker deployment
 

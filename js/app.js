@@ -26,6 +26,7 @@ const WINDOW_OPACITY_MIN = 0;
 const WINDOW_OPACITY_MAX = 100;
 const WINDOW_OPACITY_DEFAULT = 100;
 const windowOpacityModeMap = new Map();
+const OWNER_DEFAULT_MODES = new Set(['design', 'export', 'comment']);
 
 function normalizeRelativePath(path) {
   return String(path || '')
@@ -193,6 +194,98 @@ function setWindowOpacityPercent(windowId, value) {
   }
 
   settings.set('windowOpacity', currentMap);
+}
+
+function normalizeOwnerDefaultSettings(raw) {
+  if (!raw || typeof raw !== 'object') return {};
+
+  const normalized = {};
+
+  const readNumber = (key, min, max) => {
+    if (!(key in raw)) return;
+    const value = Number(raw[key]);
+    if (!Number.isFinite(value)) return;
+    normalized[key] = Math.max(min, Math.min(max, value));
+  };
+
+  readNumber('scale', 0.3, 2);
+  readNumber('bgScale', 0.3, 2);
+
+  if (typeof raw.autoFitScale === 'boolean') normalized.autoFitScale = raw.autoFitScale;
+  if (typeof raw.screenBounds === 'boolean') normalized.screenBounds = raw.screenBounds;
+  if (typeof raw.snapToGrid === 'boolean') normalized.snapToGrid = raw.snapToGrid;
+
+  if ('gridSize' in raw) {
+    const value = Number(raw.gridSize);
+    if (Number.isFinite(value)) {
+      normalized.gridSize = Math.max(1, Math.min(100, Math.round(value)));
+    }
+  }
+
+  if (typeof raw.background === 'string') {
+    normalized.background = raw.background;
+  }
+
+  if (typeof raw.backgroundType === 'string') {
+    const type = raw.backgroundType.trim().toLowerCase();
+    if (type === '' || type === 'image' || type === 'video') {
+      normalized.backgroundType = type;
+    }
+  }
+
+  if (typeof normalized.background === 'string' && normalized.background === '') {
+    normalized.backgroundType = '';
+  } else if (typeof normalized.background === 'string' && !('backgroundType' in normalized)) {
+    normalized.backgroundType = guessMediaType(normalized.background);
+  }
+
+  if (typeof raw.backgroundColor === 'string' && raw.backgroundColor.trim()) {
+    normalized.backgroundColor = raw.backgroundColor.trim();
+  }
+
+  if (typeof raw.mode === 'string') {
+    const mode = raw.mode.trim().toLowerCase();
+    if (OWNER_DEFAULT_MODES.has(mode)) {
+      normalized.mode = mode;
+    }
+  }
+
+  return normalized;
+}
+
+function captureOwnerDefaultSettings() {
+  return normalizeOwnerDefaultSettings({
+    scale: settings.get('scale'),
+    bgScale: settings.get('bgScale'),
+    autoFitScale: settings.get('autoFitScale'),
+    screenBounds: settings.get('screenBounds'),
+    snapToGrid: settings.get('snapToGrid'),
+    gridSize: settings.get('gridSize'),
+    background: settings.get('background'),
+    backgroundType: settings.get('backgroundType'),
+    backgroundColor: settings.get('backgroundColor'),
+    mode: settings.get('mode'),
+  });
+}
+
+function applyOwnerDefaultSettings(rawSettings, { applyRuntime = true } = {}) {
+  const normalized = normalizeOwnerDefaultSettings(rawSettings);
+  const entries = Object.entries(normalized);
+  if (entries.length === 0) return false;
+
+  for (const [key, value] of entries) {
+    settings.set(key, value);
+  }
+
+  if (applyRuntime) {
+    applyScaleFromSettings();
+    applyBgScale(settings.get('bgScale') || 1.0);
+    applyBackground(settings.get('background'), settings.get('backgroundType'));
+    applyBackgroundColor(settings.get('backgroundColor'));
+    applyViewportBoundsMode();
+  }
+
+  return true;
 }
 
 function parseAlphaToken(token) {
@@ -384,6 +477,7 @@ function captureDefaultWindowState() {
   const allowedIds = getDefaultableWindowIds();
   const states = windowManager.captureLayout().filter(ws => allowedIds.has(ws.id));
   const allInteractiveState = windowManager.captureInteractiveState();
+  const defaultsSettings = captureOwnerDefaultSettings();
 
   const currentVersionMap = getActiveWindowVersionMap();
   const currentOpacityMap = getWindowOpacityMap();
@@ -405,6 +499,7 @@ function captureDefaultWindowState() {
   return {
     version: 1,
     updatedAt: new Date().toISOString(),
+    settings: defaultsSettings,
     windows: states,
     windowVersions,
     windowOpacity,
@@ -415,17 +510,34 @@ function captureDefaultWindowState() {
 function applyRemoteWindowDefaults() {
   if (!remoteWindowDefaults || typeof remoteWindowDefaults !== 'object') return false;
 
-  const windowStates = Array.isArray(remoteWindowDefaults.windows) ? remoteWindowDefaults.windows : [];
-  if (windowStates.length === 0) return false;
+  let applied = false;
 
-  windowManager.restoreLayout(windowStates);
-  if (remoteWindowDefaults.windowState && typeof remoteWindowDefaults.windowState === 'object') {
-    windowManager.restoreInteractiveState(remoteWindowDefaults.windowState);
+  if (remoteWindowDefaults.settings && typeof remoteWindowDefaults.settings === 'object') {
+    applied = applyOwnerDefaultSettings(remoteWindowDefaults.settings) || applied;
   }
+
+  if (remoteWindowDefaults.windowVersions && typeof remoteWindowDefaults.windowVersions === 'object') {
+    settings.set('windowVersions', { ...remoteWindowDefaults.windowVersions });
+    applied = true;
+  }
+
   if (remoteWindowDefaults.windowOpacity && typeof remoteWindowDefaults.windowOpacity === 'object') {
     settings.set('windowOpacity', normalizeWindowOpacityMap(remoteWindowDefaults.windowOpacity));
+    applied = true;
   }
-  return true;
+
+  const windowStates = Array.isArray(remoteWindowDefaults.windows) ? remoteWindowDefaults.windows : [];
+  if (windowStates.length > 0) {
+    windowManager.restoreLayout(windowStates);
+    applied = true;
+  }
+
+  if (remoteWindowDefaults.windowState && typeof remoteWindowDefaults.windowState === 'object') {
+    windowManager.restoreInteractiveState(remoteWindowDefaults.windowState);
+    applied = true;
+  }
+
+  return applied;
 }
 
 function mergeWindowConfigs(baseConfig, versionConfig) {
@@ -818,15 +930,39 @@ async function boot() {
     const configResp = await fetch('config.json');
     if (configResp.ok) {
       remoteConfig = await configResp.json();
-      if (remoteConfig.scale !== undefined && !localStorage.getItem('ui-ui-settings')) {
-        settings.set('scale', remoteConfig.scale);
-        settings.set('autoFitScale', false);
-      }
-      if (remoteConfig.bgScale !== undefined && !localStorage.getItem('ui-ui-settings')) {
-        settings.set('bgScale', remoteConfig.bgScale);
-      }
+
       if (remoteConfig.windowDefaults && typeof remoteConfig.windowDefaults === 'object') {
         remoteWindowDefaults = remoteConfig.windowDefaults;
+
+        if (remoteWindowDefaults.settings && typeof remoteWindowDefaults.settings === 'object') {
+          applyOwnerDefaultSettings(remoteWindowDefaults.settings, { applyRuntime: false });
+        }
+
+        if (remoteWindowDefaults.windowVersions && typeof remoteWindowDefaults.windowVersions === 'object') {
+          settings.set('windowVersions', { ...remoteWindowDefaults.windowVersions });
+        }
+
+        if (remoteWindowDefaults.windowOpacity && typeof remoteWindowDefaults.windowOpacity === 'object') {
+          settings.set('windowOpacity', normalizeWindowOpacityMap(remoteWindowDefaults.windowOpacity));
+        }
+      }
+
+      // Backward-compatible support for legacy top-level defaults.
+      const hasWindowDefaultSettings = !!(
+        remoteWindowDefaults &&
+        typeof remoteWindowDefaults.settings === 'object'
+      );
+
+      if (!hasWindowDefaultSettings && (remoteConfig.scale !== undefined || remoteConfig.bgScale !== undefined)) {
+        const legacyDefaults = {};
+        if (remoteConfig.scale !== undefined) {
+          legacyDefaults.scale = remoteConfig.scale;
+          legacyDefaults.autoFitScale = false;
+        }
+        if (remoteConfig.bgScale !== undefined) {
+          legacyDefaults.bgScale = remoteConfig.bgScale;
+        }
+        applyOwnerDefaultSettings(legacyDefaults, { applyRuntime: false });
       }
     }
   } catch (err) {
@@ -862,25 +998,16 @@ async function boot() {
     onExportWindow: (id) => exportManager.exportWindow(id),
   });
 
-  // 6. Apply settings to UI — auto-fit if enabled, else use saved scale
-  if (settings.get('autoFitScale')) {
-    const ww = window.innerWidth - 40;
-    const wh = window.innerHeight - 20;
-    const fit = Math.min(ww / 1920, wh / 1080);
-    const autoScale = Math.max(0.3, Math.min(2, fit));
-    settings.set('scale', autoScale);
-    applyScale(autoScale);
-  } else {
-    applyScale(settings.get('scale'));
-  }
+  // 6. Apply settings to UI
+  applyScaleFromSettings();
   applyViewportBoundsMode();
   applyBackground(settings.get('background'), settings.get('backgroundType'));
   applyBackgroundColor(settings.get('backgroundColor'));
 
-  // 7. Try to load from URL, then autosave, then default
+  // 7. Startup precedence: URL preset > owner defaults > local autosave > manifest defaults
   if (!layoutManager.loadFromURL()) {
-    if (!layoutManager.loadAutoSave()) {
-      if (!applyRemoteWindowDefaults()) {
+    if (!applyRemoteWindowDefaults()) {
+      if (!layoutManager.loadAutoSave()) {
         for (const wDef of manifest.windows) {
           windowManager.resetPosition(wDef.id, manifest);
           if (wDef.defaultOpen) windowManager.open(wDef.id);
@@ -899,16 +1026,11 @@ async function boot() {
   // 9. Load remote pins from GitHub (non-blocking)
   commentManager.loadRemotePins().catch(() => {});
 
-  // 10. Hide loading screen and open all windows initially
+  // 10. Hide loading screen
   const loadingScreen = document.getElementById('ui-loading-screen');
   if (loadingScreen) {
     loadingScreen.classList.add('hidden');
     setTimeout(() => loadingScreen.remove(), 500); // Wait for transition
-  }
-
-  // Open all windows
-  for (const w of windowManager.getAll()) {
-    windowManager.open(w.id);
   }
 
   // 11. Show panel arrow briefly
@@ -984,7 +1106,7 @@ async function loadWindowById(windowId, windowsLayer) {
     windowId: rootConfig.id,
     title: rootConfig.title,
     rootConfig,
-    preferredVersion: storedVersion || remoteVersion,
+    preferredVersion: remoteVersion || storedVersion,
     sourceLabel: '',
     askIfMultiple: false,
   });
@@ -1977,12 +2099,12 @@ function wireControlPanel() {
       await githubApi.saveFile(
         'config.json',
         JSON.stringify(remoteConfig, null, 2),
-        'chore: Update default window versions and layout'
+        'chore: Update default UI baseline for everyone'
       );
 
-      window.uiToast('Saved default window versions and layout for everyone', 'success');
+      window.uiToast('Saved default UI baseline for everyone', 'success');
     } catch (err) {
-      window.uiToast('Failed to save default window versions/layout', 'error');
+      window.uiToast('Failed to save default UI baseline', 'error');
       console.error(err);
     } finally {
       saveDefaultsBtn.textContent = oldText;
@@ -2037,6 +2159,20 @@ function clearActiveThumb() {
 /* ═══════════════════════════════════════════════════════
    HELPERS
    ═══════════════════════════════════════════════════════ */
+function applyScaleFromSettings() {
+  if (settings.get('autoFitScale')) {
+    const ww = window.innerWidth - 40;
+    const wh = window.innerHeight - 20;
+    const fit = Math.min(ww / 1920, wh / 1080);
+    const autoScale = Math.max(0.3, Math.min(2, fit));
+    settings.set('scale', autoScale);
+    applyScale(autoScale);
+    return;
+  }
+
+  applyScale(settings.get('scale'));
+}
+
 function applyScale(scale) {
   const viewport = document.getElementById('ui-viewport');
   viewport.style.setProperty('--ui-scale', scale);
