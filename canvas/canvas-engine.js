@@ -39,6 +39,9 @@ let canvasClipboard = null;
 let clipboardPasteCount = 0;
 let pendingClipboardNodePaste = false;
 let canvasClipboardCopiedAtMs = 0;
+let nodePasteShortcutAtMs = 0;
+let pendingNodePasteShortcutSeq = 0;
+let handledNodePasteShortcutSeq = 0;
 let undoRedoCaptureBound = false;
 let editorTabCaptureBound = false;
 let liveClient = null;
@@ -63,6 +66,8 @@ const CANVAS_FILE = 'concept.canvas';
 const CANVAS_VIEW_STATE_KEY = 'ui-canvas-view-v1';
 const SNAP_THRESHOLD = 8;
 const CANVAS_CLIPBOARD_PASTE_PRIORITY_WINDOW_MS = 2 * 60 * 1000;
+const CANVAS_CLIPBOARD_IMAGE_CONFLICT_NODE_WINDOW_MS = 2500;
+const NODE_PASTE_SHORTCUT_WINDOW_MS = 900;
 const LIVE_SYNC_DEBOUNCE_MS = Math.max(250, Number(config.live?.syncDebounceMs) || 1200);
 const LIVE_POLL_INTERVAL_MS = Math.max(1200, Number(config.live?.pollIntervalMs) || 2200);
 let hasUnsavedChanges = false;
@@ -5939,16 +5944,21 @@ function setupOwnerTools() {
             e.preventDefault();
             copySelectedToClipboard();
         } else if (isCtrlOrCmd && (e.key === 'v' || e.key === 'V')) {
-            pendingClipboardNodePaste = !!(canvasClipboard && Array.isArray(canvasClipboard.nodes) && canvasClipboard.nodes.length > 0);
+            const hasClipboardNodes = !!(canvasClipboard && Array.isArray(canvasClipboard.nodes) && canvasClipboard.nodes.length > 0);
+            pendingClipboardNodePaste = hasClipboardNodes;
 
             // Do not block native paste. The paste event handler decides whether to
             // paste nodes, upload image clipboard content, or allow text paste.
-            if (pendingClipboardNodePaste) {
+            if (hasClipboardNodes) {
+                nodePasteShortcutAtMs = Date.now();
+                const requestSeq = ++pendingNodePasteShortcutSeq;
                 setTimeout(() => {
+                    if (requestSeq <= handledNodePasteShortcutSeq) return;
                     if (!pendingClipboardNodePaste) return;
                     pendingClipboardNodePaste = false;
+                    handledNodePasteShortcutSeq = requestSeq;
                     pasteFromClipboard();
-                }, 0);
+                }, 80);
             }
         } else if (isCtrlOrCmd && (e.key === 's' || e.key === 'S')) {
             e.preventDefault();
@@ -6046,26 +6056,40 @@ function setupOwnerTools() {
 async function handleGlobalPaste(e) {
     if (!isOwner) return;
 
+    const now = Date.now();
     const targetTag = e.target?.tagName;
     const isInputLike = targetTag === 'INPUT' || targetTag === 'TEXTAREA';
     const clipboard = e.clipboardData || e.originalEvent?.clipboardData;
     const items = Array.from(clipboard?.items || []);
+    const imageItem = items.find(item => item.kind === 'file' && item.type.startsWith('image/'));
+    const hasImageClipboardItem = !!imageItem;
     const hasCanvasClipboardNodes = !!(canvasClipboard && Array.isArray(canvasClipboard.nodes) && canvasClipboard.nodes.length > 0);
     const recentCanvasCopy = hasCanvasClipboardNodes
-        && (Date.now() - canvasClipboardCopiedAtMs) <= CANVAS_CLIPBOARD_PASTE_PRIORITY_WINDOW_MS;
+        && (now - canvasClipboardCopiedAtMs) <= CANVAS_CLIPBOARD_PASTE_PRIORITY_WINDOW_MS;
+    const strongCanvasCopyForImageConflict = hasCanvasClipboardNodes
+        && (now - canvasClipboardCopiedAtMs) <= CANVAS_CLIPBOARD_IMAGE_CONFLICT_NODE_WINDOW_MS;
+    const shortcutNodeIntent = pendingClipboardNodePaste
+        && (now - nodePasteShortcutAtMs) <= NODE_PASTE_SHORTCUT_WINDOW_MS;
     const allowSystemClipboardOverride = e.altKey || e.shiftKey;
+    const targetIsContentEditable = !!e.target?.isContentEditable;
+
+    if (shortcutNodeIntent) {
+        handledNodePasteShortcutSeq = Math.max(handledNodePasteShortcutSeq, pendingNodePasteShortcutSeq);
+    }
 
     // Ignore if pasting into text inputs (chat, forms)
     if (isInputLike) {
+        pendingClipboardNodePaste = false;
         return;
     }
 
-    // If the user copied canvas nodes and is pasting outside an editor,
-    // prioritize the node paste over any residual clipboard image.
+    // Conflict resolver: if both image clipboard data and node clipboard exist,
+    // only prefer nodes when the node intent is explicit and fresh.
     if (!allowSystemClipboardOverride
-        && !e.target.isContentEditable
+        && !targetIsContentEditable
         && hasCanvasClipboardNodes
-        && (pendingClipboardNodePaste || recentCanvasCopy)) {
+        && hasImageClipboardItem
+        && (shortcutNodeIntent || strongCanvasCopyForImageConflict)) {
         e.preventDefault();
         pendingClipboardNodePaste = false;
         pasteFromClipboard();
@@ -6076,7 +6100,6 @@ async function handleGlobalPaste(e) {
     const activeTextNodeId = activeTextEditor?.dataset?.id || null;
 
     // Clipboard image paste inserts inline when editing a text node.
-    const imageItem = items.find(item => item.kind === 'file' && item.type.startsWith('image/'));
     if (imageItem) {
         e.preventDefault();
         pendingClipboardNodePaste = false;
@@ -6105,13 +6128,17 @@ async function handleGlobalPaste(e) {
     }
 
     // Let native paste flow for active rich-text node editing.
-    if (e.target.isContentEditable) {
+    if (targetIsContentEditable) {
         pendingClipboardNodePaste = false;
         return;
     }
 
-    // If Ctrl+V was intended for node clipboard, consume this paste and paste nodes.
-    if (hasCanvasClipboardNodes && (pendingClipboardNodePaste || recentCanvasCopy)) {
+    // Node-only path (no image item in clipboard): allow either recent copy or
+    // an explicit Ctrl/Cmd+V intent to paste node clipboard.
+    if (!allowSystemClipboardOverride
+        && hasCanvasClipboardNodes
+        && !hasImageClipboardItem
+        && (shortcutNodeIntent || recentCanvasCopy)) {
         e.preventDefault();
         pendingClipboardNodePaste = false;
         pasteFromClipboard();

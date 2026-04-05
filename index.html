@@ -237,6 +237,9 @@
         </div>
         <div class="btn-row">
           <button class="panel-btn panel-btn-sm panel-btn-danger" id="ui-preset-reset">↺ Reset All</button>
+          <button class="panel-btn panel-btn-sm" id="ui-layout-defaults-save" title="Owner only: save current window versions and layout for everyone" hidden>
+            Save Defaults for Everyone
+          </button>
         </div>
       </section>
 
@@ -324,6 +327,7 @@
   config.js       ← metadata, position, drag, resize, exports
   template.html   ← the window's HTML
   style.css       ← styles (auto-scoped, no conflicts)</code></pre>
+          <p style="margin-top:6px"><em>This guide dialog is part of the main settings UI, not a runtime window module. Use it as authoring reference only.</em></p>
         </section>
 
         <section class="ui-guide-section">
@@ -333,9 +337,10 @@
             <li>Open Control Panel → click <strong>Import Window</strong></li>
             <li>Select your .zip or the 3 files together</li>
             <li>The window loads instantly — <strong>no upload, no server</strong></li>
-            <li>Imported windows persist in your browser (localStorage) and survive page refreshes</li>
+            <li>For versioned windows, include <code>config.js</code> + version subfolders in the ZIP and choose a version in the picker</li>
           </ol>
-          <p style="margin-top:6px"><em>Note: <code>registry.json</code> is only for the built-in windows that ship with the project. Your imported windows are stored entirely in your browser.</em></p>
+          <p style="margin-top:6px"><em>Note: <code>registry.json</code> is only for built-in windows that ship with the project.</em></p>
+          <p style="margin-top:6px"><em>GitHub import supports optional hash params: <code>#window=inventory&amp;version=v2</code>.</em></p>
         </section>
 
         <section class="ui-guide-section">
@@ -352,11 +357,18 @@
     minWidth: 200, minHeight: 150,
   },
   exports: [
-    { selector: '[data-export="my-full"]', name: 'full', label: 'Full Window' },
+    { selector: '[data-export="my-full"]', name: 'full', label: 'Full Window' }, // minimal export baseline
+    // add fine-grained slices only when explicitly needed
   ],
   init(container) {
     // wire interactive logic here
     // container.querySelector('.my-btn').addEventListener('click', ...);
+  },
+  captureState(container) {
+    return null; // optional, implement only for editable tab/value/filter state
+  },
+  applyState(container, state) {
+    // optional
   },
 };</code></pre>
         </section>
@@ -397,7 +409,7 @@ Each window = 3 files: config.js, template.html, style.css.
 - template.html provides the window's HTML content — it's injected into a container div
 - style.css is auto-scoped: all your selectors are prefixed with `[data-window-id="your-id"]` so class names never conflict with other windows
 - config.js is an ES module (`export default {}`) that declares metadata and an optional `init()` function for interactivity
-- Users can import windows client-side (ZIP or 3 files) without touching any server — windows persist in localStorage
+- Users can import windows client-side (ZIP or 3 files) without touching any server
 
 ## config.js fields
 - `id` (string): unique window ID, must match folder name
@@ -406,11 +418,13 @@ Each window = 3 files: config.js, template.html, style.css.
 - `defaultOpen` (boolean): whether the window is visible on first load
 - `dragHandle` (string): CSS selector for the draggable area (e.g. '.my-header')
 - `resizable` (object): `{ enabled: true, handles: ['se'], minWidth, minHeight }` — which edges/corners can resize
-- `exports` (array): `[{ selector, name, label }]` — elements users can export as PNG
+- `exports` (array): `[{ selector, name, label }]` — export targets (minimal `full` export is enough unless granular slicing is requested)
 - `init(container)` (function): called after the window is mounted. Use `container.querySelector()` to access your elements.
+- `captureState(container)` + `applyState(container, state)` (optional): persist editable tabs/values/filters for defaults
 
 ## Rules
-- template.html: pure HTML, use data-export="name" for exportable elements, include a drag handle element matching config.dragHandle
+- template.html: pure HTML, include a drag handle element matching config.dragHandle
+- export slicing: default to one `data-export` for full window; add granular markers only when requested
 - style.css: plain CSS (auto-scoped, no need to prefix selectors), @keyframes work, avoid IDs
 - init(container): use container.querySelector() to wire events, animations, state changes
 - To close the window: import('../../js/core/window-manager.js').then(m =&gt; m.windowManager.close('my-id'))
@@ -425,10 +439,27 @@ Return only the 3 files, nothing else.</code></pre>
           <h4>Resources</h4>
           <p>
             <a href="https://github.com/wyrtensi/ui_emulator" target="_blank" rel="noopener noreferrer">GitHub Repository</a> —
-            full source, existing windows, and detailed WINDOW.md guide.
+            full source, existing windows, and detailed windows_guide/WINDOW.md guide.
           </p>
         </section>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ VERSION PICKER DIALOG ═══ -->
+  <div id="ui-version-picker-overlay" class="ui-guide-overlay" hidden>
+    <div class="ui-guide-dialog ui-version-picker-dialog">
+      <div class="ui-guide-header">
+        <h3 id="ui-version-picker-title"><svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l4 4-4 4-4-4 4-4zM12 10l4 4-4 4-4-4 4-4zM12 18l4 4-4 4-4-4 4-4z"/></svg> Choose window version</h3>
+        <button id="ui-version-picker-close" class="ui-guide-close">✕</button>
+      </div>
+      <div class="ui-guide-body">
+        <p id="ui-version-picker-subtitle" class="ui-version-picker-subtitle"></p>
+        <div id="ui-version-picker-list" class="ui-version-picker-list"></div>
+        <div class="btn-row" style="margin-top: 12px;">
+          <button id="ui-version-picker-cancel" class="panel-btn panel-btn-sm panel-btn-danger" style="width: auto; padding: 0 12px;">Cancel</button>
+        </div>
       </div>
     </div>
   </div>

@@ -14,6 +14,9 @@ class ExportManager {
     this._progressEl = null;
     this._progressText = null;
     this._progressBar = null;
+    this._highlightedEls = new Set();
+    this._highlightMeta = new WeakMap();
+    this._refreshRaf = 0;
   }
 
   init() {
@@ -29,16 +32,45 @@ class ExportManager {
 
     settings.on('mode', (val) => {
       if (val === 'export') {
-        this._enableHighlights();
-        this._buildTree();
+        this._queueRefresh();
       } else {
         this._disableHighlights();
       }
+    });
+
+    // Keep export highlights in sync with dynamic windows (inventory/action-bar/grid rebuilds).
+    document.addEventListener('ui-export-refresh', this._onExternalRefresh);
+    window.addEventListener('ui-export-refresh', this._onExternalRefresh);
+    windowManager.on('window:opened', () => this._queueRefresh());
+    windowManager.on('window:closed', () => this._queueRefresh());
+  }
+
+  _onExternalRefresh = () => {
+    this._queueRefresh();
+  };
+
+  _queueRefresh() {
+    if (settings.get('mode') !== 'export') return;
+    if (this._refreshRaf) cancelAnimationFrame(this._refreshRaf);
+
+    this._refreshRaf = requestAnimationFrame(() => {
+      this._refreshRaf = 0;
+      this._disableHighlights();
+      this._enableHighlights();
+      this._buildTree();
     });
   }
 
   _toast(msg, type = 'info') {
     if (typeof window.uiToast === 'function') window.uiToast(msg, type);
+  }
+
+  _getRenderableMatches(container, selector) {
+    if (!container || !selector) return [];
+    return Array.from(container.querySelectorAll(selector)).filter((el) => {
+      const rect = el.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    });
   }
 
   /* ── Progress overlay ──────────────────────────────── */
@@ -71,7 +103,7 @@ class ExportManager {
     const exportDef = entry.config.exports?.find(e => e.name === exportName);
     if (!exportDef) return null;
 
-    const els = entry.container.querySelectorAll(exportDef.selector);
+    const els = this._getRenderableMatches(entry.container, exportDef.selector);
     if (!els || els.length === 0) return null;
 
     const scale = parseInt(this._exportScaleEl?.value || '2');
@@ -100,7 +132,7 @@ class ExportManager {
   /* ── Export selected checkboxes ─────────────────────── */
   async exportSelected() {
     // Exclude indeterminate or unchecked parent toggles without data-window-id
-    const checked = this._exportTreeEl?.querySelectorAll('input[type="checkbox"][data-window-id]:checked') ?? [];
+    const checked = this._exportTreeEl?.querySelectorAll('input[type="checkbox"][data-window-id]:checked:not([disabled])') ?? [];
     if (checked.length === 0) {
       this._toast('No elements selected for export', 'error');
       return;
@@ -253,16 +285,25 @@ class ExportManager {
     for (const w of windowManager.getAll()) {
       if (!w.config.exports) continue;
       for (const exp of w.config.exports) {
-        const el = w.container.querySelector(exp.selector);
-        if (el) {
+        const els = this._getRenderableMatches(w.container, exp.selector);
+        for (const el of els) {
+          if (this._highlightMeta.has(el)) continue;
           el.classList.add('ui-export-highlight');
           el.addEventListener('click', this._onHighlightClick);
+          this._highlightedEls.add(el);
+          this._highlightMeta.set(el, { windowId: w.id, exportName: exp.name });
         }
       }
     }
   }
 
   _disableHighlights() {
+    this._highlightedEls.forEach(el => {
+      el.classList.remove('ui-export-highlight');
+      el.removeEventListener('click', this._onHighlightClick);
+    });
+    this._highlightedEls.clear();
+    this._highlightMeta = new WeakMap();
     document.querySelectorAll('.ui-export-highlight').forEach(el => {
       el.classList.remove('ui-export-highlight');
       el.removeEventListener('click', this._onHighlightClick);
@@ -275,23 +316,31 @@ class ExportManager {
     const windowEl = el.closest('.ui-window');
     if (!windowEl) return;
 
-    const windowId = windowEl.dataset.windowId;
+    const highlighted = e.currentTarget;
+    const meta = this._highlightMeta.get(highlighted);
+    const windowId = meta?.windowId || windowEl.dataset.windowId;
     const entry = windowManager.get(windowId);
     if (!entry?.config.exports) return;
 
-    const exportDef = entry.config.exports.find(exp =>
-      el.matches(exp.selector) || el.querySelector(exp.selector)
-    );
+    let exportDef = null;
+    if (meta?.exportName) {
+      exportDef = entry.config.exports.find(exp => exp.name === meta.exportName) || null;
+    }
+
+    if (!exportDef) {
+      exportDef = entry.config.exports.find(exp => highlighted.matches(exp.selector)) || null;
+    }
+
     if (!exportDef) return;
 
     // Find if it's one of multiple to append an index
-    const els = Array.from(entry.container.querySelectorAll(exportDef.selector));
-    const index = els.indexOf(el);
+    const els = this._getRenderableMatches(entry.container, exportDef.selector);
+    const index = els.indexOf(highlighted);
     const suffix = index >= 0 && els.length > 1 ? `_${index + 1}` : '';
 
     this._showProgress('Exporting element...');
     const scale = parseInt(this._exportScaleEl?.value || '2');
-    const result = await this._renderToPNG(el, windowId, `${exportDef.name}${suffix}`, scale);
+    const result = await this._renderToPNG(highlighted, windowId, `${exportDef.name}${suffix}`, scale);
     this._hideProgress();
 
     if (result) {
@@ -316,9 +365,16 @@ class ExportManager {
     selectAllBtn.className = 'panel-btn';
     selectAllBtn.style.flex = '1';
     selectAllBtn.addEventListener('click', () => {
-      this._exportTreeEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      this._exportTreeEl.querySelectorAll('input[type="checkbox"][data-window-id]:not([disabled])').forEach(cb => {
         cb.checked = true;
-        cb.indeterminate = false;
+      });
+      this._exportTreeEl.querySelectorAll('details.export-tree-window').forEach(details => {
+        const parent = details.querySelector('summary > input[type="checkbox"]');
+        if (!parent) return;
+        const total = details.querySelectorAll('input[type="checkbox"][data-window-id]:not([disabled])').length;
+        const checked = details.querySelectorAll('input[type="checkbox"][data-window-id]:checked:not([disabled])').length;
+        parent.checked = total > 0 && total === checked;
+        parent.indeterminate = checked > 0 && checked < total;
       });
     });
 
@@ -327,9 +383,14 @@ class ExportManager {
     deselectAllBtn.className = 'panel-btn';
     deselectAllBtn.style.flex = '1';
     deselectAllBtn.addEventListener('click', () => {
-      this._exportTreeEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      this._exportTreeEl.querySelectorAll('input[type="checkbox"][data-window-id]:not([disabled])').forEach(cb => {
         cb.checked = false;
-        cb.indeterminate = false;
+      });
+      this._exportTreeEl.querySelectorAll('details.export-tree-window').forEach(details => {
+        const parent = details.querySelector('summary > input[type="checkbox"]');
+        if (!parent) return;
+        parent.checked = false;
+        parent.indeterminate = false;
       });
     });
 
@@ -358,7 +419,7 @@ class ExportManager {
 
       toggleAllCb.addEventListener('change', (e) => {
         const isChecked = e.target.checked;
-        details.querySelectorAll('input[type="checkbox"][data-window-id]').forEach(cb => {
+        details.querySelectorAll('input[type="checkbox"][data-window-id]:not([disabled])').forEach(cb => {
           cb.checked = isChecked;
         });
       });
@@ -371,24 +432,33 @@ class ExportManager {
       details.appendChild(summary);
 
       for (const exp of w.config.exports) {
+        const matchCount = this._getRenderableMatches(w.container, exp.selector).length;
+        const hasMatches = matchCount > 0;
+        const countHTML = matchCount > 1 ? ` <span class="export-match-count">(${matchCount})</span>` : '';
+
         const item = document.createElement('label');
         item.className = 'export-tree-item';
         item.innerHTML = `
-          <input type="checkbox" checked data-window-id="${w.id}" data-export-name="${exp.name}">
-          <span>${exp.label || exp.name}</span>
+          <input type="checkbox" ${hasMatches ? 'checked' : ''} ${hasMatches ? '' : 'disabled'} data-window-id="${w.id}" data-export-name="${exp.name}">
+          <span>${exp.label || exp.name}${countHTML}</span>
         `;
 
         // Update the parent toggle checkbox if children are toggled
         const cb = item.querySelector('input');
         cb.addEventListener('change', () => {
-          const total = details.querySelectorAll('input[type="checkbox"][data-window-id]').length;
-          const checked = details.querySelectorAll('input[type="checkbox"][data-window-id]:checked').length;
+          const total = details.querySelectorAll('input[type="checkbox"][data-window-id]:not([disabled])').length;
+          const checked = details.querySelectorAll('input[type="checkbox"][data-window-id]:checked:not([disabled])').length;
           toggleAllCb.checked = (total === checked);
           toggleAllCb.indeterminate = (checked > 0 && checked < total);
         });
 
         details.appendChild(item);
       }
+
+      const enabledTotal = details.querySelectorAll('input[type="checkbox"][data-window-id]:not([disabled])').length;
+      const enabledChecked = details.querySelectorAll('input[type="checkbox"][data-window-id]:checked:not([disabled])').length;
+      toggleAllCb.checked = enabledTotal > 0 && enabledTotal === enabledChecked;
+      toggleAllCb.indeterminate = enabledChecked > 0 && enabledChecked < enabledTotal;
 
       this._exportTreeEl.appendChild(details);
     }

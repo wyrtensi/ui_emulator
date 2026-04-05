@@ -21,11 +21,17 @@ export default {
     { selector: '[data-export="ab-grid"]', name: 'grid', label: 'Grid Wrap' },
     { selector: '[data-export="ab-slots"]', name: 'slots', label: 'Slot Grid' },
     { selector: '[data-export="ab-slot"]', name: 'slot', label: 'Individual Slots' },
+    { selector: '[data-export="ab-slot-inner"]', name: 'slot-inner', label: 'Slot Inner Area' },
+    { selector: '[data-export="ab-slot-dot"]', name: 'slot-dot', label: 'Slot Dots' },
+    { selector: '[data-export="ab-slot-label"]', name: 'slot-label', label: 'Slot Labels' },
     { selector: '[data-export="ab-right"]', name: 'right', label: 'Resize Arrow' },
   ],
   init(container) {
     const grid = container.querySelector('.ab-grid');
     if (!grid) return;
+    const requestExportRefresh = () => {
+      window.dispatchEvent(new CustomEvent('ui-export-refresh'));
+    };
 
     const cellW = 48, cellH = 48, gap = 4;
 
@@ -33,7 +39,7 @@ export default {
       const s = document.createElement('div');
       s.className = 'ab-slot';
       s.dataset.export = 'ab-slot'; // Expose individual slot
-      s.innerHTML = `<div class="ab-slot-inner"></div><div class="ab-dot"></div><span class="ab-label">${key}</span>`;
+      s.innerHTML = `<div class="ab-slot-inner" data-export="ab-slot-inner"></div><div class="ab-dot" data-export="ab-slot-dot"></div><span class="ab-label" data-export="ab-slot-label">${key}</span>`;
       return s;
     };
 
@@ -84,6 +90,21 @@ export default {
       } else if (total < current) {
         for (let i = current; i > total; i--) grid.removeChild(grid.lastElementChild);
       }
+
+      requestExportRefresh();
+    };
+
+    const getSlotLabels = () => {
+      return Array.from(grid.querySelectorAll('.ab-label')).map(label => label.textContent || '');
+    };
+
+    const applySlotLabels = (labels = []) => {
+      if (!Array.isArray(labels)) return;
+      const nodes = Array.from(grid.querySelectorAll('.ab-label'));
+      nodes.forEach((node, idx) => {
+        if (idx >= labels.length) return;
+        node.textContent = String(labels[idx] || '');
+      });
     };
 
     // Custom resize via the arrow handle
@@ -136,6 +157,7 @@ export default {
         dragging = false;
         arrow.releasePointerCapture(e.pointerId);
         fillGrid();
+        requestExportRefresh();
       });
     }
 
@@ -145,10 +167,40 @@ export default {
     });
     ro.observe(grid);
 
+    grid.addEventListener('dblclick', (event) => {
+      const labelEl = event.target.closest('.ab-label');
+      if (!labelEl) return;
+
+      const next = window.prompt('Set slot label', labelEl.textContent || '');
+      if (next === null) return;
+      labelEl.textContent = next;
+      requestExportRefresh();
+    });
+
+    container._actionBarStateApi = {
+      getState: () => ({ labels: getSlotLabels() }),
+      setState: (next = {}) => {
+        if (Array.isArray(next.labels)) {
+          applySlotLabels(next.labels);
+          requestExportRefresh();
+        }
+      },
+    };
+
     // Initial snap + fill
     requestAnimationFrame(() => {
       snapToCell();
       fillGrid();
+      requestExportRefresh();
     });
+  },
+
+  captureState(container) {
+    return container?._actionBarStateApi?.getState?.() || null;
+  },
+
+  applyState(container, state) {
+    if (!state || typeof state !== 'object') return;
+    container?._actionBarStateApi?.setState?.(state);
   },
 };

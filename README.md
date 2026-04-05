@@ -17,12 +17,17 @@ No build pipeline is required. The app runs on plain HTML, CSS, and ES modules.
 - Drag, resize, focus/z-order management, and right-click context actions.
 - Design, Export, and Comment modes.
 - PNG export and batch ZIP export via html2canvas + JSZip.
+- Export Mode now supports multi-match selector slicing with count-aware selection (fine-grained repeated parts export correctly).
 - Layout save/load/share using JSON files or URL hash compression (LZ-String).
 - Auto-save to localStorage.
 - Background gallery, local background upload, and independent background zoom.
 - Runtime module import:
   - Local ZIP or file bundle (`config.js`, `template.html`, `style.css`)
   - GitHub branch window import (`https://github.com/{user}/{repo}/tree/{branch}`).
+- Optional window versions under one window id using subfolders (`windows/{id}/v1`, `windows/{id}/v2`, ...).
+- GitHub import can target a specific version with hash params (`#window={id}&version={key}`), while old links continue to work.
+- Owner-only one-click action to save default window versions + layout positions/sizes for everyone via `config.json`.
+- Interactive window state (tabs, editable values, filters, mode toggles) can be captured/applied by window modules and included in owner defaults.
 
 ### Collaboration and GitHub Integration
 
@@ -128,6 +133,10 @@ Edit `js/config.js`:
 
 - `scale`
 - `bgScale`
+- `windowDefaults` (owner-published baseline for all users when no local/url preset exists):
+  - `windowVersions`: selected version per window id
+  - `windows`: layout snapshot (`x`, `y`, `width`, `height`, `open`, `zIndex`)
+  - `windowState`: optional interactive state payload per window (tabs, editable values, filters)
 
 ### Worker deployment
 
@@ -179,7 +188,7 @@ ui_emulator-main/
 - `js/core/`: Core managers (window, drag, resize, export, comments, auth, API, discussion)
 - `windows/`: Modular HUD windows
   - `registry.json`: Boot window id list
-  - `_template/`: Boilerplate for new windows
+- `windows_guide/`: Boilerplate files and authoring guide for new windows
 - `canvas/`: Concept Canvas module
   - `canvas-engine.js`: Canvas interaction, chat mirror, and persistence
 - `concept.canvas`: Canvas graph data file
@@ -191,12 +200,20 @@ ui_emulator-main/
 
 ## Creating a New Window
 
-1. Copy `windows/_template` to `windows/your-window-id`.
-2. Edit `config.js`, `template.html`, and `style.css`.
-3. Add the id to `windows/registry.json`.
-4. Reload the app and toggle the module from the Windows list.
+1. Create `windows/your-window-id`.
+2. Copy `windows_guide/config.js`, `windows_guide/template.html`, and `windows_guide/style.css` into that folder.
+3. Edit the files for your window and set `id` to your folder name.
+4. Add the id to `windows/registry.json`.
+5. Reload the app and toggle the module from the Windows list.
 
 You can also test without committing by importing a ZIP from the Control Panel.
+
+For versioned windows (single id, multiple looks):
+
+1. Keep root `windows/your-window-id/config.js` as version catalog (`defaultVersion` + `versions`).
+2. Add subfolders per version (`v1`, `v2`, etc.), each with `config.js`, `template.html`, `style.css`.
+3. Keep the same `id` inside every version config.
+4. During import, the app prompts for version when multiple versions exist.
 
 ## Tech Stack
 
@@ -210,4 +227,4 @@ You can also test without committing by importing a ZIP from the Control Panel.
 
 ## License
 
-PolyForm Noncommercial License 1.0.0
+MIT

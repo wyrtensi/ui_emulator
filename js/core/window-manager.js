@@ -165,6 +165,36 @@ class WindowManager {
     }
   }
 
+  captureInteractiveState() {
+    const state = {};
+    for (const [id, w] of this._windows) {
+      if (typeof w.config?.captureState !== 'function') continue;
+      try {
+        const captured = w.config.captureState(w.container);
+        if (captured && typeof captured === 'object') {
+          state[id] = captured;
+        }
+      } catch (err) {
+        console.warn(`[WindowManager] captureState failed for ${id}`, err);
+      }
+    }
+    return state;
+  }
+
+  restoreInteractiveState(stateMap) {
+    if (!stateMap || typeof stateMap !== 'object') return;
+    for (const [id, nextState] of Object.entries(stateMap)) {
+      const w = this._windows.get(id);
+      if (!w) continue;
+      if (typeof w.config?.applyState !== 'function') continue;
+      try {
+        w.config.applyState(w.container, nextState);
+      } catch (err) {
+        console.warn(`[WindowManager] applyState failed for ${id}`, err);
+      }
+    }
+  }
+
   /* ── Events ───────────────────────────────────────── */
   on(event, fn) {
     this._bus.addEventListener(event, fn);

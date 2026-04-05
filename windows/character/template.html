@@ -2,8 +2,8 @@
   <div class="char-header" data-export="char-header">
     <span class="char-title" data-export="char-title">CHARACTER</span>
     <div class="char-tab-row" data-export="char-tabs">
-      <button class="char-tab active">EQUIP</button>
-      <button class="char-tab">COSTUMES</button>
+      <button class="char-tab active" data-export="char-tab" data-tab="EQUIP">EQUIP</button>
+      <button class="char-tab" data-export="char-tab" data-tab="COSTUMES">COSTUMES</button>
     </div>
     <button class="char-close" data-export="char-close" title="Close">✕</button>
   </div>
@@ -23,59 +23,59 @@
       </div>
 
       <!-- Left slots -->
-      <div class="eq-slot eq-head" data-export="char-slot" title="Head"><span>HEAD</span></div>
-      <div class="eq-slot eq-chest" data-export="char-slot" title="Chest"><span>CHEST</span></div>
-      <div class="eq-slot eq-legs" data-export="char-slot" title="Legs"><span>LEGS</span></div>
-      <div class="eq-slot eq-shoes" data-export="char-slot" title="Shoes"><span>SHOES</span></div>
-      <div class="eq-slot eq-cloak" data-export="char-slot" title="Cloak"><span>CLOAK</span></div>
-      <div class="eq-slot eq-glove" data-export="char-slot" title="Gloves"><span>GLOVE</span></div>
+      <div class="eq-slot eq-head" data-export="char-slot" title="Head"><span data-export="char-slot-label">HEAD</span></div>
+      <div class="eq-slot eq-chest" data-export="char-slot" title="Chest"><span data-export="char-slot-label">CHEST</span></div>
+      <div class="eq-slot eq-legs" data-export="char-slot" title="Legs"><span data-export="char-slot-label">LEGS</span></div>
+      <div class="eq-slot eq-shoes" data-export="char-slot" title="Shoes"><span data-export="char-slot-label">SHOES</span></div>
+      <div class="eq-slot eq-cloak" data-export="char-slot" title="Cloak"><span data-export="char-slot-label">CLOAK</span></div>
+      <div class="eq-slot eq-glove" data-export="char-slot" title="Gloves"><span data-export="char-slot-label">GLOVE</span></div>
 
       <!-- Right slots -->
-      <div class="eq-slot eq-weapon" data-export="char-slot" title="Weapon"><span>WEAPON</span></div>
-      <div class="eq-slot eq-shield" data-export="char-slot" title="Shield"><span>SHIELD</span></div>
-      <div class="eq-slot eq-ring1" data-export="char-slot" title="Ring 1"><span>RING</span></div>
-      <div class="eq-slot eq-ring2" data-export="char-slot" title="Ring 2"><span>RING</span></div>
-      <div class="eq-slot eq-amu1" data-export="char-slot" title="Amulet 1"><span>AMU</span></div>
-      <div class="eq-slot eq-amu2" data-export="char-slot" title="Amulet 2"><span>AMU</span></div>
+      <div class="eq-slot eq-weapon" data-export="char-slot" title="Weapon"><span data-export="char-slot-label">WEAPON</span></div>
+      <div class="eq-slot eq-shield" data-export="char-slot" title="Shield"><span data-export="char-slot-label">SHIELD</span></div>
+      <div class="eq-slot eq-ring1" data-export="char-slot" title="Ring 1"><span data-export="char-slot-label">RING</span></div>
+      <div class="eq-slot eq-ring2" data-export="char-slot" title="Ring 2"><span data-export="char-slot-label">RING</span></div>
+      <div class="eq-slot eq-amu1" data-export="char-slot" title="Amulet 1"><span data-export="char-slot-label">AMU</span></div>
+      <div class="eq-slot eq-amu2" data-export="char-slot" title="Amulet 2"><span data-export="char-slot-label">AMU</span></div>
     </div>
 
     <!-- Stats grid -->
     <div class="char-stats" data-export="char-stats">
       <div class="stat-box" data-export="char-stat-atk">
-        <span class="stat-label">ATTACK</span><span class="stat-val">2,450</span>
+        <span class="stat-label" data-export="char-stat-label">ATTACK</span><span class="stat-val" data-export="char-stat-value">2,450</span>
       </div>
       <div class="stat-box" data-export="char-stat-def">
-        <span class="stat-label">DEFENSE</span><span class="stat-val">1,820</span>
+        <span class="stat-label" data-export="char-stat-label">DEFENSE</span><span class="stat-val" data-export="char-stat-value">1,820</span>
       </div>
       <div class="stat-box" data-export="char-stat-range">
-        <span class="stat-label">RANGE</span><span class="stat-val">180</span>
+        <span class="stat-label" data-export="char-stat-label">RANGE</span><span class="stat-val" data-export="char-stat-value">180</span>
       </div>
       <div class="stat-box" data-export="char-stat-hp">
-        <span class="stat-label">MAX HP</span><span class="stat-val">15,200</span>
+        <span class="stat-label" data-export="char-stat-label">MAX HP</span><span class="stat-val" data-export="char-stat-value">15,200</span>
       </div>
     </div>
 
     <!-- Mastery bars -->
     <div class="char-mastery" data-export="char-mastery">
-      <div class="mastery-row" data-export="char-mastery-melee">
-        <span class="mastery-label">MELEE</span>
-        <div class="mastery-track"><div class="mastery-fill" style="width:92%"></div></div>
-        <span class="mastery-rank">GM</span>
+      <div class="mastery-row" data-export="char-mastery-melee" data-mastery="MELEE">
+        <span class="mastery-label" data-export="char-mastery-label">MELEE</span>
+        <div class="mastery-track" data-export="char-mastery-track"><div class="mastery-fill" data-export="char-mastery-fill" style="width:92%"></div></div>
+        <span class="mastery-rank" data-export="char-mastery-rank">GM</span>
       </div>
-      <div class="mastery-row" data-export="char-mastery-range">
-        <span class="mastery-label">RANGE</span>
-        <div class="mastery-track"><div class="mastery-fill" style="width:78%"></div></div>
-        <span class="mastery-rank">GM</span>
+      <div class="mastery-row" data-export="char-mastery-range" data-mastery="RANGE">
+        <span class="mastery-label" data-export="char-mastery-label">RANGE</span>
+        <div class="mastery-track" data-export="char-mastery-track"><div class="mastery-fill" data-export="char-mastery-fill" style="width:78%"></div></div>
+        <span class="mastery-rank" data-export="char-mastery-rank">GM</span>
       </div>
-      <div class="mastery-row" data-export="char-mastery-def">
-        <span class="mastery-label">DEFENSE</span>
-        <div class="mastery-track"><div class="mastery-fill" style="width:85%"></div></div>
-        <span class="mastery-rank">GM</span>
+      <div class="mastery-row" data-export="char-mastery-def" data-mastery="DEFENSE">
+        <span class="mastery-label" data-export="char-mastery-label">DEFENSE</span>
+        <div class="mastery-track" data-export="char-mastery-track"><div class="mastery-fill" data-export="char-mastery-fill" style="width:85%"></div></div>
+        <span class="mastery-rank" data-export="char-mastery-rank">GM</span>
       </div>
-      <div class="mastery-row" data-export="char-mastery-shield">
-        <span class="mastery-label">SHIELD</span>
-        <div class="mastery-track"><div class="mastery-fill" style="width:60%"></div></div>
-        <span class="mastery-rank">PT</span>
+      <div class="mastery-row" data-export="char-mastery-shield" data-mastery="SHIELD">
+        <span class="mastery-label" data-export="char-mastery-label">SHIELD</span>
+        <div class="mastery-track" data-export="char-mastery-track"><div class="mastery-fill" data-export="char-mastery-fill" style="width:60%"></div></div>
+        <span class="mastery-rank" data-export="char-mastery-rank">PT</span>
       </div>
     </div>
   </div>

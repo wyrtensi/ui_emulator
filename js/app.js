@@ -19,6 +19,353 @@ import config from './config.js';
 let manifest = null;  // built dynamically from registry + per-window configs
 let backgroundsList = [];
 let remoteConfig = null;
+let remoteWindowDefaults = null;
+let _activeVersionPrompt = null;
+
+function normalizeRelativePath(path) {
+  return String(path || '')
+    .replace(/\\/g, '/')
+    .replace(/^\.\//, '')
+    .replace(/^\/+/, '')
+    .split('/')
+    .filter(Boolean)
+    .filter(seg => seg !== '.' && seg !== '..')
+    .join('/');
+}
+
+function joinRelativePath(...parts) {
+  return normalizeRelativePath(parts.filter(Boolean).join('/'));
+}
+
+function dirnamePath(path) {
+  const norm = normalizeRelativePath(path);
+  if (!norm) return '';
+  const parts = norm.split('/');
+  parts.pop();
+  return parts.join('/');
+}
+
+function getWindowVersionEntries(configObj) {
+  if (!configObj || typeof configObj !== 'object') return [];
+  const versions = configObj.versions;
+  if (!versions || typeof versions !== 'object' || Array.isArray(versions)) return [];
+
+  const entries = [];
+  for (const [key, raw] of Object.entries(versions)) {
+    if (!key) continue;
+
+    let folder = key;
+    let configFile = 'config.js';
+    let templateFile = 'template.html';
+    let styleFile = 'style.css';
+    let label = key;
+
+    if (typeof raw === 'string') {
+      folder = raw;
+    } else if (raw && typeof raw === 'object') {
+      folder = raw.folder || key;
+      configFile = raw.config || configFile;
+      templateFile = raw.template || templateFile;
+      styleFile = raw.style || styleFile;
+      label = raw.label || raw.title || key;
+    } else {
+      continue;
+    }
+
+    entries.push({
+      key,
+      label: String(label),
+      folder: normalizeRelativePath(folder),
+      configFile: normalizeRelativePath(configFile) || 'config.js',
+      templateFile: normalizeRelativePath(templateFile) || 'template.html',
+      styleFile: normalizeRelativePath(styleFile) || 'style.css',
+    });
+  }
+
+  return entries;
+}
+
+function getDefaultWindowVersionKey(configObj, versionEntries) {
+  const entries = Array.isArray(versionEntries) ? versionEntries : [];
+  if (entries.length === 0) return null;
+  const requested = configObj?.defaultVersion;
+  if (requested && entries.some(e => e.key === requested)) return requested;
+  return entries[0].key;
+}
+
+function getStoredWindowVersion(windowId) {
+  if (!windowId) return null;
+  const map = settings.get('windowVersions');
+  if (!map || typeof map !== 'object') return null;
+  return typeof map[windowId] === 'string' ? map[windowId] : null;
+}
+
+function setStoredWindowVersion(windowId, versionKey) {
+  if (!windowId) return;
+  const current = settings.get('windowVersions');
+  const map = (current && typeof current === 'object') ? { ...current } : {};
+
+  if (versionKey) map[windowId] = versionKey;
+  else delete map[windowId];
+
+  settings.set('windowVersions', map);
+}
+
+function getRemoteWindowVersion(windowId) {
+  if (!windowId) return null;
+  const map = remoteWindowDefaults?.windowVersions;
+  if (!map || typeof map !== 'object') return null;
+  return typeof map[windowId] === 'string' ? map[windowId] : null;
+}
+
+function getDefaultableWindowIds() {
+  if (!manifest || !Array.isArray(manifest.windows)) return new Set();
+  return new Set(
+    manifest.windows
+      .filter(w => !w._imported)
+      .map(w => w.id)
+  );
+}
+
+function getActiveWindowVersionMap() {
+  const current = settings.get('windowVersions');
+  const map = (current && typeof current === 'object') ? { ...current } : {};
+
+  for (const w of windowManager.getAll()) {
+    if (!w?.id) continue;
+    const versionKey = w.config?._versionKey;
+    if (typeof versionKey === 'string' && versionKey) {
+      map[w.id] = versionKey;
+    }
+  }
+
+  return map;
+}
+
+function captureDefaultWindowState() {
+  const allowedIds = getDefaultableWindowIds();
+  const states = windowManager.captureLayout().filter(ws => allowedIds.has(ws.id));
+  const allInteractiveState = windowManager.captureInteractiveState();
+
+  const currentVersionMap = getActiveWindowVersionMap();
+  const windowVersions = {};
+  const windowState = {};
+  for (const id of allowedIds) {
+    if (typeof currentVersionMap[id] === 'string' && currentVersionMap[id]) {
+      windowVersions[id] = currentVersionMap[id];
+    }
+    if (allInteractiveState[id] && typeof allInteractiveState[id] === 'object') {
+      windowState[id] = allInteractiveState[id];
+    }
+  }
+
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    windows: states,
+    windowVersions,
+    windowState,
+  };
+}
+
+function applyRemoteWindowDefaults() {
+  if (!remoteWindowDefaults || typeof remoteWindowDefaults !== 'object') return false;
+
+  const windowStates = Array.isArray(remoteWindowDefaults.windows) ? remoteWindowDefaults.windows : [];
+  if (windowStates.length === 0) return false;
+
+  windowManager.restoreLayout(windowStates);
+  if (remoteWindowDefaults.windowState && typeof remoteWindowDefaults.windowState === 'object') {
+    windowManager.restoreInteractiveState(remoteWindowDefaults.windowState);
+  }
+  return true;
+}
+
+function mergeWindowConfigs(baseConfig, versionConfig) {
+  if (!versionConfig || typeof versionConfig !== 'object') return { ...baseConfig };
+
+  const merged = {
+    ...baseConfig,
+    ...versionConfig,
+  };
+
+  merged.defaultPosition = {
+    ...(baseConfig?.defaultPosition || {}),
+    ...(versionConfig?.defaultPosition || {}),
+  };
+
+  merged.resizable = {
+    ...(baseConfig?.resizable || {}),
+    ...(versionConfig?.resizable || {}),
+  };
+
+  if (!merged.id) merged.id = baseConfig?.id;
+  if (!merged.title) merged.title = baseConfig?.title || merged.id;
+
+  return merged;
+}
+
+async function importConfigModuleFromText(configText) {
+  const blob = new Blob([configText], { type: 'application/javascript' });
+  const blobUrl = URL.createObjectURL(blob);
+  try {
+    const mod = await import(blobUrl);
+    return mod.default;
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
+}
+
+function pickRootConfigPath(fileLookup) {
+  const configPaths = [...fileLookup.keys()].filter(path => path.endsWith('/config.js') || path === 'config.js');
+  if (configPaths.length === 0) return null;
+  configPaths.sort((a, b) => a.split('/').length - b.split('/').length);
+  return configPaths[0];
+}
+
+async function promptWindowVersionSelection({ windowId, title, versions, defaultVersion, sourceLabel }) {
+  if (!Array.isArray(versions) || versions.length === 0) return null;
+  if (versions.length === 1) return versions[0].key;
+
+  if (_activeVersionPrompt) {
+    await _activeVersionPrompt;
+  }
+
+  const overlay = document.getElementById('ui-version-picker-overlay');
+  const closeBtn = document.getElementById('ui-version-picker-close');
+  const cancelBtn = document.getElementById('ui-version-picker-cancel');
+  const list = document.getElementById('ui-version-picker-list');
+  const titleEl = document.getElementById('ui-version-picker-title');
+  const subtitleEl = document.getElementById('ui-version-picker-subtitle');
+  if (!overlay || !closeBtn || !cancelBtn || !list || !titleEl || !subtitleEl) {
+    return defaultVersion || versions[0].key;
+  }
+
+  const activeDefault = versions.some(v => v.key === defaultVersion)
+    ? defaultVersion
+    : versions[0].key;
+
+  _activeVersionPrompt = new Promise(resolve => {
+    let settled = false;
+
+    const cleanup = () => {
+      overlay.hidden = true;
+      list.innerHTML = '';
+      closeBtn.removeEventListener('click', onCancel);
+      cancelBtn.removeEventListener('click', onCancel);
+      overlay.removeEventListener('click', onBackdrop);
+      settled = true;
+      _activeVersionPrompt = null;
+    };
+
+    const finish = (value) => {
+      if (settled) return;
+      cleanup();
+      resolve(value);
+    };
+
+    const onCancel = () => finish(null);
+    const onBackdrop = (event) => {
+      if (event.target === overlay) finish(null);
+    };
+
+    titleEl.textContent = `Choose version for ${title || windowId}`;
+    subtitleEl.textContent = sourceLabel
+      ? `${sourceLabel} found multiple versions for "${windowId}".`
+      : `Multiple versions are available for "${windowId}".`;
+
+    for (const version of versions) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ui-version-option';
+      const isDefault = version.key === activeDefault;
+      btn.innerHTML = `
+        <span class="ui-version-option-main">${version.label || version.key}</span>
+        <span class="ui-version-option-meta">${version.key}${isDefault ? ' - default' : ''}</span>
+      `;
+      btn.addEventListener('click', () => finish(version.key));
+      list.appendChild(btn);
+    }
+
+    closeBtn.addEventListener('click', onCancel);
+    cancelBtn.addEventListener('click', onCancel);
+    overlay.addEventListener('click', onBackdrop);
+    overlay.hidden = false;
+  });
+
+  return _activeVersionPrompt;
+}
+
+async function resolveWindowVersionSelection({
+  windowId,
+  title,
+  rootConfig,
+  preferredVersion,
+  sourceLabel,
+  askIfMultiple,
+}) {
+  const versionEntries = getWindowVersionEntries(rootConfig);
+  if (versionEntries.length === 0) {
+    return { selectedVersion: null, versionEntry: null, versionEntries, cancelled: false };
+  }
+
+  let selectedVersion = null;
+  const preferredIsValid = !!preferredVersion && versionEntries.some(v => v.key === preferredVersion);
+
+  if (preferredIsValid) {
+    selectedVersion = preferredVersion;
+  } else {
+    selectedVersion = getDefaultWindowVersionKey(rootConfig, versionEntries);
+    if (askIfMultiple && versionEntries.length > 1) {
+      selectedVersion = await promptWindowVersionSelection({
+        windowId,
+        title,
+        versions: versionEntries,
+        defaultVersion: selectedVersion,
+        sourceLabel,
+      });
+      if (!selectedVersion) {
+        return { selectedVersion: null, versionEntry: null, versionEntries, cancelled: true };
+      }
+    }
+  }
+
+  const versionEntry = versionEntries.find(v => v.key === selectedVersion) || null;
+  return { selectedVersion, versionEntry, versionEntries, cancelled: false };
+}
+
+function parseGitHubImportURL(rawUrl) {
+  const input = String(rawUrl || '').trim();
+  if (!input) return null;
+
+  let normalized = input;
+  if (!/^https?:\/\//i.test(normalized)) {
+    normalized = `https://${normalized}`;
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(normalized);
+  } catch {
+    return null;
+  }
+
+  if (!/github\.com$/i.test(parsed.hostname)) return null;
+  const pathParts = parsed.pathname.split('/').filter(Boolean);
+  if (pathParts.length < 4 || pathParts[2] !== 'tree') return null;
+
+  const user = pathParts[0];
+  const repo = pathParts[1];
+  const branch = decodeURIComponent(pathParts.slice(3).join('/'));
+  if (!user || !repo || !branch) return null;
+
+  const hash = parsed.hash.startsWith('#') ? parsed.hash.slice(1) : parsed.hash;
+  const hashParams = new URLSearchParams(hash);
+  const targetWindow = (hashParams.get('window') || '').trim();
+  const targetVersion = (hashParams.get('version') || '').trim();
+
+  return { user, repo, branch, targetWindow, targetVersion };
+}
 
 /* ── Global toast function ────────────────────────────── */
 window.uiToast = function(message, type = 'info') {
@@ -97,6 +444,9 @@ async function boot() {
       if (remoteConfig.bgScale !== undefined && !localStorage.getItem('ui-ui-settings')) {
         settings.set('bgScale', remoteConfig.bgScale);
       }
+      if (remoteConfig.windowDefaults && typeof remoteConfig.windowDefaults === 'object') {
+        remoteWindowDefaults = remoteConfig.windowDefaults;
+      }
     }
   } catch (err) {
     // No remote config found, silently continue
@@ -148,9 +498,11 @@ async function boot() {
   // 7. Try to load from URL, then autosave, then default
   if (!layoutManager.loadFromURL()) {
     if (!layoutManager.loadAutoSave()) {
-      for (const wDef of manifest.windows) {
-        windowManager.resetPosition(wDef.id, manifest);
-        if (wDef.defaultOpen) windowManager.open(wDef.id);
+      if (!applyRemoteWindowDefaults()) {
+        for (const wDef of manifest.windows) {
+          windowManager.resetPosition(wDef.id, manifest);
+          if (wDef.defaultOpen) windowManager.open(wDef.id);
+        }
       }
     }
   }
@@ -232,13 +584,56 @@ async function loadWindowById(windowId, windowsLayer) {
   const folder = windowId === 'canvas' ? 'canvas' : `windows/${windowId}`;
 
   let configModule;
-try {
-  configModule = await import(`../${folder}/config.js`).catch(e => { console.log("CATCH CAUGHT ERROR:", e.message); throw e; });
-} catch(e) {
-  console.error("IMPORT ERROR:", e);
-  throw e;
-}
-  const config = configModule.default;
+  try {
+    configModule = await import(`../${folder}/config.js`);
+  } catch (e) {
+    console.error('IMPORT ERROR:', e);
+    throw e;
+  }
+
+  const rootConfig = configModule.default;
+  if (!rootConfig || !rootConfig.id) {
+    throw new Error(`Invalid window config in ${folder}/config.js`);
+  }
+
+  const storedVersion = getStoredWindowVersion(rootConfig.id);
+  const remoteVersion = getRemoteWindowVersion(rootConfig.id);
+  const versionResolution = await resolveWindowVersionSelection({
+    windowId: rootConfig.id,
+    title: rootConfig.title,
+    rootConfig,
+    preferredVersion: storedVersion || remoteVersion,
+    sourceLabel: '',
+    askIfMultiple: false,
+  });
+
+  let config = rootConfig;
+  let mountOptions = {};
+
+  if (versionResolution.versionEntry) {
+    const entry = versionResolution.versionEntry;
+    const versionFolder = joinRelativePath(folder, entry.folder);
+    const versionConfigPath = joinRelativePath(versionFolder, entry.configFile);
+
+    let versionConfig = null;
+    try {
+      const versionConfigModule = await import(`../${versionConfigPath}`);
+      versionConfig = versionConfigModule.default;
+    } catch (err) {
+      console.warn(`[UI Emulator] Missing version config: ${versionConfigPath}`, err);
+    }
+
+    config = mergeWindowConfigs(rootConfig, versionConfig);
+    config._versionKey = entry.key;
+    config._versionLabel = entry.label;
+
+    mountOptions = {
+      templatePath: `${versionFolder}/${entry.templateFile}`,
+      stylePath: `${versionFolder}/${entry.styleFile}`,
+    };
+
+    setStoredWindowVersion(config.id, entry.key);
+  }
 
   // Build wDef from config (per-window manifest)
   const wDef = {
@@ -247,19 +642,26 @@ try {
     folder,
     defaultPosition: config.defaultPosition || { x: 100, y: 100, width: 300, height: 200 },
     defaultOpen: config.defaultOpen ?? false,
+    version: config._versionKey || null,
   };
   manifest.windows.push(wDef);
 
-  await _mountWindow(wDef, config, folder, windowsLayer);
+  await _mountWindow(wDef, config, folder, windowsLayer, mountOptions);
 }
 
 /** Mount a window given its wDef, config, folder path, and DOM layer */
-async function _mountWindow(wDef, config, folder, windowsLayer) {
-  const htmlResp = await fetch(`${folder}/template.html`);
+async function _mountWindow(wDef, config, folder, windowsLayer, mountOptions = {}) {
+  const templatePath = mountOptions.templatePath || `${folder}/template.html`;
+  const stylePath = mountOptions.stylePath || `${folder}/style.css`;
+
+  const htmlResp = await fetch(templatePath);
+  if (!htmlResp.ok) {
+    throw new Error(`Missing template: ${templatePath}`);
+  }
   const htmlText = await htmlResp.text();
 
-  const cssResp = await fetch(`${folder}/style.css`);
-  const cssText = await cssResp.text();
+  const cssResp = await fetch(stylePath);
+  const cssText = cssResp.ok ? await cssResp.text() : '';
 
   _injectWindow(wDef, config, htmlText, cssText, windowsLayer);
 }
@@ -270,12 +672,14 @@ function _injectWindow(wDef, config, htmlText, cssText, windowsLayer) {
 
   const styleEl = document.createElement('style');
   styleEl.dataset.windowId = wDef.id;
+  if (wDef.version) styleEl.dataset.windowVersion = wDef.version;
   styleEl.textContent = scopedCSS;
   document.head.appendChild(styleEl);
 
   const container = document.createElement('div');
   container.className = 'ui-window';
   container.dataset.windowId = wDef.id;
+  if (wDef.version) container.dataset.windowVersion = wDef.version;
   container.innerHTML = htmlText;
 
   const dp = wDef.defaultPosition;
@@ -301,61 +705,145 @@ function _injectWindow(wDef, config, htmlText, cssText, windowsLayer) {
    CLIENT-SIDE WINDOW IMPORT
    ═══════════════════════════════════════════════════════ */
 
+function getFileLookupText(fileLookup, path) {
+  return fileLookup.get(normalizeRelativePath(path).toLowerCase()) || null;
+}
+
+async function buildImportFileLookupFromZip(zipFile) {
+  const zip = await JSZip.loadAsync(zipFile);
+  const fileLookup = new Map();
+
+  for (const [path, entry] of Object.entries(zip.files)) {
+    if (entry.dir) continue;
+    const normPath = normalizeRelativePath(path).toLowerCase();
+    const text = await entry.async('string');
+    fileLookup.set(normPath, text);
+  }
+
+  return fileLookup;
+}
+
+async function buildImportFileLookupFromFiles(files) {
+  const fileLookup = new Map();
+  for (const file of files) {
+    const normPath = normalizeRelativePath(file.name).toLowerCase();
+    const text = await file.text();
+    fileLookup.set(normPath, text);
+  }
+  return fileLookup;
+}
+
+async function resolveImportedWindowBundle(fileLookup, { sourceLabel, preferredVersion, askIfMultiple }) {
+  const rootConfigPath = pickRootConfigPath(fileLookup);
+  if (!rootConfigPath) {
+    return { error: 'config.js not found in import' };
+  }
+
+  const rootConfigText = getFileLookupText(fileLookup, rootConfigPath);
+  if (!rootConfigText) {
+    return { error: 'config.js not found in import' };
+  }
+
+  const rootConfig = await importConfigModuleFromText(rootConfigText);
+  if (!rootConfig || !rootConfig.id) {
+    return { error: 'Invalid config.js - missing id' };
+  }
+
+  const rootFolder = dirnamePath(rootConfigPath);
+  const versionResolution = await resolveWindowVersionSelection({
+    windowId: rootConfig.id,
+    title: rootConfig.title,
+    rootConfig,
+    preferredVersion,
+    sourceLabel,
+    askIfMultiple,
+  });
+
+  if (versionResolution.cancelled) {
+    return { cancelled: true };
+  }
+
+  let config = rootConfig;
+  let templatePath = joinRelativePath(rootFolder, 'template.html');
+  let stylePath = joinRelativePath(rootFolder, 'style.css');
+
+  if (versionResolution.versionEntry) {
+    const entry = versionResolution.versionEntry;
+    const versionBase = joinRelativePath(rootFolder, entry.folder);
+
+    const versionConfigPath = joinRelativePath(versionBase, entry.configFile);
+    const versionConfigText = getFileLookupText(fileLookup, versionConfigPath);
+    if (!versionConfigText) {
+      return { error: `Version config not found: ${versionConfigPath}` };
+    }
+
+    const versionConfig = await importConfigModuleFromText(versionConfigText);
+    config = mergeWindowConfigs(rootConfig, versionConfig);
+    config._versionKey = entry.key;
+    config._versionLabel = entry.label;
+
+    templatePath = joinRelativePath(versionBase, entry.templateFile);
+    stylePath = joinRelativePath(versionBase, entry.styleFile);
+  }
+
+  const htmlText = getFileLookupText(fileLookup, templatePath);
+  if (!htmlText) {
+    return { error: `Template not found: ${templatePath}` };
+  }
+
+  const cssText = getFileLookupText(fileLookup, stylePath) || '';
+
+  return {
+    config,
+    htmlText,
+    cssText,
+    selectedVersion: config._versionKey || null,
+  };
+}
+
+async function fetchTextFromURL(url, required = false) {
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    if (required) {
+      throw new Error(`Missing required file: ${url}`);
+    }
+    return null;
+  }
+  return resp.text();
+}
+
 /** Import a window from user-provided files (ZIP or individual files). */
 async function importWindowFromFiles(files) {
-  let configText = '', htmlText = '', cssText = '';
+  let fileLookup;
+  const isZip = files.length === 1 && files[0].name.toLowerCase().endsWith('.zip');
 
-  // Check if it's a ZIP file
-  if (files.length === 1 && files[0].name.toLowerCase().endsWith('.zip')) {
+  if (isZip) {
     if (typeof JSZip === 'undefined') {
       window.uiToast('JSZip not loaded', 'error');
       return;
     }
-    const zip = await JSZip.loadAsync(files[0]);
-
-    // Find files — may be at root or inside a subfolder
-    for (const [path, entry] of Object.entries(zip.files)) {
-      if (entry.dir) continue;
-      const name = path.split('/').pop().toLowerCase();
-      if (name === 'config.js') configText = await entry.async('string');
-      else if (name === 'template.html') htmlText = await entry.async('string');
-      else if (name === 'style.css') cssText = await entry.async('string');
-    }
+    fileLookup = await buildImportFileLookupFromZip(files[0]);
   } else {
-    // Individual files
-    for (const file of files) {
-      const name = file.name.toLowerCase();
-      const text = await file.text();
-      if (name === 'config.js') configText = text;
-      else if (name === 'template.html') htmlText = text;
-      else if (name === 'style.css') cssText = text;
-    }
+    fileLookup = await buildImportFileLookupFromFiles(files);
   }
 
-  if (!configText) {
-    window.uiToast('config.js not found in import', 'error');
-    return;
-  }
-  if (!htmlText) {
-    window.uiToast('template.html not found in import', 'error');
+  const bundle = await resolveImportedWindowBundle(fileLookup, {
+    sourceLabel: 'Local import',
+    preferredVersion: null,
+    askIfMultiple: true,
+  });
+
+  if (bundle.cancelled) {
+    window.uiToast('Window import cancelled', 'info');
     return;
   }
 
-  // Parse config.js via blob URL dynamic import
-  const blob = new Blob([configText], { type: 'application/javascript' });
-  const blobUrl = URL.createObjectURL(blob);
-  let config;
-  try {
-    const mod = await import(blobUrl);
-    config = mod.default;
-  } finally {
-    URL.revokeObjectURL(blobUrl);
-  }
-
-  if (!config || !config.id) {
-    window.uiToast('Invalid config.js — missing id', 'error');
+  if (bundle.error) {
+    window.uiToast(bundle.error, 'error');
     return;
   }
+
+  const config = bundle.config;
 
   // Check for duplicate
   if (windowManager.get(config.id)) {
@@ -370,35 +858,39 @@ async function importWindowFromFiles(files) {
     defaultPosition: config.defaultPosition || { x: 100, y: 100, width: 380, height: 320 },
     defaultOpen: true,
     _imported: true,
+    version: bundle.selectedVersion,
   };
 
   manifest.windows.push(wDef);
 
   const windowsLayer = document.getElementById('ui-windows');
-  _injectWindow(wDef, config, htmlText, cssText || '', windowsLayer);
+  _injectWindow(wDef, config, bundle.htmlText, bundle.cssText || '', windowsLayer);
   windowManager.open(wDef.id);
+
+  if (bundle.selectedVersion) {
+    setStoredWindowVersion(config.id, bundle.selectedVersion);
+  }
 
   // Rebuild windows list in panel
   _rebuildWindowsList();
 
-  window.uiToast(`Window "${config.title || config.id}" imported!`, 'success');
+  const suffix = bundle.selectedVersion ? ` (${bundle.selectedVersion})` : '';
+  window.uiToast(`Window "${config.title || config.id}" imported${suffix}!`, 'success');
 }
 
 /** Import windows directly from a GitHub branch URL */
 async function importWindowsFromGithub(url) {
-  // Expected URL format: https://github.com/{user}/{repo}/tree/{branch}
-
-  const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/tree\/(.+)/);
-  if (!match) {
-    window.uiToast('Invalid GitHub URL. Must be a branch tree URL (e.g. github.com/user/repo/tree/branch)', 'error');
+  const parsed = parseGitHubImportURL(url);
+  if (!parsed) {
+    window.uiToast('Invalid GitHub URL. Use github.com/user/repo/tree/branch with optional #window=...&version=...', 'error');
     return;
   }
 
-  const [_, user, repo, branch] = match;
+  const { user, repo, branch, targetWindow, targetVersion } = parsed;
   window.uiToast(`Fetching windows from ${user}/${repo} (${branch})...`, 'info');
 
   try {
-    const apiURL = `https://api.github.com/repos/${user}/${repo}/contents/windows?ref=${branch}`;
+    const apiURL = `https://api.github.com/repos/${user}/${repo}/contents/windows?ref=${encodeURIComponent(branch)}`;
     const response = await fetch(apiURL);
     if (!response.ok) {
       throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
@@ -407,43 +899,84 @@ async function importWindowsFromGithub(url) {
     const contents = await response.json();
     if (!Array.isArray(contents)) throw new Error('Could not read windows directory');
 
+    const directories = contents.filter(item => item.type === 'dir');
+    const candidates = targetWindow
+      ? directories.filter(item => item.name === targetWindow)
+      : directories;
+
+    if (targetWindow && candidates.length === 0) {
+      window.uiToast(`Window folder "${targetWindow}" not found in branch`, 'error');
+      return;
+    }
+
     let importedCount = 0;
+    let skippedCount = 0;
     const windowsLayer = document.getElementById('ui-windows');
 
-    for (const item of contents) {
-      if (item.type !== 'dir') continue;
-
+    for (const item of candidates) {
       const folderName = item.name;
-      // Skip if already in registry/imported
-      if (windowManager.get(folderName)) continue;
 
       try {
         const rawBase = `https://raw.githubusercontent.com/${user}/${repo}/${branch}/windows/${folderName}`;
 
-        // Fetch config.js
-        const configResp = await fetch(`${rawBase}/config.js`);
-        if (!configResp.ok) continue;
-        const configText = await configResp.text();
-
-        // Fetch template.html
-        const htmlResp = await fetch(`${rawBase}/template.html`);
-        if (!htmlResp.ok) continue;
-        const htmlText = await htmlResp.text();
-
-        // Fetch style.css (optional)
-        const cssResp = await fetch(`${rawBase}/style.css`);
-        const cssText = cssResp.ok ? await cssResp.text() : '';
-
-        // Import the window dynamically
-        const blob = new Blob([configText], { type: 'application/javascript' });
-        const blobUrl = URL.createObjectURL(blob);
-        let config;
-        try {
-          const mod = await import(blobUrl);
-          config = mod.default;
-        } finally {
-          URL.revokeObjectURL(blobUrl);
+        const rootConfigText = await fetchTextFromURL(`${rawBase}/config.js`);
+        if (!rootConfigText) {
+          skippedCount++;
+          continue;
         }
+
+        const rootConfig = await importConfigModuleFromText(rootConfigText);
+        if (!rootConfig || !rootConfig.id) {
+          skippedCount++;
+          continue;
+        }
+
+        // Skip if already in registry/imported
+        if (windowManager.get(rootConfig.id)) {
+          skippedCount++;
+          continue;
+        }
+
+        const preferredVersion = targetVersion || getStoredWindowVersion(rootConfig.id);
+        const versionResolution = await resolveWindowVersionSelection({
+          windowId: rootConfig.id,
+          title: rootConfig.title,
+          rootConfig,
+          preferredVersion,
+          sourceLabel: `GitHub import (${folderName})`,
+          askIfMultiple: true,
+        });
+
+        if (versionResolution.cancelled) {
+          skippedCount++;
+          continue;
+        }
+
+        let config = rootConfig;
+        let htmlURL = `${rawBase}/template.html`;
+        let cssURL = `${rawBase}/style.css`;
+
+        if (versionResolution.versionEntry) {
+          const entry = versionResolution.versionEntry;
+          const versionBase = `${rawBase}/${entry.folder}`;
+          const versionConfigURL = `${versionBase}/${entry.configFile}`;
+          const versionConfigText = await fetchTextFromURL(versionConfigURL);
+          if (!versionConfigText) {
+            skippedCount++;
+            continue;
+          }
+
+          const versionConfig = await importConfigModuleFromText(versionConfigText);
+          config = mergeWindowConfigs(rootConfig, versionConfig);
+          config._versionKey = entry.key;
+          config._versionLabel = entry.label;
+
+          htmlURL = `${versionBase}/${entry.templateFile}`;
+          cssURL = `${versionBase}/${entry.styleFile}`;
+        }
+
+        const htmlText = await fetchTextFromURL(htmlURL, true);
+        const cssText = await fetchTextFromURL(cssURL) || '';
 
         if (!config || !config.id) continue;
 
@@ -454,21 +987,28 @@ async function importWindowsFromGithub(url) {
           defaultPosition: config.defaultPosition || { x: 100, y: 100, width: 380, height: 320 },
           defaultOpen: true,
           _imported: true,
+          version: config._versionKey || null,
         };
 
         manifest.windows.push(wDef);
         _injectWindow(wDef, config, htmlText, cssText, windowsLayer);
         windowManager.open(wDef.id);
 
+        if (config._versionKey) {
+          setStoredWindowVersion(config.id, config._versionKey);
+        }
+
         importedCount++;
       } catch (err) {
         console.warn(`[GitHub Import] Failed to import ${folderName}:`, err);
+        skippedCount++;
       }
     }
 
     if (importedCount > 0) {
       _rebuildWindowsList();
-      window.uiToast(`Imported ${importedCount} new windows from GitHub!`, 'success');
+      const skippedSuffix = skippedCount > 0 ? ` (${skippedCount} skipped)` : '';
+      window.uiToast(`Imported ${importedCount} new windows from GitHub${skippedSuffix}!`, 'success');
     } else {
       window.uiToast('No new windows found to import.', 'info');
     }
@@ -612,7 +1152,8 @@ function wireControlPanel() {
         windowManager.toggle(w.id);
         toggle.classList.toggle('on', windowManager.isOpen(w.id));
       });
-      item.innerHTML = `<span>${w.config.title || w.id}</span>`;
+      const versionSuffix = w.config._versionKey ? ` (${w.config._versionKey})` : '';
+      item.innerHTML = `<span>${w.config.title || w.id}${versionSuffix}</span>`;
       item.appendChild(toggle);
       windowsList.appendChild(item);
     }
@@ -892,6 +1433,41 @@ function wireControlPanel() {
     buildWindowsList();
     window.uiToast('Layout reset to defaults', 'info');
   });
+
+  const saveDefaultsBtn = document.getElementById('ui-layout-defaults-save');
+  saveDefaultsBtn?.addEventListener('click', async () => {
+    if (!githubAuth.isOwner) return;
+
+    const oldText = saveDefaultsBtn.textContent;
+    saveDefaultsBtn.textContent = 'Saving...';
+    saveDefaultsBtn.disabled = true;
+
+    try {
+      const snapshot = captureDefaultWindowState();
+      if (!Array.isArray(snapshot.windows) || snapshot.windows.length === 0) {
+        window.uiToast('No windows available to save as defaults', 'error');
+        return;
+      }
+
+      remoteConfig = remoteConfig || {};
+      remoteConfig.windowDefaults = snapshot;
+      remoteWindowDefaults = snapshot;
+
+      await githubApi.saveFile(
+        'config.json',
+        JSON.stringify(remoteConfig, null, 2),
+        'chore: Update default window versions and layout'
+      );
+
+      window.uiToast('Saved default window versions and layout for everyone', 'success');
+    } catch (err) {
+      window.uiToast('Failed to save default window versions/layout', 'error');
+      console.error(err);
+    } finally {
+      saveDefaultsBtn.textContent = oldText;
+      saveDefaultsBtn.disabled = false;
+    }
+  });
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1029,6 +1605,20 @@ function updateAuthUI(user) {
   const avatarEl = document.getElementById('ui-gh-avatar');
   const nameEl = document.getElementById('ui-gh-username');
   const hintEl = document.getElementById('ui-comment-hint');
+  const ownerOnlyButtonIds = [
+    'ui-scale-default',
+    'ui-bg-scale-default',
+    'ui-layout-defaults-save',
+  ];
+
+  const setOwnerButtonsVisible = (visible) => {
+    ownerOnlyButtonIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (visible) el.removeAttribute('hidden');
+      else el.setAttribute('hidden', '');
+    });
+  };
 
   if (user) {
     if (loginBtn) loginBtn.classList.add('hidden');
@@ -1036,15 +1626,12 @@ function updateAuthUI(user) {
     if (avatarEl) avatarEl.src = user.avatar_url;
     if (nameEl) nameEl.textContent = user.login;
     if (hintEl) hintEl.innerHTML = '<svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Double-click on any window to add a comment pin';
-
-    if (githubAuth.isOwner) {
-      document.getElementById('ui-scale-default')?.removeAttribute('hidden');
-      document.getElementById('ui-bg-scale-default')?.removeAttribute('hidden');
-    }
+    setOwnerButtonsVisible(!!githubAuth.isOwner);
   } else {
     if (loginBtn) loginBtn.classList.remove('hidden');
     if (userEl) userEl.classList.add('hidden');
     if (hintEl) hintEl.innerHTML = '<svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> Sign in with GitHub to leave comment pins';
+    setOwnerButtonsVisible(false);
   }
 }
 
@@ -1061,6 +1648,12 @@ function wireKeyboardShortcuts() {
 
     // Escape — close guide dialog first, then focused window (topmost)
     if (e.key === 'Escape') {
+      const versionOverlay = document.getElementById('ui-version-picker-overlay');
+      if (versionOverlay && !versionOverlay.hidden) {
+        document.getElementById('ui-version-picker-cancel')?.click();
+        return;
+      }
+
       const guideOverlay = document.getElementById('ui-guide-overlay');
       if (guideOverlay && !guideOverlay.hidden) {
         guideOverlay.hidden = true;

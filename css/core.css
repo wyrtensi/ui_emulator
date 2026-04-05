@@ -1635,6 +1635,53 @@ input[type="range"]::-webkit-slider-thumb:hover {
   color: #c8d8e8;
 }
 
+.ui-version-picker-dialog {
+  width: 520px;
+}
+
+.ui-version-picker-subtitle {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--panel-text-dim);
+}
+
+.ui-version-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ui-version-option {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 22, 36, 0.65);
+  color: var(--panel-text);
+  border-radius: 6px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ui-version-option:hover {
+  border-color: var(--panel-accent-dim);
+  background: rgba(0, 48, 72, 0.55);
+}
+
+.ui-version-option-main {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.ui-version-option-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--panel-text-dim);
+}
+
 /* ═══════════════════════════════════════════════════════
    Image Zoom Modal
    ═══════════════════════════════════════════════════════ */

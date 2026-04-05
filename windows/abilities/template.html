@@ -2,98 +2,98 @@
   <div class="abl-header" data-export="abl-header">
     <span class="abl-title" data-export="abl-title">ABILITIES</span>
     <div class="abl-dots" data-export="abl-dots">
-      <span class="abl-dot active" style="--dot-color:#ff2a55" title="Attack"></span>
-      <span class="abl-dot" style="--dot-color:#00e5ff" title="Defense"></span>
-      <span class="abl-dot" style="--dot-color:#ffcc00" title="Support"></span>
-      <span class="abl-dot" style="--dot-color:#8a9ba8" title="Passive"></span>
+      <span class="abl-dot active" data-dot="attack" data-export="abl-dot" style="--dot-color:#ff2a55" title="Attack"></span>
+      <span class="abl-dot" data-dot="defense" data-export="abl-dot" style="--dot-color:#00e5ff" title="Defense"></span>
+      <span class="abl-dot" data-dot="support" data-export="abl-dot" style="--dot-color:#ffcc00" title="Support"></span>
+      <span class="abl-dot" data-dot="passive" data-export="abl-dot" style="--dot-color:#8a9ba8" title="Passive"></span>
     </div>
     <button class="abl-close" data-export="abl-close" title="Close">✕</button>
   </div>
 
   <div class="abl-cats" data-export="abl-cats">
-    <button class="abl-cat active">BASIC</button>
-    <button class="abl-cat">EXPERT</button>
+    <button class="abl-cat active" data-cat="basic" data-export="abl-cat">BASIC</button>
+    <button class="abl-cat" data-cat="expert" data-export="abl-cat">EXPERT</button>
   </div>
 
   <div class="abl-list" data-export="abl-list">
     <!-- Active skill -->
-    <div class="abl-skill active" data-export="abl-skill">
-      <div class="abl-icon"></div>
+    <div class="abl-skill active" data-export="abl-skill" data-skill-id="power-strike" data-skill-type="attack" data-skill-tier="basic">
+      <div class="abl-icon" data-export="abl-icon"></div>
       <div class="abl-info">
-        <div class="abl-name">Power Strike</div>
-        <div class="abl-bar">
-          <span class="abl-seg filled"></span><span class="abl-seg filled"></span><span class="abl-seg filled"></span>
-          <span class="abl-seg filled"></span><span class="abl-seg filled"></span><span class="abl-seg filled"></span>
-          <span class="abl-seg filled"></span><span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span>
+        <div class="abl-name" data-export="abl-name">Power Strike</div>
+        <div class="abl-bar" data-export="abl-bar">
+          <span class="abl-seg filled" data-export="abl-seg"></span><span class="abl-seg filled" data-export="abl-seg"></span><span class="abl-seg filled" data-export="abl-seg"></span>
+          <span class="abl-seg filled" data-export="abl-seg"></span><span class="abl-seg filled" data-export="abl-seg"></span><span class="abl-seg filled" data-export="abl-seg"></span>
+          <span class="abl-seg filled" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span>
         </div>
       </div>
-      <div class="abl-rank"><span class="abl-rank-lv">GM</span><span class="abl-rank-pct">92%</span></div>
+      <div class="abl-rank" data-export="abl-rank"><span class="abl-rank-lv" data-export="abl-rank-lv">GM</span><span class="abl-rank-pct" data-export="abl-rank-pct">92%</span></div>
     </div>
 
-    <div class="abl-skill active" data-export="abl-skill">
-      <div class="abl-icon"></div>
+    <div class="abl-skill active" data-export="abl-skill" data-skill-id="blade-fury" data-skill-type="attack" data-skill-tier="basic">
+      <div class="abl-icon" data-export="abl-icon"></div>
       <div class="abl-info">
-        <div class="abl-name">Blade Fury</div>
-        <div class="abl-bar">
-          <span class="abl-seg filled"></span><span class="abl-seg filled"></span><span class="abl-seg filled"></span>
-          <span class="abl-seg filled"></span><span class="abl-seg filled"></span><span class="abl-seg filled"></span>
-          <span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span>
+        <div class="abl-name" data-export="abl-name">Blade Fury</div>
+        <div class="abl-bar" data-export="abl-bar">
+          <span class="abl-seg filled" data-export="abl-seg"></span><span class="abl-seg filled" data-export="abl-seg"></span><span class="abl-seg filled" data-export="abl-seg"></span>
+          <span class="abl-seg filled" data-export="abl-seg"></span><span class="abl-seg filled" data-export="abl-seg"></span><span class="abl-seg filled" data-export="abl-seg"></span>
+          <span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span>
         </div>
       </div>
-      <div class="abl-rank"><span class="abl-rank-lv">PT</span><span class="abl-rank-pct">64%</span></div>
+      <div class="abl-rank" data-export="abl-rank"><span class="abl-rank-lv" data-export="abl-rank-lv">PT</span><span class="abl-rank-pct" data-export="abl-rank-pct">64%</span></div>
     </div>
 
-    <div class="abl-skill" data-export="abl-skill">
-      <div class="abl-icon"></div>
+    <div class="abl-skill" data-export="abl-skill" data-skill-id="shield-bash" data-skill-type="defense" data-skill-tier="basic">
+      <div class="abl-icon" data-export="abl-icon"></div>
       <div class="abl-info">
-        <div class="abl-name">Shield Bash</div>
-        <div class="abl-bar">
-          <span class="abl-seg filled"></span><span class="abl-seg filled"></span><span class="abl-seg filled"></span>
-          <span class="abl-seg filled"></span><span class="abl-seg filled"></span>
-          <span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span>
+        <div class="abl-name" data-export="abl-name">Shield Bash</div>
+        <div class="abl-bar" data-export="abl-bar">
+          <span class="abl-seg filled" data-export="abl-seg"></span><span class="abl-seg filled" data-export="abl-seg"></span><span class="abl-seg filled" data-export="abl-seg"></span>
+          <span class="abl-seg filled" data-export="abl-seg"></span><span class="abl-seg filled" data-export="abl-seg"></span>
+          <span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span>
         </div>
       </div>
-      <div class="abl-rank"><span class="abl-rank-lv">Lv5</span><span class="abl-rank-pct">50%</span></div>
+      <div class="abl-rank" data-export="abl-rank"><span class="abl-rank-lv" data-export="abl-rank-lv">Lv5</span><span class="abl-rank-pct" data-export="abl-rank-pct">50%</span></div>
     </div>
 
-    <div class="abl-skill" data-export="abl-skill">
-      <div class="abl-icon"></div>
+    <div class="abl-skill" data-export="abl-skill" data-skill-id="war-cry" data-skill-type="support" data-skill-tier="basic">
+      <div class="abl-icon" data-export="abl-icon"></div>
       <div class="abl-info">
-        <div class="abl-name">War Cry</div>
-        <div class="abl-bar">
-          <span class="abl-seg filled"></span><span class="abl-seg filled"></span><span class="abl-seg filled"></span>
-          <span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span>
-          <span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span>
+        <div class="abl-name" data-export="abl-name">War Cry</div>
+        <div class="abl-bar" data-export="abl-bar">
+          <span class="abl-seg filled" data-export="abl-seg"></span><span class="abl-seg filled" data-export="abl-seg"></span><span class="abl-seg filled" data-export="abl-seg"></span>
+          <span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span>
+          <span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span>
         </div>
       </div>
-      <div class="abl-rank"><span class="abl-rank-lv">Lv3</span><span class="abl-rank-pct">30%</span></div>
+      <div class="abl-rank" data-export="abl-rank"><span class="abl-rank-lv" data-export="abl-rank-lv">Lv3</span><span class="abl-rank-pct" data-export="abl-rank-pct">30%</span></div>
     </div>
 
     <!-- Disabled skill -->
-    <div class="abl-skill disabled" data-export="abl-skill">
-      <div class="abl-icon"></div>
+    <div class="abl-skill disabled" data-export="abl-skill" data-skill-id="berserker-rage" data-skill-type="attack" data-skill-tier="expert">
+      <div class="abl-icon" data-export="abl-icon"></div>
       <div class="abl-info">
-        <div class="abl-name">Berserker Rage</div>
-        <div class="abl-bar">
-          <span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span>
-          <span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span>
-          <span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span>
+        <div class="abl-name" data-export="abl-name">Berserker Rage</div>
+        <div class="abl-bar" data-export="abl-bar">
+          <span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span>
+          <span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span>
+          <span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span>
         </div>
       </div>
-      <div class="abl-rank"><span class="abl-rank-lv">—</span><span class="abl-rank-pct">0%</span></div>
+      <div class="abl-rank" data-export="abl-rank"><span class="abl-rank-lv" data-export="abl-rank-lv">—</span><span class="abl-rank-pct" data-export="abl-rank-pct">0%</span></div>
     </div>
 
-    <div class="abl-skill disabled" data-export="abl-skill">
-      <div class="abl-icon"></div>
+    <div class="abl-skill disabled" data-export="abl-skill" data-skill-id="omega-slash" data-skill-type="passive" data-skill-tier="expert">
+      <div class="abl-icon" data-export="abl-icon"></div>
       <div class="abl-info">
-        <div class="abl-name">Omega Slash</div>
-        <div class="abl-bar">
-          <span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span>
-          <span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span>
-          <span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span><span class="abl-seg"></span>
+        <div class="abl-name" data-export="abl-name">Omega Slash</div>
+        <div class="abl-bar" data-export="abl-bar">
+          <span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span>
+          <span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span>
+          <span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span><span class="abl-seg" data-export="abl-seg"></span>
         </div>
       </div>
-      <div class="abl-rank"><span class="abl-rank-lv">—</span><span class="abl-rank-pct">0%</span></div>
+      <div class="abl-rank" data-export="abl-rank"><span class="abl-rank-lv" data-export="abl-rank-lv">—</span><span class="abl-rank-pct" data-export="abl-rank-pct">0%</span></div>
     </div>
   </div>
 </div>

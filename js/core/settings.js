@@ -17,6 +17,7 @@ const defaults = {
   backgroundColor: '#0a0e18',
   mode: 'design',        // 'design' | 'export' | 'comment'
   authorName: '',
+  windowVersions: {},    // { [windowId]: versionKey }
 };
 
 class Settings {

@@ -1,0 +1,124 @@
+.wg-shell {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 12, 18, 0.92);
+  border: 1px solid rgba(0, 214, 255, 0.22);
+  border-radius: 4px;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+.wg-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(0, 66, 96, 0.45), rgba(0, 28, 44, 0.24));
+}
+
+.wg-title {
+  font-size: 11px;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #d7f8ff;
+}
+
+.wg-close {
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+.wg-close:hover {
+  color: #fff;
+  background: rgba(255, 84, 84, 0.35);
+}
+
+.wg-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.wg-tab {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(224, 241, 247, 0.82);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.wg-tab.active {
+  color: #fff;
+  border-color: rgba(0, 214, 255, 0.5);
+  box-shadow: 0 0 10px rgba(0, 214, 255, 0.2);
+  background: rgba(0, 214, 255, 0.12);
+}
+
+.wg-body {
+  flex: 1;
+  padding: 10px;
+  overflow: auto;
+  display: block;
+}
+
+.wg-panel {
+  display: none;
+  gap: 8px;
+}
+
+.wg-panel.active {
+  display: grid;
+}
+
+.wg-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+
+.wg-label {
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(196, 224, 232, 0.9);
+}
+
+.wg-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f3fbff;
+}
+
+.wg-meter {
+  margin-top: 4px;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.wg-meter-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #05bdff, #65f5ff);
+}

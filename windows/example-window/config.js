@@ -1,5 +1,5 @@
 /**
- * Example Window — demonstrates all features of the window system.
+ * Example Window — demonstrates versioned windows under one stable id.
  */
 export default {
   id: 'example-window',
@@ -22,21 +22,26 @@ export default {
     { selector: '[data-export="example-tab"]', name: 'tab', label: 'Single Tab' },
     { selector: '[data-export="example-content"]', name: 'content', label: 'Content Area' },
   ],
-  init(container) {
-    // Tab switching
-    const tabs = container.querySelectorAll('.example-tab');
-    const panels = container.querySelectorAll('.example-panel');
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('active'));
-        panels.forEach(p => p.classList.remove('active'));
-        tab.classList.add('active');
-        const panel = container.querySelector(`.example-panel[data-panel="${tab.dataset.tab}"]`);
-        if (panel) panel.classList.add('active');
-      });
-    });
+  defaultVersion: 'v1',
+  versions: {
+    v1: {
+      label: 'Classic Tabs',
+      folder: 'v1',
+      config: 'config.js',
+      template: 'template.html',
+      style: 'style.css',
+    },
+    v2: {
+      label: 'Command Deck',
+      folder: 'v2',
+      config: 'config.js',
+      template: 'template.html',
+      style: 'style.css',
+    },
+  },
 
-    // Close button
+  // Fallback only: version-specific behavior lives in v1/v2 configs.
+  init(container) {
     container.querySelector('.example-close')?.addEventListener('click', () => {
       import('../../js/core/window-manager.js').then(m => m.windowManager.close('example-window'));
     });
