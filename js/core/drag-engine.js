@@ -30,11 +30,29 @@ class DragEngine {
     const entry = windowManager.get(id);
     if (!entry) return;
     const { config, container } = entry;
-    const handle = container.querySelector(config.dragHandle);
-    if (!handle) return;
+    const selector = typeof config?.dragHandle === 'string'
+      ? config.dragHandle.trim()
+      : '';
 
-    handle.style.cursor = 'move';
-    handle.addEventListener('pointerdown', (e) => this._onDown(e, id));
+    let staticHandle = null;
+    if (selector) {
+      try {
+        staticHandle = container.querySelector(selector);
+      } catch {
+        staticHandle = null;
+      }
+    }
+
+    const delegatedHandle = staticHandle || container;
+    delegatedHandle.style.cursor = 'move';
+
+    delegatedHandle.addEventListener('pointerdown', (e) => {
+      if (selector) {
+        const target = e.target instanceof Element ? e.target : null;
+        if (!target || !target.closest(selector)) return;
+      }
+      this._onDown(e, id);
+    });
   }
 
   /* ── Internal ─────────────────────────────────────── */

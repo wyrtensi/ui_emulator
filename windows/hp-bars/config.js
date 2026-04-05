@@ -7,11 +7,11 @@ export default {
   dragHandle: '.bars-background-wrapper',
   resizable: {
     enabled: true,
-    handles: ['e', 'w'],
+    handles: ['se', 's', 'e'],
     minWidth: 500,
-    minHeight: 180,
+    minHeight: 140,
     maxWidth: 1100,
-    maxHeight: 180,
+    maxHeight: 320,
   },
   exports: [
     { selector: '[data-export="hp-bars-full"]', name: 'full', label: 'HP Bars Full' },

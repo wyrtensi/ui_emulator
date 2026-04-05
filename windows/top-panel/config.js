@@ -7,11 +7,11 @@ export default {
   dragHandle: '.top-bar',
   resizable: {
     enabled: true,
-    handles: ['e', 'w'],
+    handles: ['se', 's', 'e'],
     minWidth: 360,
     minHeight: 65,
     maxWidth: 980,
-    maxHeight: 65,
+    maxHeight: 120,
   },
   exports: [
     { selector: '[data-export="top-panel-full"]', name: 'full', label: 'Top Panel Full' },
