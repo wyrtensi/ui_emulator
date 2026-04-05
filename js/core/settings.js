@@ -18,6 +18,7 @@ const defaults = {
   mode: 'design',        // 'design' | 'export' | 'comment'
   authorName: '',
   windowVersions: {},    // { [windowId]: versionKey }
+  windowOpacity: {},     // { [windowId]: opacityPercent 30..100 }
 };
 
 class Settings {

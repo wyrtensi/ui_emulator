@@ -49,6 +49,9 @@ Rules:
 - avoid global selectors (`html`, `body`, `*`)
 - avoid id selectors unless necessary
 - `@media` and `@keyframes` are supported
+- global per-window transparency is controlled by the emulator on `.ui-window` using background alpha
+- avoid applying `opacity` on your top-level container when you want transparency, because it also fades text/icons
+- prefer `rgba(...)` backgrounds for visual transparency effects inside your module
 
 ## Config Contract
 
@@ -69,6 +72,10 @@ Optional state persistence:
 
 - `captureState(container)`
 - `applyState(container, state)`
+
+Note:
+
+- Control Panel transparency sliders are handled globally and stored in settings/presets; window modules do not need custom state hooks for this.
 
 ## Export Strategy (Decision Rule)
 
@@ -171,6 +178,7 @@ applyState(container, state) {
 ```
 
 This integrates with `config.json.windowDefaults.windowState`.
+Global transparency defaults integrate through `config.json.windowDefaults.windowOpacity`.
 
 ## Versioned Windows (Optional)
 

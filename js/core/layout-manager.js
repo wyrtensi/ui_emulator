@@ -8,6 +8,29 @@ import { settings } from './settings.js';
 
 const AUTOSAVE_KEY = 'ui-ui-autosave';
 const PRESET_VERSION = 1;
+const WINDOW_OPACITY_MIN = 30;
+const WINDOW_OPACITY_MAX = 100;
+const WINDOW_OPACITY_DEFAULT = 100;
+
+function normalizeWindowOpacityMap(rawMap) {
+  if (!rawMap || typeof rawMap !== 'object') return {};
+
+  const cleanMap = {};
+  for (const [windowId, value] of Object.entries(rawMap)) {
+    if (!windowId) continue;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) continue;
+    const normalized = Math.max(
+      WINDOW_OPACITY_MIN,
+      Math.min(WINDOW_OPACITY_MAX, Math.round(numeric))
+    );
+    if (normalized !== WINDOW_OPACITY_DEFAULT) {
+      cleanMap[windowId] = normalized;
+    }
+  }
+
+  return cleanMap;
+}
 
 class LayoutManager {
   constructor() {
@@ -22,12 +45,15 @@ class LayoutManager {
 
   /* ── Capture current state ────────────────────────── */
   capture(name = 'Untitled') {
+    const windowOpacity = normalizeWindowOpacityMap(settings.get('windowOpacity'));
+
     return {
       version: PRESET_VERSION,
       name,
       created: new Date().toISOString(),
       resolution: '1920x1080',
       scale: settings.get('scale'),
+      windowOpacity,
       windows: windowManager.captureLayout(),
       comments: this._commentManager?.getAll() ?? [],
     };
@@ -39,6 +65,13 @@ class LayoutManager {
       console.warn('Incompatible preset version');
       return false;
     }
+
+    if (preset.windowOpacity && typeof preset.windowOpacity === 'object') {
+      settings.set('windowOpacity', normalizeWindowOpacityMap(preset.windowOpacity));
+    } else {
+      settings.set('windowOpacity', {});
+    }
+
     if (preset.scale) settings.set('scale', preset.scale);
     if (preset.windows) windowManager.restoreLayout(preset.windows);
     if (preset.comments && this._commentManager) {
@@ -125,6 +158,7 @@ class LayoutManager {
   resetAll(manifest) {
     this.clearAutoSave();
     if (this._commentManager) this._commentManager.clearAll();
+    settings.set('windowOpacity', {});
     // Restore all windows to default positions from manifest
     for (const wDef of manifest.windows) {
       windowManager.resetPosition(wDef.id, manifest);

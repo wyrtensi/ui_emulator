@@ -22,6 +22,10 @@ let remoteConfig = null;
 let remoteWindowDefaults = null;
 let _activeVersionPrompt = null;
 
+const WINDOW_OPACITY_MIN = 30;
+const WINDOW_OPACITY_MAX = 100;
+const WINDOW_OPACITY_DEFAULT = 100;
+
 function normalizeRelativePath(path) {
   return String(path || '')
     .replace(/\\/g, '/')
@@ -142,17 +146,83 @@ function getActiveWindowVersionMap() {
   return map;
 }
 
+function normalizeWindowOpacityPercent(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return WINDOW_OPACITY_DEFAULT;
+  return Math.max(WINDOW_OPACITY_MIN, Math.min(WINDOW_OPACITY_MAX, Math.round(num)));
+}
+
+function normalizeWindowOpacityMap(rawMap) {
+  if (!rawMap || typeof rawMap !== 'object') return {};
+
+  const cleanMap = {};
+  for (const [windowId, rawValue] of Object.entries(rawMap)) {
+    if (!windowId) continue;
+    const nextValue = normalizeWindowOpacityPercent(rawValue);
+    if (nextValue !== WINDOW_OPACITY_DEFAULT) {
+      cleanMap[windowId] = nextValue;
+    }
+  }
+
+  return cleanMap;
+}
+
+function getWindowOpacityMap() {
+  return normalizeWindowOpacityMap(settings.get('windowOpacity'));
+}
+
+function getWindowOpacityPercent(windowId) {
+  if (!windowId) return WINDOW_OPACITY_DEFAULT;
+  const map = getWindowOpacityMap();
+  return map[windowId] ?? WINDOW_OPACITY_DEFAULT;
+}
+
+function setWindowOpacityPercent(windowId, value) {
+  if (!windowId) return;
+
+  const nextValue = normalizeWindowOpacityPercent(value);
+  const currentMap = getWindowOpacityMap();
+  const currentValue = currentMap[windowId] ?? WINDOW_OPACITY_DEFAULT;
+  if (currentValue === nextValue) return;
+
+  if (nextValue === WINDOW_OPACITY_DEFAULT) {
+    delete currentMap[windowId];
+  } else {
+    currentMap[windowId] = nextValue;
+  }
+
+  settings.set('windowOpacity', currentMap);
+}
+
+function applyWindowOpacityToContainer(container, windowId) {
+  if (!container || !windowId) return;
+  const opacityPercent = getWindowOpacityPercent(windowId);
+  container.style.setProperty('--window-bg-opacity', String(opacityPercent / 100));
+}
+
+function applyWindowOpacityToAllWindows() {
+  for (const w of windowManager.getAll()) {
+    if (!w?.container || !w?.id) continue;
+    applyWindowOpacityToContainer(w.container, w.id);
+  }
+}
+
 function captureDefaultWindowState() {
   const allowedIds = getDefaultableWindowIds();
   const states = windowManager.captureLayout().filter(ws => allowedIds.has(ws.id));
   const allInteractiveState = windowManager.captureInteractiveState();
 
   const currentVersionMap = getActiveWindowVersionMap();
+  const currentOpacityMap = getWindowOpacityMap();
   const windowVersions = {};
+  const windowOpacity = {};
   const windowState = {};
   for (const id of allowedIds) {
     if (typeof currentVersionMap[id] === 'string' && currentVersionMap[id]) {
       windowVersions[id] = currentVersionMap[id];
+    }
+    if (typeof currentOpacityMap[id] === 'number') {
+      windowOpacity[id] = currentOpacityMap[id];
     }
     if (allInteractiveState[id] && typeof allInteractiveState[id] === 'object') {
       windowState[id] = allInteractiveState[id];
@@ -164,6 +234,7 @@ function captureDefaultWindowState() {
     updatedAt: new Date().toISOString(),
     windows: states,
     windowVersions,
+    windowOpacity,
     windowState,
   };
 }
@@ -177,6 +248,9 @@ function applyRemoteWindowDefaults() {
   windowManager.restoreLayout(windowStates);
   if (remoteWindowDefaults.windowState && typeof remoteWindowDefaults.windowState === 'object') {
     windowManager.restoreInteractiveState(remoteWindowDefaults.windowState);
+  }
+  if (remoteWindowDefaults.windowOpacity && typeof remoteWindowDefaults.windowOpacity === 'object') {
+    settings.set('windowOpacity', normalizeWindowOpacityMap(remoteWindowDefaults.windowOpacity));
   }
   return true;
 }
@@ -559,6 +633,7 @@ async function boot() {
   layoutManager.init({ commentManager });
   exportManager.init();
   settings.on('screenBounds', () => applyViewportBoundsMode());
+  settings.on('windowOpacity', () => applyWindowOpacityToAllWindows());
 
   // 3b. Init GitHub auth (handles OAuth callback if ?code= present)
   const loggedIn = await githubAuth.init();
@@ -823,6 +898,8 @@ function _injectWindow(wDef, config, htmlText, cssText, windowsLayer) {
     if (dp.width) container.style.width = dp.width + 'px';
     if (dp.height) container.style.height = dp.height + 'px';
   }
+
+  applyWindowOpacityToContainer(container, wDef.id);
 
   windowsLayer.appendChild(container);
 
@@ -1281,6 +1358,9 @@ function wireControlPanel() {
       const item = document.createElement('div');
       item.className = 'window-list-item';
 
+      const itemHead = document.createElement('div');
+      itemHead.className = 'window-list-head';
+
       const titleWrap = document.createElement('div');
       titleWrap.className = 'window-list-main';
 
@@ -1323,8 +1403,45 @@ function wireControlPanel() {
         toggle.classList.toggle('on', windowManager.isOpen(w.id));
       });
 
-      item.appendChild(titleWrap);
-      item.appendChild(toggle);
+      const opacityRow = document.createElement('div');
+      opacityRow.className = 'window-opacity-row';
+
+      const opacityLabel = document.createElement('span');
+      opacityLabel.className = 'window-opacity-label';
+      opacityLabel.textContent = 'Transparency';
+
+      const opacityRange = document.createElement('input');
+      opacityRange.className = 'window-opacity-range';
+      opacityRange.type = 'range';
+      opacityRange.min = String(WINDOW_OPACITY_MIN);
+      opacityRange.max = String(WINDOW_OPACITY_MAX);
+      opacityRange.step = '1';
+      opacityRange.value = String(getWindowOpacityPercent(w.id));
+      opacityRange.title = `${w.config.title || w.id} transparency`;
+
+      const opacityValue = document.createElement('span');
+      opacityValue.className = 'window-opacity-value';
+      opacityValue.textContent = `${opacityRange.value}%`;
+
+      opacityRange.addEventListener('click', (event) => event.stopPropagation());
+      opacityRange.addEventListener('pointerdown', (event) => event.stopPropagation());
+      opacityRange.addEventListener('input', (event) => {
+        event.stopPropagation();
+        const nextOpacity = normalizeWindowOpacityPercent(event.target.value);
+        opacityRange.value = String(nextOpacity);
+        opacityValue.textContent = `${nextOpacity}%`;
+        setWindowOpacityPercent(w.id, nextOpacity);
+      });
+
+      itemHead.appendChild(titleWrap);
+      itemHead.appendChild(toggle);
+
+      opacityRow.appendChild(opacityLabel);
+      opacityRow.appendChild(opacityRange);
+      opacityRow.appendChild(opacityValue);
+
+      item.appendChild(itemHead);
+      item.appendChild(opacityRow);
       windowsList.appendChild(item);
     }
   }

@@ -125,8 +125,10 @@ body {
 
 /* ── Window wrapper ────────────────────────────────── */
 .ui-window {
+  --window-bg-opacity: 1;
   position: absolute;
   display: none;
+  background: rgba(8, 12, 16, var(--window-bg-opacity));
 }
 
 .ui-window.open {
@@ -789,18 +791,55 @@ body[data-panel-open="true"] .side-controls {
 /* ── Windows list ──────────────────────────────────── */
 .window-list-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 0;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 0;
 }
 
 .window-list-item span { font-size: 12px; }
+
+.window-list-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
 
 .window-list-main {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.window-opacity-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.window-opacity-label {
+  width: 74px;
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--panel-text-dim);
+}
+
+.window-opacity-range {
+  flex: 1;
+  margin: 0;
+  height: 4px;
+}
+
+.window-opacity-value {
+  width: 36px;
+  flex: 0 0 auto;
+  text-align: right;
+  font-size: 11px;
+  color: var(--panel-text-dim);
+  font-variant-numeric: tabular-nums;
 }
 
 .window-version-select {

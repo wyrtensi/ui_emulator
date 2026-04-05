@@ -24,6 +24,8 @@ No build pipeline is required. The app runs on plain HTML, CSS, and ES modules.
 - Layout save/load/share using JSON files or URL hash compression (LZ-String).
 - Auto-save to localStorage.
 - Background gallery, local background upload, and independent background zoom.
+- Per-window transparency control in Control Panel Windows list (30% to 100%), persisted in local settings and layout presets/share URLs.
+- Window transparency uses background alpha on the window wrapper so text/content opacity is preserved.
 - Runtime module import:
   - Local ZIP or file bundle (`config.js`, `template.html`, `style.css`)
   - GitHub branch window import (`https://github.com/{user}/{repo}/tree/{branch}`).
@@ -139,6 +141,7 @@ Edit `js/config.js`:
 - `bgScale`
 - `windowDefaults` (owner-published baseline for all users when no local/url preset exists):
   - `windowVersions`: selected version per window id
+  - `windowOpacity`: optional per-window transparency percent map (`30..100`, omitted means `100`)
   - `windows`: layout snapshot (`x`, `y`, `width`, `height`, `open`, `zIndex`)
   - `windowState`: optional interactive state payload per window (tabs, editable values, filters)
 
