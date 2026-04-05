@@ -498,6 +498,18 @@ class ExportManager {
           clone.classList.remove('ui-export-highlight');
           this._applyVariantToClone(clone, variant);
 
+          // Export should ignore live window transparency settings and render
+          // source elements at full opacity while preserving shape masks.
+          const windowClone = clone.classList.contains('ui-window')
+            ? clone
+            : clone.closest('.ui-window');
+
+          if (windowClone instanceof HTMLElement) {
+            windowClone.style.setProperty('opacity', '1', 'important');
+            windowClone.style.setProperty('--window-bg-opacity', '1', 'important');
+            windowClone.dataset.opacityMode = 'frame';
+          }
+
           // Padding hack is still useful for glow/box-shadow overflow,
           // but should not be applied to clip-path targets.
           if (needsPaddingHack) {

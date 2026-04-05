@@ -8,7 +8,7 @@ import { settings } from './settings.js';
 
 const AUTOSAVE_KEY = 'ui-ui-autosave';
 const PRESET_VERSION = 1;
-const WINDOW_OPACITY_MIN = 30;
+const WINDOW_OPACITY_MIN = 0;
 const WINDOW_OPACITY_MAX = 100;
 const WINDOW_OPACITY_DEFAULT = 100;
 

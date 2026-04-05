@@ -135,6 +135,10 @@ body {
   background: rgba(8, 12, 16, var(--window-bg-opacity));
 }
 
+.ui-window[data-opacity-mode="content"] {
+  background: transparent;
+}
+
 .ui-window.open {
   display: block;
 }
@@ -822,14 +826,6 @@ body[data-panel-open="true"] .side-controls {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.window-opacity-row.disabled {
-  opacity: 0.55;
-}
-
-.window-opacity-row.disabled .window-opacity-range {
-  cursor: not-allowed;
 }
 
 .window-opacity-label {

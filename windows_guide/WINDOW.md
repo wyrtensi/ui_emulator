@@ -49,8 +49,9 @@ Rules:
 - avoid global selectors (`html`, `body`, `*`)
 - avoid id selectors unless necessary
 - `@media` and `@keyframes` are supported
-- global per-window transparency is controlled by the emulator on `.ui-window` using background alpha
-- avoid applying `opacity` on your top-level container when you want transparency, because it also fades text/icons
+- global per-window transparency is controlled by emulator runtime and supports two modes: `frame` and `content`
+- windows with custom silhouettes (`clip-path`, `mask-image`) should use `opacityMode: 'content'` to keep shape stable at any transparency
+- rectangular panel windows can use `opacityMode: 'frame'` to keep text/icons fully opaque while fading only background feel
 - prefer `rgba(...)` backgrounds for visual transparency effects inside your module
 
 ## Config Contract
@@ -72,12 +73,15 @@ Optional state persistence:
 
 - `captureState(container)`
 - `applyState(container, state)`
-- `opaqueFrame` (optional boolean): force-enable/disable global wrapper transparency support for this window
+- `opacityMode` (optional string): `'frame'` or `'content'` transparency behavior for this window
+- `opaqueFrame` (optional boolean, legacy alias): `true -> frame`, `false -> content`
 
 Note:
 
 - Control Panel transparency sliders are handled globally and stored in settings/presets; window modules do not need custom state hooks for this.
-- Slider availability is auto-detected from the window root background; modules can override detection with `opaqueFrame`.
+- Every runtime window now has transparency control (0..100) in Control Panel.
+- Default mode selection is adaptive (`content` for custom shape windows, otherwise `frame` when root background exists).
+- Use `opacityMode` in `config.js` to explicitly control behavior when design intent differs from auto selection.
 
 ## Export Strategy (Decision Rule)
 
@@ -131,6 +135,7 @@ Supported variant fields:
 Cut-corner note:
 
 - clip-path based corners/chamfers are preserved in exported PNGs via clip-path-aware masking
+- export pipeline renders targets in full-opacity view (ignores live window transparency slider) so assets stay clear
 - avoid text-only export targets when building granular lists
 
 ## Minimal Baseline Example
@@ -236,6 +241,7 @@ Reject output if:
 - import path depth is wrong
 - unnecessary slicing is added when not requested
 - unknown external libraries are introduced
+- custom shape windows (`clip-path`/`mask-image`) omit `opacityMode: 'content'`
 
 ## Common Failure Modes
 
@@ -274,6 +280,7 @@ Rules:
 - dragHandle selector must exist in template.html.
 - Use minimal export scope only: one full-window export.
 - Add captureState/applyState only if the window has editable tab/value/filter state.
+- Set `opacityMode: 'content'` when root uses `clip-path`/`mask-image`; otherwise prefer `opacityMode: 'frame'` for rectangular panels.
 - Use close import path depth matching config.js location.
 
 Output format:
@@ -293,6 +300,7 @@ Same constraints as minimal mode, plus:
 - Avoid text-only export targets; export element containers/cells.
 - Dispatch ui-export-refresh after dynamic DOM changes.
 - If interactive export states are requested, add `variants` and matching CSS state classes.
+- Keep transparency-mode rule: shape-driven windows use `opacityMode: 'content'`; rectangular panel windows use `opacityMode: 'frame'`.
 
 Output format:
 - Return only 3 code blocks named config.js, template.html, style.css.

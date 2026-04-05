@@ -22,10 +22,10 @@ let remoteConfig = null;
 let remoteWindowDefaults = null;
 let _activeVersionPrompt = null;
 
-const WINDOW_OPACITY_MIN = 30;
+const WINDOW_OPACITY_MIN = 0;
 const WINDOW_OPACITY_MAX = 100;
 const WINDOW_OPACITY_DEFAULT = 100;
-const windowOpacityFrameSupport = new Map();
+const windowOpacityModeMap = new Map();
 
 function normalizeRelativePath(path) {
   return String(path || '')
@@ -226,11 +226,7 @@ function parseColorAlpha(colorValue) {
   return parseAlphaToken(parts[3]);
 }
 
-function shouldUseOpaqueWindowFrame(container, configObj) {
-  if (typeof configObj?.opaqueFrame === 'boolean') {
-    return configObj.opaqueFrame;
-  }
-
+function detectWindowFrameSupport(container) {
   const rootEl = container?.firstElementChild;
   if (!(rootEl instanceof HTMLElement)) return false;
 
@@ -242,19 +238,139 @@ function shouldUseOpaqueWindowFrame(container, configObj) {
   return parseColorAlpha(style.backgroundColor) > 0.01;
 }
 
-function canWindowUseOpacityFrame(windowId) {
-  return windowOpacityFrameSupport.get(windowId) === true;
+function hasCustomWindowShape(container) {
+  const rootEl = container?.firstElementChild;
+  if (!(rootEl instanceof HTMLElement)) return false;
+
+  const style = window.getComputedStyle(rootEl);
+  const clipPath = style.clipPath || style.webkitClipPath;
+  const maskImage = style.maskImage || style.webkitMaskImage;
+
+  return (clipPath && clipPath !== 'none') || (maskImage && maskImage !== 'none');
+}
+
+function resolveWindowOpacityMode(configObj, frameSupported, hasCustomShape) {
+  const rawMode = typeof configObj?.opacityMode === 'string'
+    ? configObj.opacityMode.trim().toLowerCase()
+    : '';
+
+  if (rawMode === 'frame' || rawMode === 'content') {
+    return rawMode;
+  }
+
+  // Backward compatible override from earlier iteration.
+  if (typeof configObj?.opaqueFrame === 'boolean') {
+    return configObj.opaqueFrame ? 'frame' : 'content';
+  }
+
+  if (hasCustomShape) {
+    return 'content';
+  }
+
+  return frameSupported ? 'frame' : 'content';
+}
+
+function getWindowOpacityMode(windowId) {
+  return windowOpacityModeMap.get(windowId) || 'content';
+}
+
+function clearWindowFrameShape(container) {
+  container.style.removeProperty('clip-path');
+  container.style.removeProperty('-webkit-clip-path');
+  container.style.removeProperty('border-radius');
+  container.style.removeProperty('mask-image');
+  container.style.removeProperty('mask-position');
+  container.style.removeProperty('mask-repeat');
+  container.style.removeProperty('mask-size');
+  container.style.removeProperty('-webkit-mask-image');
+  container.style.removeProperty('-webkit-mask-position');
+  container.style.removeProperty('-webkit-mask-repeat');
+  container.style.removeProperty('-webkit-mask-size');
+}
+
+function syncWindowFrameShape(container) {
+  const rootEl = container?.firstElementChild;
+  if (!(rootEl instanceof HTMLElement)) {
+    clearWindowFrameShape(container);
+    return;
+  }
+
+  const style = window.getComputedStyle(rootEl);
+  const clipPath = style.clipPath && style.clipPath !== 'none'
+    ? style.clipPath
+    : (style.webkitClipPath && style.webkitClipPath !== 'none' ? style.webkitClipPath : '');
+
+  const borderRadius = style.borderRadius && style.borderRadius !== '0px'
+    ? style.borderRadius
+    : '';
+
+  const maskImage = style.maskImage && style.maskImage !== 'none'
+    ? style.maskImage
+    : '';
+
+  const webkitMaskImage = style.webkitMaskImage && style.webkitMaskImage !== 'none'
+    ? style.webkitMaskImage
+    : '';
+
+  if (clipPath) {
+    container.style.clipPath = clipPath;
+    container.style.webkitClipPath = clipPath;
+  } else {
+    container.style.removeProperty('clip-path');
+    container.style.removeProperty('-webkit-clip-path');
+  }
+
+  if (borderRadius) {
+    container.style.borderRadius = borderRadius;
+  } else {
+    container.style.removeProperty('border-radius');
+  }
+
+  if (maskImage) {
+    container.style.maskImage = maskImage;
+    container.style.maskPosition = style.maskPosition;
+    container.style.maskRepeat = style.maskRepeat;
+    container.style.maskSize = style.maskSize;
+  } else {
+    container.style.removeProperty('mask-image');
+    container.style.removeProperty('mask-position');
+    container.style.removeProperty('mask-repeat');
+    container.style.removeProperty('mask-size');
+  }
+
+  if (webkitMaskImage) {
+    container.style.webkitMaskImage = webkitMaskImage;
+    container.style.webkitMaskPosition = style.webkitMaskPosition;
+    container.style.webkitMaskRepeat = style.webkitMaskRepeat;
+    container.style.webkitMaskSize = style.webkitMaskSize;
+  } else {
+    container.style.removeProperty('-webkit-mask-image');
+    container.style.removeProperty('-webkit-mask-position');
+    container.style.removeProperty('-webkit-mask-repeat');
+    container.style.removeProperty('-webkit-mask-size');
+  }
 }
 
 function applyWindowOpacityToContainer(container, windowId) {
   if (!container || !windowId) return;
-  const frameEnabled = canWindowUseOpacityFrame(windowId);
-  container.classList.toggle('ui-window-opaque-frame', frameEnabled);
 
-  const opacityPercent = frameEnabled
-    ? getWindowOpacityPercent(windowId)
-    : WINDOW_OPACITY_DEFAULT;
-  container.style.setProperty('--window-bg-opacity', String(opacityPercent / 100));
+  const opacityMode = getWindowOpacityMode(windowId);
+  const useFrameMode = opacityMode === 'frame';
+  const opacityPercent = getWindowOpacityPercent(windowId);
+  const opacityValue = opacityPercent / 100;
+
+  container.dataset.opacityMode = opacityMode;
+  container.classList.toggle('ui-window-opaque-frame', useFrameMode);
+
+  if (useFrameMode) {
+    syncWindowFrameShape(container);
+    container.style.setProperty('--window-bg-opacity', String(opacityValue));
+    container.style.opacity = '1';
+  } else {
+    clearWindowFrameShape(container);
+    container.style.setProperty('--window-bg-opacity', '1');
+    container.style.opacity = String(opacityValue);
+  }
 }
 
 function applyWindowOpacityToAllWindows() {
@@ -958,8 +1074,10 @@ function _injectWindow(wDef, config, htmlText, cssText, windowsLayer) {
 
   windowsLayer.appendChild(container);
 
-  const frameSupported = shouldUseOpaqueWindowFrame(container, config);
-  windowOpacityFrameSupport.set(wDef.id, frameSupported);
+  const frameSupported = detectWindowFrameSupport(container);
+  const customShape = hasCustomWindowShape(container);
+  const opacityMode = resolveWindowOpacityMode(config, frameSupported, customShape);
+  windowOpacityModeMap.set(wDef.id, opacityMode);
   applyWindowOpacityToContainer(container, wDef.id);
 
   windowManager.register(wDef.id, config, container);
@@ -1475,32 +1593,23 @@ function wireControlPanel() {
       opacityRange.min = String(WINDOW_OPACITY_MIN);
       opacityRange.max = String(WINDOW_OPACITY_MAX);
       opacityRange.step = '1';
-      const supportsOpacityFrame = canWindowUseOpacityFrame(w.id);
+      const opacityMode = getWindowOpacityMode(w.id);
       opacityRange.value = String(getWindowOpacityPercent(w.id));
-      opacityRange.title = supportsOpacityFrame
-        ? `${w.config.title || w.id} transparency`
-        : `${w.config.title || w.id} has no window frame background`;
-      opacityRange.disabled = !supportsOpacityFrame;
+      opacityRange.title = `${w.config.title || w.id} transparency (${opacityMode} mode)`;
 
       const opacityValue = document.createElement('span');
       opacityValue.className = 'window-opacity-value';
-      opacityValue.textContent = supportsOpacityFrame ? `${opacityRange.value}%` : 'N/A';
-
-      if (!supportsOpacityFrame) {
-        opacityRow.classList.add('disabled');
-      }
+      opacityValue.textContent = `${opacityRange.value}%`;
 
       opacityRange.addEventListener('click', (event) => event.stopPropagation());
       opacityRange.addEventListener('pointerdown', (event) => event.stopPropagation());
-      if (supportsOpacityFrame) {
-        opacityRange.addEventListener('input', (event) => {
-          event.stopPropagation();
-          const nextOpacity = normalizeWindowOpacityPercent(event.target.value);
-          opacityRange.value = String(nextOpacity);
-          opacityValue.textContent = `${nextOpacity}%`;
-          setWindowOpacityPercent(w.id, nextOpacity);
-        });
-      }
+      opacityRange.addEventListener('input', (event) => {
+        event.stopPropagation();
+        const nextOpacity = normalizeWindowOpacityPercent(event.target.value);
+        opacityRange.value = String(nextOpacity);
+        opacityValue.textContent = `${nextOpacity}%`;
+        setWindowOpacityPercent(w.id, nextOpacity);
+      });
 
       itemHead.appendChild(titleWrap);
       itemHead.appendChild(toggle);
