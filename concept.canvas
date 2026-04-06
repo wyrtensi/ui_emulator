@@ -470,13 +470,13 @@
       "id": "n_1775327901628",
       "type": "text",
       "x": -6769,
-      "y": -6535,
+      "y": -6534,
       "width": 692,
-      "height": 503,
-      "text": "Regarding the schema creation, here is what I'm thinking so far: Image of how window originally looked in the gameWindow nameCurrent functionality or what should be included by defaultThe concept version to which you will be adding new featuresWhat to add to this concept — (for example, I added an NPC icon)Design and styling, including specific elements, etc.Concept drafts (rough sketches) branch out from here. You can just mock these up in an image format, even using Paint; there's no need to draw them out using blocks on the canvas.From each schema branch, final/ready-made designs are attached as images.Design changes/iterations based on the specified image.",
+      "height": 505,
+      "text": "Regarding the schema creation, here is what I'm thinking so far:Image of how window originally looked in the gameWindow nameCurrent functionality or what should be included by defaultThe concept version to which you will be adding new featuresWhat to add to this concept — (for example, I added an NPC icon)Design and styling, including specific elements, etc.Concept drafts (rough sketches) branch out from here. You can just mock these up in an image format, even using Paint; there's no need to draw them out using blocks on the canvas.From each schema branch, final/ready-made designs are attached as images.Design changes/iterations based on the specified image.",
       "textAlign": "left",
       "verticalAlign": "top",
-      "html": "<p data-path-to-node=\"1\"><b data-path-to-node=\"1\" data-index-in-node=\"0\">Regarding the schema creation, here is what I'm thinking so far:</b></p><ol><li><p data-path-to-node=\"2,0,0\"><b data-path-to-node=\"2,0,0\" data-index-in-node=\"0\">&nbsp;Image of how window originally looked in the game</b></p></li><li><p data-path-to-node=\"2,0,0\"><b data-path-to-node=\"2,0,0\" data-index-in-node=\"0\">Window name</b></p></li><li><p data-path-to-node=\"2,1,0\"><b data-path-to-node=\"2,1,0\" data-index-in-node=\"0\">Current functionality</b> or what should be included by default</p></li><li><p data-path-to-node=\"2,2,0\"><b data-path-to-node=\"2,2,0\" data-index-in-node=\"0\">The concept version</b> to which you will be adding new features</p></li><li><p data-path-to-node=\"2,3,0\"><b data-path-to-node=\"2,3,0\" data-index-in-node=\"0\">What to add to this concept</b> — (for example, I added an NPC icon)</p></li><li><p data-path-to-node=\"2,4,0\"><b data-path-to-node=\"2,4,0\" data-index-in-node=\"0\">Design and styling</b>, including specific elements, etc.</p></li><li><p data-path-to-node=\"2,5,0\"><b data-path-to-node=\"2,5,0\" data-index-in-node=\"0\">Concept drafts (rough sketches)</b> branch out from here. You can just mock these up in an image format, even using Paint; there's no need to draw them out using blocks on the canvas.</p></li><li><p data-path-to-node=\"2,6,0\">From each schema branch, <b data-path-to-node=\"2,6,0\" data-index-in-node=\"25\">final/ready-made designs</b> are attached as images.</p></li><li><p data-path-to-node=\"2,7,0\"><b data-path-to-node=\"2,7,0\" data-index-in-node=\"0\">Design changes/iterations</b> based on the specified image.</p></li></ol>"
+      "html": "<p data-path-to-node=\"1\"><b data-path-to-node=\"1\" data-index-in-node=\"0\">Regarding the schema creation, here is what I'm thinking so far:</b></p><ol><li><p data-path-to-node=\"2,0,0\"><b data-path-to-node=\"2,0,0\" data-index-in-node=\"0\">Image of how window originally looked in the game</b></p></li><li><p data-path-to-node=\"2,0,0\"><b data-path-to-node=\"2,0,0\" data-index-in-node=\"0\">Window name</b></p></li><li><p data-path-to-node=\"2,1,0\"><b data-path-to-node=\"2,1,0\" data-index-in-node=\"0\">Current functionality</b> or what should be included by default</p></li><li><p data-path-to-node=\"2,2,0\"><b data-path-to-node=\"2,2,0\" data-index-in-node=\"0\">The concept version</b> to which you will be adding new features</p></li><li><p data-path-to-node=\"2,3,0\"><b data-path-to-node=\"2,3,0\" data-index-in-node=\"0\">What to add to this concept</b> — (for example, I added an NPC icon)</p></li><li><p data-path-to-node=\"2,4,0\"><b data-path-to-node=\"2,4,0\" data-index-in-node=\"0\">Design and styling</b>, including specific elements, etc.</p></li><li><p data-path-to-node=\"2,5,0\"><b data-path-to-node=\"2,5,0\" data-index-in-node=\"0\">Concept drafts (rough sketches)</b> branch out from here. You can just mock these up in an image format, even using Paint; there's no need to draw them out using blocks on the canvas.</p></li><li><p data-path-to-node=\"2,6,0\">From each schema branch, <b data-path-to-node=\"2,6,0\" data-index-in-node=\"25\">final/ready-made designs</b> are attached as images.</p></li><li><p data-path-to-node=\"2,7,0\"><b data-path-to-node=\"2,7,0\" data-index-in-node=\"0\">Design changes/iterations</b> based on the specified image.</p></li></ol>"
     },
     {
       "id": "8rq22sa0jnc",
@@ -486,6 +486,78 @@
       "width": 254,
       "height": 319,
       "file": "canvas_uploads/pasted_image_1775334728261.png"
+    },
+    {
+      "id": "3r0hhcohw3r",
+      "type": "file",
+      "x": -4487,
+      "y": -9640,
+      "width": 523,
+      "height": 616,
+      "file": "canvas_uploads/pasted_image_1775481341671.png"
+    },
+    {
+      "id": "t5bfvavnhke",
+      "type": "file",
+      "x": -5569,
+      "y": -9640,
+      "width": 1082,
+      "height": 616,
+      "file": "canvas_uploads/pasted_image_1775482320977.png"
+    },
+    {
+      "id": "nwiugdhqdhc",
+      "type": "file",
+      "x": -5569,
+      "y": -9024,
+      "width": 1082,
+      "height": 616,
+      "file": "canvas_uploads/pasted_image_1775482758491.png"
+    },
+    {
+      "id": "4x4jq8vp47s",
+      "type": "file",
+      "x": -4487,
+      "y": -9024,
+      "width": 1093,
+      "height": 616,
+      "file": "canvas_uploads/pasted_image_1775483597200.png"
+    },
+    {
+      "id": "8z0kbim0y3f",
+      "type": "file",
+      "x": -3967,
+      "y": -9640,
+      "width": 1096,
+      "height": 616,
+      "file": "canvas_uploads/pasted_image_1775483904787.png"
+    },
+    {
+      "id": "omhl6w5tple",
+      "type": "file",
+      "x": -3394,
+      "y": -9024,
+      "width": 1106,
+      "height": 616,
+      "file": "canvas_uploads/pasted_image_1775483945473.png"
+    },
+    {
+      "id": "mmeivjd6p5h",
+      "type": "file",
+      "x": -2871,
+      "y": -9640,
+      "width": 1098,
+      "height": 616,
+      "file": "canvas_uploads/pasted_image_1775484009961.png"
+    },
+    {
+      "id": "6qpimjao02n",
+      "type": "file",
+      "x": -2288,
+      "y": -9024,
+      "width": 1098,
+      "height": 616,
+      "file": "canvas_uploads/pasted_image_1775484065185.png"
     }
   ],
   "edges": [
