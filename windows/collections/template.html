@@ -1,0 +1,175 @@
+<div class="collections-window" data-export="collections-full">
+  <!-- Header / Drag Handle -->
+  <header class="collections-header">
+    <div class="collections-header-title">
+      <span class="collections-header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4zM4 9h16M9 4v16"/></svg>
+      </span>
+      КОЛЛЕКЦИИ
+    </div>
+    <div class="collections-header-controls">
+      <button class="collections-btn-close" aria-label="Close" onclick="import('../../js/core/window-manager.js').then(m => m.windowManager.close('collections'))">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="collections-body">
+    <!-- Left Sidebar: Navigation & Search -->
+    <aside class="collections-sidebar">
+      <div class="collections-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" placeholder="ПОИСК...">
+      </div>
+
+      <div class="collections-nav-list">
+        <div class="collections-nav-item active">
+          <span class="nav-marker"></span>
+          КИБЕР-БРОНЯ T31
+          <span class="nav-status">5/7</span>
+        </div>
+        <div class="collections-nav-item">
+          <span class="nav-marker"></span>
+          ОРУЖИЕ ДРЕВНИХ
+          <span class="nav-status warning">!</span>
+        </div>
+        <div class="collections-nav-item">
+          <span class="nav-marker"></span>
+          БИО-ИМПЛАНТЫ
+          <span class="nav-status">0/5</span>
+        </div>
+        <div class="collections-nav-item locked">
+          <span class="nav-marker"></span>
+          СЕКРЕТНЫЙ АРХИВ
+          <svg class="locked-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center Content -->
+    <main class="collections-main">
+      <!-- Top Center: Stages/Progress -->
+      <section class="collections-stages">
+        <div class="stage-track"></div>
+        <div class="stage-nodes">
+          <div class="stage-node success">
+            <div class="stage-node-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <div class="stage-node-label">3 ПРЕДМЕТА</div>
+          </div>
+          <div class="stage-node active">
+            <div class="stage-node-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+            <div class="stage-node-label">5 ПРЕДМЕТОВ</div>
+            <div class="stage-node-glow"></div>
+          </div>
+          <div class="stage-node locked">
+            <div class="stage-node-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+            <div class="stage-node-label">7 ПРЕДМЕТОВ</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Center: Grid -->
+      <section class="collections-grid-wrapper">
+        <div class="collections-grid-title">
+          <span>СЛОТЫ КОЛЛЕКЦИИ</span>
+          <span class="grid-stats">СОБРАНО: <span class="cyan-text">5/7</span></span>
+        </div>
+        <div class="collections-grid">
+          <!-- Item: Success/Collected -->
+          <div class="collection-item success">
+            <div class="item-corner-lt"></div><div class="item-corner-rb"></div>
+            <div class="item-image-placeholder">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="item-name">ШЛЕМ</div>
+          </div>
+          <!-- Item: Active/Selected -->
+          <div class="collection-item active">
+             <div class="item-corner-lt"></div><div class="item-corner-rb"></div>
+            <div class="item-image-placeholder">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="item-name">НАГРУДНИК</div>
+            <div class="item-active-glow"></div>
+          </div>
+          <!-- Item: Success/Collected -->
+          <div class="collection-item success">
+             <div class="item-corner-lt"></div><div class="item-corner-rb"></div>
+            <div class="item-image-placeholder">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            </div>
+            <div class="item-name">ПЕРЧАТКИ</div>
+          </div>
+          <!-- Item: Empty -->
+          <div class="collection-item empty">
+             <div class="item-corner-lt"></div><div class="item-corner-rb"></div>
+            <div class="item-image-placeholder"></div>
+            <div class="item-name">ПОНОЖИ</div>
+          </div>
+          <!-- Item: Empty -->
+          <div class="collection-item empty">
+             <div class="item-corner-lt"></div><div class="item-corner-rb"></div>
+            <div class="item-image-placeholder"></div>
+            <div class="item-name">САПОГИ</div>
+          </div>
+          <!-- Item: Locked -->
+          <div class="collection-item locked">
+             <div class="item-corner-lt"></div><div class="item-corner-rb"></div>
+            <div class="item-image-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="item-name">АРТЕФАКТ</div>
+          </div>
+          <!-- Item: Locked -->
+          <div class="collection-item locked">
+             <div class="item-corner-lt"></div><div class="item-corner-rb"></div>
+            <div class="item-image-placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="item-name">ОРУЖИЕ</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Right Panel: Details & Bonuses -->
+    <aside class="collections-details">
+      <div class="details-bracket-tl"></div>
+      <div class="details-bracket-br"></div>
+
+      <div class="details-header">
+        <div class="details-title">НАГРУДНИК Т31</div>
+        <div class="details-subtitle">ЧАСТЬ КОЛЛЕКЦИИ: КИБЕР-БРОНЯ</div>
+      </div>
+
+      <div class="details-image">
+         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+
+      <div class="details-bonuses">
+        <div class="bonuses-title">БОНУСЫ СЕТА</div>
+        <ul class="bonuses-list">
+          <li class="bonus-item active">
+            <span class="bonus-req">[3/7]</span>
+            <span class="bonus-desc">+15% К ЗАЩИТЕ ОТ ЭМИ</span>
+          </li>
+          <li class="bonus-item active highlight">
+            <span class="bonus-req">[5/7]</span>
+            <span class="bonus-desc">+10% К СКОРОСТИ РЕГЕНЕРАЦИИ</span>
+          </li>
+          <li class="bonus-item locked">
+            <span class="bonus-req">[7/7]</span>
+            <span class="bonus-desc">АКТИВАЦИЯ ЩИТА "ЭГИДА"</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="details-actions">
+        <button class="collections-btn-primary">
+          <span class="btn-scanline"></span>
+          ПОЛУЧИТЬ НАГРАДУ
+        </button>
+      </div>
+    </aside>
+  </div>
+</div>
