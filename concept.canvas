@@ -565,7 +565,7 @@
       "x": -16528,
       "y": -8895,
       "width": 328,
-      "height": 166,
+      "height": 168,
       "text": "Новый план по созданию интерфейса 01.05.26",
       "textAlign": "center",
       "verticalAlign": "center",
@@ -590,7 +590,7 @@
       "x": -15194,
       "y": -8809,
       "width": 228,
-      "height": 259,
+      "height": 261,
       "text": "Window functionality:NPC NameNPC MessageButtons (e.g. Trade, Quest, Conversation, Processing, Recovery point)",
       "textAlign": "left",
       "verticalAlign": "top",
@@ -602,7 +602,7 @@
       "x": -14472,
       "y": -8791,
       "width": 228,
-      "height": 224,
+      "height": 226,
       "text": "Improvements to window functionality:Add icon picture for NPC",
       "textAlign": "left",
       "verticalAlign": "top",
@@ -614,7 +614,7 @@
       "x": -14059,
       "y": -8828,
       "width": 229,
-      "height": 287,
+      "height": 289,
       "text": "Window design and styling:NPC IconTitle (NPC name)Text frame (NPC message)Buttons under the text frameFloating elements design",
       "textAlign": "left",
       "verticalAlign": "top",
@@ -671,7 +671,7 @@
       "x": -15197,
       "y": -8955,
       "width": 231,
-      "height": 88,
+      "height": 90,
       "text": "Описание окна, функционал",
       "textAlign": "center",
       "verticalAlign": "center",
@@ -695,7 +695,7 @@
       "x": -14483,
       "y": -8938,
       "width": 251,
-      "height": 91,
+      "height": 93,
       "text": "Что добавить в окно по функционалу и особенностям дизайна именно этого окна",
       "textAlign": "left",
       "verticalAlign": "top",
@@ -707,7 +707,7 @@
       "x": -14033,
       "y": -8977,
       "width": 264,
-      "height": 82,
+      "height": 84,
       "text": "Из каких основных элементов по итогу состоит окно (дизайн)",
       "textAlign": "center",
       "verticalAlign": "center",
@@ -717,8 +717,8 @@
       "id": "ze1s3b8vi3",
       "type": "file",
       "file": "canvas_uploads/NPC_a.png",
-      "x": -13779,
-      "y": -8087,
+      "x": -13933,
+      "y": -7614,
       "width": 162,
       "height": 172,
       "groupId": "b60lkwctk3u"
@@ -726,8 +726,8 @@
     {
       "id": "bsy996al3sk",
       "type": "text",
-      "x": -13779,
-      "y": -8179,
+      "x": -13933,
+      "y": -7706,
       "width": 434,
       "height": 82,
       "text": "   NPC NAME",
@@ -739,8 +739,8 @@
     {
       "id": "gxuo294ho4t",
       "type": "text",
-      "x": -13605,
-      "y": -8087,
+      "x": -13759,
+      "y": -7614,
       "width": 804,
       "height": 174,
       "text": "NPC MESSAGE HERE...",
@@ -753,16 +753,16 @@
       "id": "b60lkwctk3u",
       "type": "group",
       "label": "v1 Concept #1",
-      "x": -13819,
-      "y": -8239,
+      "x": -13973,
+      "y": -7766,
       "width": 1058,
       "height": 549
     },
     {
       "id": "4raomrmj2th",
       "type": "text",
-      "x": -13779,
-      "y": -7902,
+      "x": -13933,
+      "y": -7429,
       "width": 481,
       "height": 80,
       "text": "Button 1",
@@ -774,8 +774,8 @@
     {
       "id": "s73eli9b4c9",
       "type": "text",
-      "x": -13282,
-      "y": -7902,
+      "x": -13436,
+      "y": -7429,
       "width": 481,
       "height": 80,
       "text": "Button 2",
@@ -787,8 +787,8 @@
     {
       "id": "xvbocncd0z8",
       "type": "text",
-      "x": -13779,
-      "y": -7810,
+      "x": -13933,
+      "y": -7337,
       "width": 481,
       "height": 80,
       "text": "Button 3",
@@ -800,8 +800,8 @@
     {
       "id": "kxhqbgeur6s",
       "type": "text",
-      "x": -13282,
-      "y": -7810,
+      "x": -13436,
+      "y": -7337,
       "width": 481,
       "height": 80,
       "text": "Button 4",
@@ -813,8 +813,8 @@
     {
       "id": "tyrclbakexi",
       "type": "file",
-      "x": -12509,
-      "y": -8239,
+      "x": -12663,
+      "y": -7766,
       "width": 952,
       "height": 535,
       "file": "canvas_uploads/pasted_image_1775325772247.png"
@@ -846,8 +846,8 @@
     {
       "id": "n_1777623640392",
       "type": "text",
-      "x": -14262,
-      "y": -7972,
+      "x": -14416,
+      "y": -7499,
       "width": 261,
       "height": 80,
       "text": "Набросок в любом редакторе paint, photoshop, word, либо здесь",
@@ -858,8 +858,8 @@
     {
       "id": "n_1777623677675",
       "type": "text",
-      "x": -12036,
-      "y": -8457,
+      "x": -12190,
+      "y": -7984,
       "width": 261,
       "height": 133,
       "text": "Генерируем картинку на основе наброска с заданным стилемиспользуем описание + набросок + стиль (chatgpt image 2, nano banana 2/pro)",
@@ -931,8 +931,8 @@
     {
       "id": "1i5oouehh0j",
       "type": "text",
-      "x": -11453,
-      "y": -8056,
+      "x": -11607,
+      "y": -7583,
       "width": 250,
       "height": 150,
       "text": "понравившийся вариант прогоняем через стич, пока не получим приемлимый результат https://stitch.withgoogle.com/",
@@ -943,8 +943,8 @@
     {
       "id": "76tlznazqz4",
       "type": "text",
-      "x": -11074,
-      "y": -8056,
+      "x": -11228,
+      "y": -7583,
       "width": 250,
       "height": 154,
       "text": "Из стича создаем окно в jules или другом редакторе используя экспорт, для дальнейшего импорта в эмулятор",
@@ -981,8 +981,8 @@
     {
       "id": "n_1777624324201",
       "type": "text",
-      "x": -13197,
-      "y": -8422,
+      "x": -13351,
+      "y": -7949,
       "width": 262,
       "height": 123,
       "text": "самый правильный на взгляд Jerry, средний по креативу",
@@ -990,6 +990,36 @@
       "verticalAlign": "top",
       "html": "<h2>самый правильный на взгляд Jerry, средний по креативу</h2>",
       "color": "4"
+    },
+    {
+      "id": "r33vew1nvjg",
+      "type": "file",
+      "x": -12955,
+      "y": -8313,
+      "width": 433,
+      "height": 435,
+      "file": "canvas_uploads/pasted_image_1777645716569.png"
+    },
+    {
+      "id": "nzbcf338bz",
+      "type": "file",
+      "x": -1980,
+      "y": -11062,
+      "width": 402,
+      "height": 546,
+      "file": "canvas_uploads/pasted_image_1777645870407.png"
+    },
+    {
+      "id": "n_1777646043031",
+      "type": "text",
+      "x": -2447,
+      "y": -10866,
+      "width": 250,
+      "height": 154,
+      "text": "Inventory",
+      "textAlign": "center",
+      "verticalAlign": "center",
+      "html": "<h1>Inventory</h1><h1><br></h1>"
     }
   ],
   "edges": [
@@ -1328,6 +1358,20 @@
       "fromSide": "bottom",
       "toNode": "b60lkwctk3u",
       "toSide": "top"
+    },
+    {
+      "id": "3owgu7mljfu",
+      "fromNode": "r33vew1nvjg",
+      "fromSide": "top",
+      "toNode": "n_1777623712595",
+      "toSide": "bottom"
+    },
+    {
+      "id": "8k8e1brn5f9",
+      "fromNode": "n_1777646043031",
+      "fromSide": "right",
+      "toNode": "nzbcf338bz",
+      "toSide": "left"
     }
   ]
 }
