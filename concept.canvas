@@ -1012,7 +1012,7 @@
     {
       "id": "n_1777646043031",
       "type": "text",
-      "x": -2447,
+      "x": -1470,
       "y": -10866,
       "width": 250,
       "height": 154,
@@ -1020,6 +1020,123 @@
       "textAlign": "center",
       "verticalAlign": "center",
       "html": "<h1>Inventory</h1><h1><br></h1>"
+    },
+    {
+      "id": "ekbgqo3o42",
+      "type": "file",
+      "x": -4374,
+      "y": -10796,
+      "width": 583,
+      "height": 636,
+      "file": "canvas_uploads/pasted_image_1777646248376.png"
+    },
+    {
+      "id": "r3qq796atyg",
+      "type": "file",
+      "x": -3774,
+      "y": -10796,
+      "width": 679,
+      "height": 695,
+      "file": "canvas_uploads/pasted_image_1777646261109.png"
+    },
+    {
+      "id": "n_1777646528760",
+      "type": "text",
+      "x": -1100,
+      "y": -10932.5,
+      "width": 372,
+      "height": 354,
+      "text": "Функционал окна:ПоискСортировка (выпадающее меню)СлотыКнопка удаления предметовКнопка закрепа вещей, для повышения приоритета отображения в спискеНастройки инвентаря3 вида валюты (до 10ти значного числа)Индикатор и кнопка расширения весаСчетчик занятых слотов",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Функционал окна:<div><ul><li>Поиск</li><li>Сортировка (выпадающее меню)</li><li>Слоты</li><li>Кнопка удаления предметов</li><li>Кнопка закрепа вещей, для повышения приоритета отображения в списке</li><li>Настройки инвентаря</li><li>3 вида валюты (до 10ти значного числа)</li><li>Индикатор и кнопка расширения веса</li><li>Счетчик занятых слотов</li></ul></div>"
+    },
+    {
+      "id": "kgea7n1rxw9",
+      "type": "file",
+      "x": -3931,
+      "y": -11389,
+      "width": 959,
+      "height": 593,
+      "file": "canvas_uploads/pasted_image_1777646545439.png"
+    },
+    {
+      "id": "n_1777646861723",
+      "type": "text",
+      "x": -636,
+      "y": -10857,
+      "width": 250,
+      "height": 156,
+      "text": "v1",
+      "textAlign": "center",
+      "verticalAlign": "center",
+      "html": "<h1>v1</h1>"
+    },
+    {
+      "id": "n_1777646902094",
+      "type": "text",
+      "x": -262,
+      "y": -10844,
+      "width": 250,
+      "height": 152,
+      "text": "Что добавить в окно:Система фильтров Индикатор нового предмета в инвентаре",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Что добавить в окно:<div><ul><li>Система фильтров&nbsp;</li><li>Индикатор нового предмета в инвентаре</li></ul></div>"
+    },
+    {
+      "id": "n_1777647202989",
+      "type": "text",
+      "x": 123,
+      "y": -10759,
+      "width": 475,
+      "height": 283,
+      "text": "Из каких элементов состоит окно:Фон (само окно)Слоты (с различной подсветкой рамки (включая индикатор новых и закрепленных предметов и самого слота), при наведении с предметом на курсоре подсветка слота под ним)",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Из каких элементов состоит окно:<div><ul><li>Фон (само окно)</li><li>Слоты (с различной подсветкой рамки (включая индикатор новых и закрепленных предметов и самого слота), при наведении с предметом на курсоре подсветка слота под ним)</li><li><br></li></ul></div>"
+    },
+    {
+      "id": "n_1777647590918",
+      "type": "text",
+      "x": 996,
+      "y": -10707,
+      "width": 1186,
+      "height": 123,
+      "text": "",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "groupId": "n_1777647594517200"
+    },
+    {
+      "id": "n_1777647594517200",
+      "type": "group",
+      "label": "Макет",
+      "x": 956,
+      "y": -10767,
+      "width": 1286,
+      "height": 223
+    },
+    {
+      "id": "n_1777647658637",
+      "type": "text",
+      "x": 2052,
+      "y": -10707,
+      "width": 150,
+      "height": 123,
+      "text": "",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "groupId": "n_1777647594517200"
+    },
+    {
+      "id": "cd25dfo334h",
+      "type": "file",
+      "x": 59,
+      "y": -10332,
+      "width": 631,
+      "height": 763,
+      "file": "canvas_uploads/pasted_image_1777651176825.png"
     }
   ],
   "edges": [
@@ -1367,11 +1484,46 @@
       "toSide": "bottom"
     },
     {
-      "id": "8k8e1brn5f9",
+      "id": "b20ry23jdol",
+      "fromNode": "nzbcf338bz",
+      "fromSide": "right",
+      "toNode": "n_1777646043031",
+      "toSide": "left"
+    },
+    {
+      "id": "blsji8adxqw",
       "fromNode": "n_1777646043031",
       "fromSide": "right",
-      "toNode": "nzbcf338bz",
+      "toNode": "n_1777646528760",
       "toSide": "left"
+    },
+    {
+      "id": "7d1lt05x32",
+      "fromNode": "n_1777646528760",
+      "fromSide": "right",
+      "toNode": "n_1777646861723",
+      "toSide": "left"
+    },
+    {
+      "id": "y33y44ndrkc",
+      "fromNode": "n_1777646861723",
+      "fromSide": "right",
+      "toNode": "n_1777646902094",
+      "toSide": "left"
+    },
+    {
+      "id": "bog4g1hx97t",
+      "fromNode": "n_1777646902094",
+      "fromSide": "right",
+      "toNode": "n_1777647202989",
+      "toSide": "left"
+    },
+    {
+      "id": "h25bdl3sxh",
+      "fromNode": "n_1777647202989",
+      "fromSide": "bottom",
+      "toNode": "cd25dfo334h",
+      "toSide": "top"
     }
   ]
 }
