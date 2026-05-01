@@ -3,8 +3,8 @@
     {
       "id": "n_1775178260035",
       "type": "text",
-      "x": -9594,
-      "y": -5671,
+      "x": -8505,
+      "y": -3414,
       "width": 257,
       "height": 80,
       "text": "Armors Concept",
@@ -16,8 +16,8 @@
     {
       "id": "n_1775178287674",
       "type": "text",
-      "x": -9594,
-      "y": -5517,
+      "x": -8505,
+      "y": -3260,
       "width": 254,
       "height": 80,
       "text": "Bellato",
@@ -28,8 +28,8 @@
     {
       "id": "n_1775178355046",
       "type": "text",
-      "x": -9860,
-      "y": -5517,
+      "x": -8771,
+      "y": -3260,
       "width": 243,
       "height": 80,
       "text": "Accretia",
@@ -40,8 +40,8 @@
     {
       "id": "n_1775178376708",
       "type": "text",
-      "x": -9317,
-      "y": -5517,
+      "x": -8228,
+      "y": -3260,
       "width": 263,
       "height": 80,
       "text": "Cora",
@@ -53,8 +53,8 @@
       "id": "n_1775178416711",
       "type": "file",
       "file": "canvas_uploads/striker_2026_1.png",
-      "x": -9869,
-      "y": -5385,
+      "x": -8780,
+      "y": -3128,
       "width": 262,
       "height": 149
     },
@@ -109,8 +109,8 @@
     {
       "id": "n_1775218986373",
       "type": "text",
-      "x": -9027,
-      "y": -5902,
+      "x": -7938,
+      "y": -3645,
       "width": 213,
       "height": 111,
       "text": "Jerry's hobbies",
@@ -122,8 +122,8 @@
       "id": "n_1775244168780",
       "type": "file",
       "file": "canvas_uploads/NPC_a.png",
-      "x": -4526,
-      "y": -4035,
+      "x": -4365,
+      "y": -4243,
       "width": 162,
       "height": 172,
       "groupId": "n_1775244389661018"
@@ -131,8 +131,8 @@
     {
       "id": "n_1775244189740",
       "type": "text",
-      "x": -4526,
-      "y": -4127,
+      "x": -4365,
+      "y": -4335,
       "width": 434,
       "height": 82,
       "text": "   NPC NAME",
@@ -144,8 +144,8 @@
     {
       "id": "n_1775244297937",
       "type": "text",
-      "x": -4352,
-      "y": -4035,
+      "x": -4191,
+      "y": -4243,
       "width": 804,
       "height": 174,
       "text": "NPC MESSAGE HERE...",
@@ -158,16 +158,16 @@
       "id": "n_1775244389661018",
       "type": "group",
       "label": "v1 Concept #1",
-      "x": -4566,
-      "y": -4187,
+      "x": -4405,
+      "y": -4395,
       "width": 1058,
       "height": 549
     },
     {
       "id": "n_1775253836067",
       "type": "text",
-      "x": -4526,
-      "y": -3850,
+      "x": -4365,
+      "y": -4058,
       "width": 481,
       "height": 80,
       "text": "Button 1",
@@ -179,8 +179,8 @@
     {
       "id": "yrwpech0ngn",
       "type": "text",
-      "x": -4029,
-      "y": -3850,
+      "x": -3868,
+      "y": -4058,
       "width": 481,
       "height": 80,
       "text": "Button 2",
@@ -192,8 +192,8 @@
     {
       "id": "pgjzhj4j2t",
       "type": "text",
-      "x": -4526,
-      "y": -3758,
+      "x": -4365,
+      "y": -3966,
       "width": 481,
       "height": 80,
       "text": "Button 3",
@@ -304,8 +304,8 @@
     {
       "id": "b5ww5ga49u7",
       "type": "text",
-      "x": -4029,
-      "y": -3758,
+      "x": -3868,
+      "y": -3966,
       "width": 481,
       "height": 80,
       "text": "Button 4",
@@ -469,8 +469,8 @@
     {
       "id": "n_1775327901628",
       "type": "text",
-      "x": -6769,
-      "y": -6534,
+      "x": -6041,
+      "y": -7153,
       "width": 692,
       "height": 505,
       "text": "Regarding the schema creation, here is what I'm thinking so far:Image of how window originally looked in the gameWindow nameCurrent functionality or what should be included by defaultThe concept version to which you will be adding new featuresWhat to add to this concept — (for example, I added an NPC icon)Design and styling, including specific elements, etc.Concept drafts (rough sketches) branch out from here. You can just mock these up in an image format, even using Paint; there's no need to draw them out using blocks on the canvas.From each schema branch, final/ready-made designs are attached as images.Design changes/iterations based on the specified image.",
@@ -558,6 +558,436 @@
       "width": 1098,
       "height": 616,
       "file": "canvas_uploads/pasted_image_1775484065185.png"
+    },
+    {
+      "id": "n_1777622332531",
+      "type": "text",
+      "x": -12369,
+      "y": -7198,
+      "width": 207,
+      "height": 94,
+      "text": "Новый план по созданию интерфейса 01.05.26",
+      "textAlign": "center",
+      "verticalAlign": "center",
+      "html": "<h3>Новый план по созданию интерфейса 01.05.26</h3>"
+    },
+    {
+      "id": "ne03x0q1w5",
+      "type": "text",
+      "x": -11619,
+      "y": -7217,
+      "width": 228,
+      "height": 133,
+      "text": "NPC Window",
+      "textAlign": "center",
+      "verticalAlign": "center",
+      "html": "<h2>NPC Window</h2>"
+    },
+    {
+      "id": "df6xumdnowv",
+      "type": "text",
+      "x": -11297,
+      "y": -7198,
+      "width": 228,
+      "height": 259,
+      "text": "Window functionality:NPC NameNPC MessageButtons (e.g. Trade, Quest, Conversation, Processing, Recovery point)",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "<h3>Window functionality:</h3><div><ul><li>NPC Name</li><li>NPC Message</li><li>Buttons (e.g. Trade, Quest, Conversation, Processing, Recovery point)</li></ul></div>"
+    },
+    {
+      "id": "pqwihcux5g",
+      "type": "text",
+      "x": -10575,
+      "y": -7180.5,
+      "width": 228,
+      "height": 224,
+      "text": "Improvements to window functionality:Add icon picture for NPC",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "<h3>Improvements to window functionality:</h3><div><ul><li>Add icon picture for NPC</li><li><br></li></ul></div>"
+    },
+    {
+      "id": "kqroufr5fe",
+      "type": "text",
+      "x": -10162,
+      "y": -7217,
+      "width": 229,
+      "height": 287,
+      "text": "Window design and styling:NPC IconTitle (NPC name)Text frame (NPC message)Buttons under the text frameFloating elements design",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "<h3>Window design and styling:</h3><div><ul><li>NPC Icon</li><li>Title (NPC name)</li><li>Text frame (NPC message)</li><li>Buttons under the text frame</li><li>Floating elements design</li></ul></div>"
+    },
+    {
+      "id": "0z85xrbxh8x",
+      "type": "text",
+      "x": -10920,
+      "y": -7184,
+      "width": 150,
+      "height": 80,
+      "text": "v1",
+      "textAlign": "center",
+      "verticalAlign": "center",
+      "html": "<h1>v1</h1>"
+    },
+    {
+      "id": "ehvyo82srm",
+      "type": "file",
+      "x": -12031,
+      "y": -7311,
+      "width": 254,
+      "height": 319,
+      "file": "canvas_uploads/pasted_image_1775334728261.png"
+    },
+    {
+      "id": "n_1777622672948",
+      "type": "text",
+      "x": -12031,
+      "y": -7426,
+      "width": 252,
+      "height": 82,
+      "text": "Как выглядит базовое окно изначально",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Как выглядит базовое окно изначально"
+    },
+    {
+      "id": "n_1777622998206",
+      "type": "text",
+      "x": -11598,
+      "y": -7344,
+      "width": 187,
+      "height": 86,
+      "text": "Название окна",
+      "textAlign": "center",
+      "verticalAlign": "center",
+      "html": "Название окна"
+    },
+    {
+      "id": "n_1777623049418",
+      "type": "text",
+      "x": -11300,
+      "y": -7344,
+      "width": 231,
+      "height": 88,
+      "text": "Описание окна, функционал",
+      "textAlign": "center",
+      "verticalAlign": "center",
+      "html": "Описание окна, функционал"
+    },
+    {
+      "id": "n_1777623146756",
+      "type": "text",
+      "x": -10938,
+      "y": -7344,
+      "width": 216,
+      "height": 88,
+      "text": "Версия, номер концепта дизайна окна",
+      "textAlign": "center",
+      "verticalAlign": "center",
+      "html": "Версия, номер концепта дизайна окна"
+    },
+    {
+      "id": "n_1777623225676",
+      "type": "text",
+      "x": -10586.5,
+      "y": -7327,
+      "width": 251,
+      "height": 91,
+      "text": "Что добавить в окно по функционалу и особенностям дизайна именно этого окна",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Что добавить в окно по функционалу и особенностям дизайна именно этого окна"
+    },
+    {
+      "id": "n_1777623273212",
+      "type": "text",
+      "x": -10135.683757243405,
+      "y": -7366,
+      "width": 264,
+      "height": 82,
+      "text": "Из каких основных элементов по итогу состоит окно (дизайн)",
+      "textAlign": "center",
+      "verticalAlign": "center",
+      "html": "Из каких основных элементов по итогу состоит окно (дизайн)"
+    },
+    {
+      "id": "ze1s3b8vi3",
+      "type": "file",
+      "file": "canvas_uploads/NPC_a.png",
+      "x": -9882,
+      "y": -6476,
+      "width": 162,
+      "height": 172,
+      "groupId": "b60lkwctk3u"
+    },
+    {
+      "id": "bsy996al3sk",
+      "type": "text",
+      "x": -9882,
+      "y": -6568,
+      "width": 434,
+      "height": 82,
+      "text": "   NPC NAME",
+      "textAlign": "left",
+      "verticalAlign": "center",
+      "html": "<h2>&nbsp; &nbsp;NPC NAME</h2>",
+      "groupId": "b60lkwctk3u"
+    },
+    {
+      "id": "gxuo294ho4t",
+      "type": "text",
+      "x": -9708,
+      "y": -6476,
+      "width": 804,
+      "height": 174,
+      "text": "NPC MESSAGE HERE...",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "<div>NPC MESSAGE HERE...</div>",
+      "groupId": "b60lkwctk3u"
+    },
+    {
+      "id": "b60lkwctk3u",
+      "type": "group",
+      "label": "v1 Concept #1",
+      "x": -9922,
+      "y": -6628,
+      "width": 1058,
+      "height": 549
+    },
+    {
+      "id": "4raomrmj2th",
+      "type": "text",
+      "x": -9882,
+      "y": -6291,
+      "width": 481,
+      "height": 80,
+      "text": "Button 1",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "groupId": "b60lkwctk3u",
+      "html": "Button 1"
+    },
+    {
+      "id": "s73eli9b4c9",
+      "type": "text",
+      "x": -9385,
+      "y": -6291,
+      "width": 481,
+      "height": 80,
+      "text": "Button 2",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Button 2",
+      "groupId": "b60lkwctk3u"
+    },
+    {
+      "id": "xvbocncd0z8",
+      "type": "text",
+      "x": -9882,
+      "y": -6199,
+      "width": 481,
+      "height": 80,
+      "text": "Button 3",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Button 3",
+      "groupId": "b60lkwctk3u"
+    },
+    {
+      "id": "kxhqbgeur6s",
+      "type": "text",
+      "x": -9385,
+      "y": -6199,
+      "width": 481,
+      "height": 80,
+      "text": "Button 4",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Button 4",
+      "groupId": "b60lkwctk3u"
+    },
+    {
+      "id": "tyrclbakexi",
+      "type": "file",
+      "x": -8612,
+      "y": -6628,
+      "width": 952,
+      "height": 535,
+      "file": "canvas_uploads/pasted_image_1775325772247.png"
+    },
+    {
+      "id": "n_1777623481420",
+      "type": "text",
+      "x": -9856.625488093721,
+      "y": -7050.740293713591,
+      "width": 250,
+      "height": 175,
+      "text": "Далее у нас три варианта развития событий: либо мы рисуем набросок сами с тем, что описали и далее генерируем по нему концепт изображения - нижний вариант, либо верхний вариант",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Далее у нас три варианта развития событий: либо мы рисуем набросок сами с тем, что описали и далее генерируем по нему концепт изображения - нижний вариант, либо верхний вариант"
+    },
+    {
+      "id": "n_1777623599374",
+      "type": "text",
+      "x": -9229,
+      "y": -7548,
+      "width": 250,
+      "height": 154,
+      "text": "Используем https://stitch.withgoogle.com/ отрабатываем наш стиль, генерим окна строго на описании",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Используем&nbsp;https://stitch.withgoogle.com/ отрабатываем наш стиль, генерим окна строго на описании"
+    },
+    {
+      "id": "n_1777623640392",
+      "type": "text",
+      "x": -10365,
+      "y": -6361,
+      "width": 261,
+      "height": 80,
+      "text": "Набросок в любом редакторе paint, photoshop, word, либо здесь",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Набросок в любом редакторе paint, photoshop, word, либо здесь"
+    },
+    {
+      "id": "n_1777623677675",
+      "type": "text",
+      "x": -8139,
+      "y": -6846,
+      "width": 261,
+      "height": 133,
+      "text": "Генерируем картинку на основе наброска с заданным стилемиспользуем описание + набросок + стиль (chatgpt image 2, nano banana 2/pro)",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Генерируем картинку на основе наброска с заданным стилем<br>используем описание + набросок + стиль (chatgpt image 2, nano banana 2/pro)"
+    },
+    {
+      "id": "n_1777623712595",
+      "type": "text",
+      "x": -8948,
+      "y": -7029,
+      "width": 250,
+      "height": 152,
+      "text": "Здесь будет наш общий стиль (наброски картинок)",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Здесь будет наш общий стиль (наброски картинок)"
+    },
+    {
+      "id": "n_1777623935513",
+      "type": "text",
+      "x": -8864,
+      "y": -7334.5,
+      "width": 250,
+      "height": 154,
+      "text": "Используем сразу генерацию изображения для набросков концепта: используем заданный стиль и описание, с нашим примерным видинием окна",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Используем сразу генерацию изображения для набросков концепта: используем заданный стиль и описание, с нашим примерным видинием окна<div><br></div>"
+    },
+    {
+      "id": "n_1777624044828",
+      "type": "text",
+      "x": -8457.792271517726,
+      "y": -7247.93628641038,
+      "width": 250,
+      "height": 150,
+      "text": "понравившийся вариант прогоняем через стич, пока не получим приемлимый результат https://stitch.withgoogle.com/",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "понравившийся вариант прогоняем через стич, пока не получим приемлимый результат https://stitch.withgoogle.com/"
+    },
+    {
+      "id": "n_1777624077922",
+      "type": "text",
+      "x": -8079,
+      "y": -7247.93628641038,
+      "width": 250,
+      "height": 154,
+      "text": "Из стича создаем окно в jules или другом редакторе используя экспорт, для дальнейшего импорта в эмулятор",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Из стича создаем окно в jules или другом редакторе используя экспорт, для дальнейшего импорта в эмулятор"
+    },
+    {
+      "id": "n_1777624161167",
+      "type": "text",
+      "x": -8707.792271517726,
+      "y": -7659,
+      "width": 250,
+      "height": 150,
+      "text": "также экспортируем в jules или другой редактор, для дальнейшего импорта в эмулятор",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "также экспортируем в jules или другой редактор, для дальнейшего импорта в эмулятор"
+    },
+    {
+      "id": "1i5oouehh0j",
+      "type": "text",
+      "x": -7556,
+      "y": -6445,
+      "width": 250,
+      "height": 150,
+      "text": "понравившийся вариант прогоняем через стич, пока не получим приемлимый результат https://stitch.withgoogle.com/",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "понравившийся вариант прогоняем через стич, пока не получим приемлимый результат https://stitch.withgoogle.com/"
+    },
+    {
+      "id": "76tlznazqz4",
+      "type": "text",
+      "x": -7177,
+      "y": -6445,
+      "width": 250,
+      "height": 154,
+      "text": "Из стича создаем окно в jules или другом редакторе используя экспорт, для дальнейшего импорта в эмулятор",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "html": "Из стича создаем окно в jules или другом редакторе используя экспорт, для дальнейшего импорта в эмулятор"
+    },
+    {
+      "id": "n_1777624254227",
+      "type": "text",
+      "x": -9229,
+      "y": -7736,
+      "width": 250,
+      "height": 82,
+      "text": "самый сложный",
+      "textAlign": "center",
+      "verticalAlign": "top",
+      "color": "1",
+      "html": "<h2>самый сложный</h2>"
+    },
+    {
+      "id": "n_1777624276469",
+      "type": "text",
+      "x": -8866,
+      "y": -7465,
+      "width": 254,
+      "height": 87,
+      "text": "самый креативный",
+      "textAlign": "center",
+      "verticalAlign": "top",
+      "html": "<h2>самый креативный</h2>",
+      "color": "3"
+    },
+    {
+      "id": "n_1777624324201",
+      "type": "text",
+      "x": -9300,
+      "y": -6811,
+      "width": 262,
+      "height": 123,
+      "text": "самый правильный на взгляд Jerry, средний по креативу",
+      "textAlign": "center",
+      "verticalAlign": "top",
+      "html": "<h2>самый правильный на взгляд Jerry, средний по креативу</h2>",
+      "color": "4"
     }
   ],
   "edges": [
@@ -686,6 +1116,216 @@
       "fromSide": "top",
       "toNode": "n_1775207743140",
       "toSide": "bottom"
+    },
+    {
+      "id": "ip7snxb5z7",
+      "fromNode": "ne03x0q1w5",
+      "fromSide": "right",
+      "toNode": "df6xumdnowv",
+      "toSide": "left"
+    },
+    {
+      "id": "mxy0rhy2vw",
+      "fromNode": "n_1777622672948",
+      "fromSide": "bottom",
+      "toNode": "ehvyo82srm",
+      "toSide": "top"
+    },
+    {
+      "id": "vtoqy5go49",
+      "fromNode": "n_1777622332531",
+      "fromSide": "right",
+      "toNode": "ehvyo82srm",
+      "toSide": "left"
+    },
+    {
+      "id": "sz76ozfwm6d",
+      "fromNode": "n_1777622998206",
+      "fromSide": "bottom",
+      "toNode": "ne03x0q1w5",
+      "toSide": "top"
+    },
+    {
+      "id": "l8nbsetb65",
+      "fromNode": "ehvyo82srm",
+      "fromSide": "right",
+      "toNode": "ne03x0q1w5",
+      "toSide": "left"
+    },
+    {
+      "id": "djwtihlyrlb",
+      "fromNode": "n_1777623049418",
+      "fromSide": "bottom",
+      "toNode": "df6xumdnowv",
+      "toSide": "top"
+    },
+    {
+      "id": "f36m753xykk",
+      "fromNode": "df6xumdnowv",
+      "fromSide": "right",
+      "toNode": "0z85xrbxh8x",
+      "toSide": "left"
+    },
+    {
+      "id": "t28rjnq8etp",
+      "fromNode": "n_1777623146756",
+      "fromSide": "bottom",
+      "toNode": "0z85xrbxh8x",
+      "toSide": "top"
+    },
+    {
+      "id": "60dq8wj7c5p",
+      "fromNode": "0z85xrbxh8x",
+      "fromSide": "right",
+      "toNode": "pqwihcux5g",
+      "toSide": "left"
+    },
+    {
+      "id": "ikc55pysgb",
+      "fromNode": "n_1777623225676",
+      "fromSide": "bottom",
+      "toNode": "pqwihcux5g",
+      "toSide": "top"
+    },
+    {
+      "id": "ip44amfjsv",
+      "fromNode": "pqwihcux5g",
+      "fromSide": "right",
+      "toNode": "kqroufr5fe",
+      "toSide": "left"
+    },
+    {
+      "id": "677prwuoerl",
+      "fromNode": "n_1777623273212",
+      "fromSide": "bottom",
+      "toNode": "kqroufr5fe",
+      "toSide": "top"
+    },
+    {
+      "id": "o3nccxrt8to",
+      "fromNode": "b60lkwctk3u",
+      "fromSide": "right",
+      "toNode": "tyrclbakexi",
+      "toSide": "left"
+    },
+    {
+      "id": "fmpa6quudz",
+      "fromNode": "kqroufr5fe",
+      "fromSide": "right",
+      "toNode": "n_1777623481420",
+      "toSide": "left"
+    },
+    {
+      "id": "tsuo6ibfcd",
+      "fromNode": "n_1777623481420",
+      "fromSide": "bottom",
+      "toNode": "b60lkwctk3u",
+      "toSide": "top"
+    },
+    {
+      "id": "ms9puw6i30j",
+      "fromNode": "n_1777623481420",
+      "fromSide": "top",
+      "toNode": "n_1777623599374",
+      "toSide": "left"
+    },
+    {
+      "id": "vb6595xg0wj",
+      "fromNode": "n_1777623640392",
+      "fromSide": "right",
+      "toNode": "b60lkwctk3u",
+      "toSide": "left"
+    },
+    {
+      "id": "uqnuoq2lfzq",
+      "fromNode": "n_1777623712595",
+      "fromSide": "right",
+      "toNode": "tyrclbakexi",
+      "toSide": "top"
+    },
+    {
+      "id": "2hptwgnno6o",
+      "fromNode": "n_1777623677675",
+      "fromSide": "bottom",
+      "toNode": "tyrclbakexi",
+      "toSide": "top"
+    },
+    {
+      "id": "a788kkda8qk",
+      "fromNode": "n_1777623481420",
+      "fromSide": "right",
+      "toNode": "n_1777623935513",
+      "toSide": "left"
+    },
+    {
+      "id": "35qrl4k37po",
+      "fromNode": "n_1777623712595",
+      "fromSide": "top",
+      "toNode": "n_1777623935513",
+      "toSide": "bottom"
+    },
+    {
+      "id": "wjdgclsgbtf",
+      "fromNode": "n_1777623935513",
+      "fromSide": "right",
+      "toNode": "n_1777624044828",
+      "toSide": "left"
+    },
+    {
+      "id": "ik5b3ir9sm",
+      "fromNode": "n_1777624044828",
+      "fromSide": "right",
+      "toNode": "n_1777624077922",
+      "toSide": "left"
+    },
+    {
+      "id": "tzhwrwwsg6d",
+      "fromNode": "n_1777623712595",
+      "fromSide": "left",
+      "toNode": "n_1777623599374",
+      "toSide": "bottom"
+    },
+    {
+      "id": "hu9ul5lp6cv",
+      "fromNode": "n_1777623599374",
+      "fromSide": "right",
+      "toNode": "n_1777624161167",
+      "toSide": "left"
+    },
+    {
+      "id": "orej3140uno",
+      "fromNode": "1i5oouehh0j",
+      "fromSide": "right",
+      "toNode": "76tlznazqz4",
+      "toSide": "left"
+    },
+    {
+      "id": "mve6srk563",
+      "fromNode": "tyrclbakexi",
+      "fromSide": "right",
+      "toNode": "1i5oouehh0j",
+      "toSide": "left"
+    },
+    {
+      "id": "mo16bqip76p",
+      "fromNode": "n_1777624254227",
+      "fromSide": "bottom",
+      "toNode": "n_1777623599374",
+      "toSide": "top"
+    },
+    {
+      "id": "s14ptac9bd",
+      "fromNode": "n_1777624276469",
+      "fromSide": "bottom",
+      "toNode": "n_1777623935513",
+      "toSide": "top"
+    },
+    {
+      "id": "md4zl1vuzi",
+      "fromNode": "n_1777624324201",
+      "fromSide": "bottom",
+      "toNode": "b60lkwctk3u",
+      "toSide": "top"
     }
   ]
 }
