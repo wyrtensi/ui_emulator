@@ -1,0 +1,205 @@
+<div class="prof-window-container">
+  <!-- Top Header Area (Drag Handle) -->
+  <div class="prof-header">
+    <div class="prof-header-left">
+      <div class="prof-header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 22h20L12 2z"/></svg>
+      </div>
+      <div class="prof-header-title">CHOOSE A PROFESSION</div>
+    </div>
+    <div class="prof-header-right">
+      <div class="prof-level-box">
+        <span class="prof-level-label">LV</span>
+        <span class="prof-level-value">15</span>
+        <div class="prof-level-underline"></div>
+      </div>
+      <div class="prof-char-name">AGENT JULES</div>
+    </div>
+  </div>
+
+  <!-- Main Content Area: 4 Columns -->
+  <div class="prof-main-content">
+
+    <!-- Column 1: Class Selection -->
+    <div class="prof-col prof-col-classes">
+      <div class="prof-col-title">BASE CLASS</div>
+      <div class="prof-class-list">
+        <!-- Selected Class -->
+        <div class="prof-class-item selected">
+          <div class="prof-class-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="M3 9h18M9 21V9"/></svg>
+          </div>
+          <div class="prof-class-name">WARRIOR</div>
+        </div>
+        <!-- Default Classes -->
+        <div class="prof-class-item">
+          <div class="prof-class-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+          </div>
+          <div class="prof-class-name">RANGER</div>
+        </div>
+        <div class="prof-class-item">
+          <div class="prof-class-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <div class="prof-class-name">MAGE</div>
+        </div>
+        <div class="prof-class-item locked">
+          <div class="prof-class-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div class="prof-class-name">SPECIALIST</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="prof-divider"></div>
+
+    <!-- Column 2: Profession Selection -->
+    <div class="prof-col prof-col-professions">
+      <div class="prof-col-title">PROFESSION SELECT</div>
+      <div class="prof-cards-container">
+        <!-- Profession Card 1 (Selected) -->
+        <div class="prof-card selected">
+          <div class="prof-card-inner">
+            <div class="prof-card-name">GLADIATOR</div>
+            <div class="prof-card-figure">
+              <svg class="prof-holo-figure" viewBox="0 0 100 200">
+                <!-- Pedestal -->
+                <ellipse cx="50" cy="180" rx="40" ry="10" fill="rgba(74, 209, 242, 0.1)" stroke="#4ad1f2" stroke-width="1"/>
+                <!-- Hologram Figure Placeholder -->
+                <polygon points="50,20 30,80 40,170 60,170 70,80" fill="rgba(74, 209, 242, 0.2)" stroke="rgba(74, 209, 242, 0.5)" stroke-width="1"/>
+                <circle cx="50" cy="30" r="10" fill="rgba(74, 209, 242, 0.3)" stroke="rgba(74, 209, 242, 0.8)"/>
+                <!-- Sword placeholder -->
+                <line x1="70" y1="80" x2="90" y2="150" stroke="#4ad1f2" stroke-width="2"/>
+              </svg>
+            </div>
+            <div class="prof-card-type">MELEE DPS</div>
+          </div>
+        </div>
+        <!-- Profession Card 2 (Default) -->
+        <div class="prof-card">
+          <div class="prof-card-inner">
+            <div class="prof-card-name">PALADIN</div>
+            <div class="prof-card-figure">
+              <svg class="prof-holo-figure" viewBox="0 0 100 200">
+                <!-- Pedestal -->
+                <ellipse cx="50" cy="180" rx="40" ry="10" fill="rgba(106, 139, 159, 0.1)" stroke="#6a8b9f" stroke-width="1"/>
+                <!-- Hologram Figure Placeholder -->
+                <polygon points="50,20 25,80 35,170 65,170 75,80" fill="rgba(106, 139, 159, 0.2)" stroke="rgba(106, 139, 159, 0.5)" stroke-width="1"/>
+                <circle cx="50" cy="30" r="10" fill="rgba(106, 139, 159, 0.3)" stroke="rgba(106, 139, 159, 0.8)"/>
+                <!-- Shield placeholder -->
+                <rect x="15" y="80" width="20" height="40" rx="2" fill="none" stroke="#6a8b9f" stroke-width="2"/>
+              </svg>
+            </div>
+            <div class="prof-card-type">TANK / SUPPORT</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="prof-divider"></div>
+
+    <!-- Column 3: Detail & Rewards -->
+    <div class="prof-col prof-col-details">
+      <div class="prof-col-title">DETAIL & REWARDS</div>
+
+      <div class="prof-detail-section">
+        <div class="prof-detail-title">GLADIATOR (MELEE DPS)</div>
+        <div class="prof-detail-desc">
+          Masters of close-quarters combat, Gladiators sacrifice defensive capabilities for overwhelming offensive power. They dual-wield weapons to unleash relentless combinations on their foes.
+          <br><br>
+          <span class="prof-highlight">Playstyle:</span> Fast-paced, high risk, high reward. Requires precise timing to maximize damage output while avoiding enemy attacks.
+        </div>
+      </div>
+
+      <div class="prof-rewards-section">
+        <div class="prof-rewards-title">PROFESSION REWARDS</div>
+        <div class="prof-rewards-grid">
+          <!-- Reward 1 -->
+          <div class="prof-reward-slot">
+            <div class="prof-reward-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#4ad1f2" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </div>
+            <div class="prof-reward-name">GLAD. GEAR SET</div>
+          </div>
+          <!-- Reward 2 -->
+          <div class="prof-reward-slot">
+            <div class="prof-reward-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#e0e6ed" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </div>
+            <div class="prof-reward-name">UNIQUE MOUNT</div>
+          </div>
+          <!-- Reward 3 -->
+          <div class="prof-reward-slot">
+            <div class="prof-reward-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#e0e6ed" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            </div>
+            <div class="prof-reward-name">100,000 CREDITS</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="prof-divider"></div>
+
+    <!-- Column 4: Skills -->
+    <div class="prof-col prof-col-skills">
+      <div class="prof-col-title">ACQUIRED SKILLS</div>
+      <div class="prof-skills-list">
+        <!-- Skill 1 -->
+        <div class="prof-skill-item">
+          <div class="prof-skill-icon active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="prof-skill-info">
+            <div class="prof-skill-name">WHIRLWIND STRIKE</div>
+            <div class="prof-skill-status success">LEARNABLE</div>
+          </div>
+        </div>
+        <!-- Skill 2 -->
+        <div class="prof-skill-item">
+          <div class="prof-skill-icon active">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </div>
+          <div class="prof-skill-info">
+            <div class="prof-skill-name">BLOOD RAGE</div>
+            <div class="prof-skill-status success">LEARNABLE</div>
+          </div>
+        </div>
+        <!-- Skill 3 -->
+        <div class="prof-skill-item">
+          <div class="prof-skill-icon locked">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div class="prof-skill-info">
+            <div class="prof-skill-name">EXECUTE</div>
+            <div class="prof-skill-status warning">LV 20 REQUIRED</div>
+          </div>
+        </div>
+        <!-- Skill 4 -->
+        <div class="prof-skill-item">
+          <div class="prof-skill-icon locked">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div class="prof-skill-info">
+            <div class="prof-skill-name">BLADE DANCE</div>
+            <div class="prof-skill-status warning">LV 35 REQUIRED</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="prof-actions">
+        <button class="prof-btn prof-btn-cancel">CANCEL</button>
+        <button class="prof-btn prof-btn-confirm">CONFIRM PROFESSION</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Decorative Bottom Right Corner -->
+  <div class="prof-corner-decor">
+    <div class="prof-corner-diamond"></div>
+  </div>
+</div>
